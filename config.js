@@ -11,19 +11,26 @@ const SUPABASE_URL = 'https://oxfbxqclqfglpzgzizhq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_W3WMWLP28Czb2_5VTDQUlg_--3vfY71';
 
 // ============================================================
-// Google Maps API key.
+// OPTIONAL: Google Maps satellite key.
 //
-// Get one at: console.cloud.google.com -> APIs & Services ->
-// Credentials. Enable "Maps JavaScript API". Google gives a
-// $200/month credit, which covers roughly 28,000 map loads —
-// far more than a pilot will use.
+// Leave EMPTY and the map uses Sentinel-2 satellite imagery (ESA
+// open data via EOX) — free forever, no key, no quota, licensed
+// for commercial use. Resolution is ~10m: enough to read terrain,
+// rivers and grazing ground, not enough to see an individual animal.
 //
-// IMPORTANT: restrict the key to your domain (HTTP referrers:
-// magna-astra.github.io/*) or anyone can run up your quota.
+// Set a key here to ADD a Google satellite layer to the switcher
+// for sharper imagery.
 //
-// Leave this empty and the map falls back to OpenStreetMap,
-// which works without a key but has almost no detail in rural
-// Mongolia.
+// COST (verified 2026): Google scrapped the old $200/month credit
+// in March 2025. Dynamic Maps now gives 10,000 free map loads per
+// month, then $7 per 1,000. One "load" = one user opening the map
+// tab. A billing account with a card is required even to use the
+// free tier.
+//   ~6,000 loads/month  -> $0
+//   ~30,000 loads/month -> ~$140/month
+//   ~120,000            -> ~$770/month
+// Always restrict the key to your domain (HTTP referrers) or
+// someone else can run up your bill.
 // ============================================================
 const GOOGLE_MAPS_KEY = '';
 

@@ -96,6 +96,18 @@ header{background:var(--ink);color:#fff;padding:16px 0 26px;margin-bottom:-16px}
 .foot{text-align:center;font-size:.76rem;color:var(--ink-soft);margin-top:26px;line-height:1.6}
 .foot a{color:var(--khukh);text-decoration:none}
 
+.sharebox{background:var(--steppe-l);border:1px solid #C9E3D3;border-radius:14px;
+  padding:17px;margin-bottom:14px}
+.sharebox b{display:block;color:var(--steppe);font-size:.94rem;margin-bottom:4px}
+.sharebox p{font-size:.84rem;color:#3E6B4F;line-height:1.5;margin-bottom:12px}
+.sharebtn{display:block;width:100%;padding:13px;background:var(--steppe);color:#fff;
+  border:0;border-radius:11px;font-weight:700;font-size:.94rem;text-align:center;
+  text-decoration:none;margin-bottom:8px}
+.sharebtn.ghost{background:#fff;color:var(--steppe);border:1.5px solid #C9E3D3;margin-bottom:0}
+.minitoast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:var(--ink);
+  color:#fff;padding:12px 20px;border-radius:11px;font-size:.88rem;z-index:99;max-width:88vw;
+  text-align:center}
+
 .notfound{background:var(--card);border:1px solid var(--line);border-radius:16px;
   padding:44px 24px;text-align:center}
 .notfound h2{font-size:1.15rem;margin-bottom:8px}
@@ -127,6 +139,7 @@ header{background:var(--ink);color:#fff;padding:16px 0 26px;margin-bottom:-16px}
 <script>
 let scanId = null;
 let cowPhone = null;
+let lastPos = null;
 
 function getTag() {
   const p = new URLSearchParams(location.search);
@@ -245,11 +258,47 @@ function setLocState(state, detail) {
   if (state === 'ok') {
     el.innerHTML = `<span class="tick">✓</span>
       <span class="verified">Бүртгэгдлээ${detail ? `<span class="locsub">${detail}</span>` : ''}</span>`;
+    showLocationShare();
   } else if (state === 'denied') {
     el.innerHTML = `<span class="failed">Байршил аваагүй</span>`;
   } else {
     el.innerHTML = `<span class="unverified">Боломжгүй</span>`;
   }
+}
+
+// Once we have the finder's position, give them a one-tap way to send it
+// to the owner. A plain Google Maps URL — no API, no key, no cost — and on
+// a phone it opens the Maps app so the owner can navigate straight there.
+function showLocationShare(){
+  if (!lastPos || document.getElementById('shareBox')) return;
+  const url = `https://www.google.com/maps?q=${lastPos.lat},${lastPos.lng}`;
+  const box = document.createElement('div');
+  box.id = 'shareBox';
+  box.className = 'sharebox';
+  box.innerHTML = `
+    <b>Байршлаа эзэмшигчид илгээх</b>
+    <p>Та энэ малыг олсон бол доорх байршлыг эзэмшигч рүү илгээнэ үү.</p>
+    <a class="sharebtn" href="${url}" target="_blank" rel="noopener">Газрын зураг дээр харах</a>
+    <button class="sharebtn ghost" id="copyLoc">Байршлыг хуулах</button>`;
+  const anchor = document.querySelector('.idcard');
+  if (anchor) anchor.insertAdjacentElement('afterend', box);
+
+  document.getElementById('copyLoc').addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(url);
+      toastMini('Хуулагдлаа — эзэмшигч рүү илгээнэ үү');
+    }catch(e){
+      prompt('Энэ холбоосыг хуулна уу:', url);
+    }
+  });
+}
+
+function toastMini(msg){
+  const t = document.createElement('div');
+  t.className = 'minitoast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2600);
 }
 
 // Record that someone tapped this tag. For a stolen animal this is the
@@ -276,7 +325,10 @@ function logScan(tag) {
 
   if (!navigator.geolocation) { setLocState('unavailable'); send(null, null, null); return; }
   navigator.geolocation.getCurrentPosition(
-    pos => send(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
+    pos => {
+      lastPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      send(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+    },
     ()  => send(null, null, null),
     { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
   );

@@ -299,12 +299,8 @@ body.role-herder .col-owner{display:none}
           <div><span class="legdot" style="background:#B3341F"></span> Алга болсон</div>
         </div>
       </div>
-      <p class="mapnote" id="mapKeyNote" style="display:none;color:#B8892C">
-        Google Maps түлхүүр тохируулаагүй тул OpenStreetMap ашиглаж байна.
-        config.js дотор GOOGLE_MAPS_KEY-г нэмнэ үү — хиймэл дагуулын зураг илүү тодорхой.
-      </p>
       <p class="mapnote">Цэг бүр = таг сүүлд уншуулсан үеийн GPS байрлал. Тасралтгүй хөдөлгөөний зам биш.
-        Уншуулаагүй мал газрын зураг дээр харагдахгүй.</p>
+        Уншуулаагүй мал газрын зураг дээр харагдахгүй. Баруун дээд буланд давхаргыг сольж болно.</p>
     </div>
 
     <!-- ===== FARMS (super admin) ===== -->
@@ -473,6 +469,12 @@ function isToday(d){return d === new Date().toISOString().slice(0,10);}
 function fmtD(ts){if(!ts)return '—';return new Date(ts).toLocaleDateString('mn-MN',{month:'short',day:'numeric'});}
 function fmtDT(ts){if(!ts)return '—';return new Date(ts).toLocaleString('mn-MN',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}
 function daysUntil(d){if(!d)return null;return Math.ceil((new Date(d)-new Date())/86400000);}
+// A plain Google Maps URL — not the paid Maps API. No key, no billing,
+// no quota. On a phone it opens the Google Maps app with navigation,
+// which is what a herder actually needs when an animal is 8km away.
+function gmapsUrl(lat,lng){ return `https://www.google.com/maps?q=${lat},${lng}`; }
+function gmapsDir(lat,lng){ return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`; }
+
 function daysSince(ts){if(!ts)return null;return Math.floor((new Date()-new Date(ts))/86400000);}
 
 // ---------- login ----------
@@ -526,7 +528,7 @@ document.querySelectorAll('.tabs button').forEach(b=>{
     document.querySelectorAll('.tabpane').forEach(x=>x.classList.remove('on'));
     b.classList.add('on');
     document.getElementById('tab-'+b.dataset.tab).classList.add('on');
-    if(b.dataset.tab==='map'){ setTimeout(async()=>{ await initMap(); drawMap(); }, 60); }
+    if(b.dataset.tab==='map'){ setTimeout(()=>{ initMap(); drawMap(); }, 60); }
     if(b.dataset.tab==='farms'){ loadAdminFarms(); }
   });
 });
@@ -783,7 +785,11 @@ function render(){
       <td class="muted">${c.last_vaccination?fmtD(c.last_vaccination):'—'}
         <button class="minibtn" onclick="openVacc('${c.id}','${esc(c.tag_code)}')">+</button></td>
       <td>${vaccBadge(c.next_vaccination_due)}</td>
-      <td class="muted">${fmtDT(c.last_seen_at)}</td>
+      <td class="muted">${c.last_lat
+        ? `<a href="${gmapsUrl(c.last_lat,c.last_lng)}" target="_blank" rel="noopener"
+             style="color:#1B4FA8;text-decoration:none" title="Google Maps дээр нээх">
+             ${fmtDT(c.last_seen_at)} ↗</a>`
+        : fmtDT(c.last_seen_at)}</td>
       <td>${statusBadge(c.status)}</td>
       <td class="super-only">
         <button class="minibtn" onclick="openEdit('${c.id}')">Засах</button>
@@ -833,47 +839,55 @@ document.getElementById('mFarm').addEventListener('change',e=>{mFarm=e.target.va
 document.getElementById('search').addEventListener('input',render);
 
 // ---------- MAP ----------
-// Google Maps when a key is configured, OpenStreetMap otherwise.
-// Satellite is the default view: in rural Mongolia the road map is
-// nearly blank, but the satellite imagery shows the actual terrain,
-// water, and winter camps a herder recognises.
-let gmap = null, gmarkers = [], gInfo = null, mapMode = 'none';
+// Layer choice, in order of preference:
+//
+//  1. Sentinel-2 (EOX cloudless) — ESA open data, ~10m resolution,
+//     CC BY 4.0, free for commercial use, no key, no quota. At 10m
+//     you cannot see an animal, but you can see the terrain, rivers,
+//     and grazing patterns that make a position meaningful. For
+//     Mongolian steppe this is genuinely usable.
+//
+//  2. Google Satellite — best detail, but needs an API key and a
+//     billing account. Enabled automatically if GOOGLE_MAPS_KEY is set.
+//
+//  3. OpenStreetMap — free, but nearly blank in rural Mongolia.
+//
+// Note on Esri World Imagery: often suggested as "free satellite",
+// but Esri state it is not licensed for commercial use without an
+// ArcGIS subscription. Deliberately not used here.
 
-function loadGoogle(){
-  return new Promise((resolve,reject)=>{
-    if(window.google && window.google.maps) return resolve();
-    if(!GOOGLE_MAPS_KEY) return reject('no key');
-    const sc = document.createElement('script');
-    sc.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&v=weekly`;
-    sc.async = true;
-    sc.onload = resolve;
-    sc.onerror = ()=>reject('script failed');
-    document.head.appendChild(sc);
-  });
-}
+let baseLayers = {}, layerControl = null;
 
-async function initMap(){
-  if(mapMode !== 'none'){
-    if(mapMode==='osm' && map) map.invalidateSize();
-    return;
+function initMap(){
+  if(map){ map.invalidateSize(); return; }
+
+  const sentinel = L.tileLayer(
+    'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg',
+    { maxZoom:15, attribution:'Sentinel-2 cloudless by <a href="https://eox.at">EOX</a> (CC BY 4.0)' });
+
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { maxZoom:19, attribution:'© OpenStreetMap' });
+
+  const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    { maxZoom:17, attribution:'© OpenTopoMap (CC-BY-SA)' });
+
+  map = L.map('map',{ scrollWheelZoom:true, layers:[sentinel] }).setView([47.92,103.5],9);
+
+  baseLayers = {
+    'Хиймэл дагуул (үнэгүй)': sentinel,
+    'Газрын гадарга': topo,
+    'Зам, суурин': osm
+  };
+
+  // Google only appears if a key is configured — no dead menu entry.
+  if(typeof GOOGLE_MAPS_KEY !== 'undefined' && GOOGLE_MAPS_KEY){
+    baseLayers['Google хиймэл дагуул'] = L.tileLayer(
+      'https://mt1.google.com/vt/lyrs=s\u0026x={x}\u0026y={y}\u0026z={z}',
+      { maxZoom:20, attribution:'© Google' });
   }
-  try{
-    await loadGoogle();
-    gmap = new google.maps.Map(document.getElementById('map'),{
-      center:{lat:47.92,lng:103.5}, zoom:9,
-      mapTypeId:'hybrid',                 // satellite + labels
-      mapTypeControl:true, streetViewControl:false, fullscreenControl:true
-    });
-    gInfo = new google.maps.InfoWindow();
-    mapMode = 'google';
-  }catch(e){
-    // Fallback keeps the product usable before a key is configured.
-    map = L.map('map',{scrollWheelZoom:true}).setView([47.92,103.5],9);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      {maxZoom:18, attribution:'© OpenStreetMap'}).addTo(map);
-    mapMode = 'osm';
-    document.getElementById('mapKeyNote').style.display = 'block';
-  }
+
+  layerControl = L.control.layers(baseLayers,{},{position:'topright'}).addTo(map);
+  L.control.scale({imperial:false}).addTo(map);
 }
 
 function mapRows(){
@@ -896,54 +910,36 @@ function popupHtml(c){
       Сүүлд: ${fmtDT(c.last_seen_at)}${days!==null?` (${days} хоног)`:''}
     </span><br>
     <a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}"
-       style="color:#1B4FA8;font-weight:600">Дэлгэрэнгүй →</a>
+       style="color:#1B4FA8;font-weight:600">Дэлгэрэнгүй →</a><br>
+    <a href="${gmapsDir(c.last_lat,c.last_lng)}" target="_blank" rel="noopener"
+       style="color:#2C7A45;font-weight:600">Google Maps-аар очих →</a>
   </div>`;
 }
 
 function drawMap(){
+  if(!map) return;
+  markers.forEach(m=>map.removeLayer(m));
+  markers = [];
+
   const rows = mapRows();
   document.getElementById('mapCount').textContent =
     `${rows.length} мал зураг дээр · ${allCattle.length-rows.length} уншуулаагүй`;
 
-  if(mapMode==='google' && gmap){
-    gmarkers.forEach(m=>m.setMap(null)); gmarkers=[];
-    const bounds = new google.maps.LatLngBounds();
-    rows.forEach(c=>{
-      const days = daysSince(c.last_seen_at);
-      const lost = c.status==='lost'||c.status==='stolen'||c.reported_lost_at;
-      const color = lost ? '#B3341F' : (days>7 ? '#8794A8' : '#1B4FA8');
-      const pos = {lat:Number(c.last_lat), lng:Number(c.last_lng)};
-      const mk = new google.maps.Marker({
-        position:pos, map:gmap,
-        label:{text:c.tag_code.replace('YT-',''), color:'#fff',
-               fontSize:'11px', fontWeight:'700', fontFamily:'monospace'},
-        icon:{path:'M -22 -11 h 44 a 4 4 0 0 1 4 4 v 14 a 4 4 0 0 1 -4 4 h -44 a 4 4 0 0 1 -4 -4 v -14 a 4 4 0 0 1 4 -4 z',
-              fillColor:color, fillOpacity:1, strokeColor:'#fff', strokeWeight:2, scale:1, labelOrigin:new google.maps.Point(0,0)}
-      });
-      mk.addListener('click',()=>{ gInfo.setContent(popupHtml(c)); gInfo.open(gmap,mk); });
-      gmarkers.push(mk); bounds.extend(pos);
-    });
-    if(rows.length){ gmap.fitBounds(bounds); 
-      google.maps.event.addListenerOnce(gmap,'idle',()=>{ if(gmap.getZoom()>14) gmap.setZoom(14); }); }
-    return;
-  }
+  const bounds = [];
+  rows.forEach(c=>{
+    const days = daysSince(c.last_seen_at);
+    const lost = c.status==='lost'||c.status==='stolen'||c.reported_lost_at;
+    const cls = lost ? 'lost' : (days>7 ? 'stale' : '');
+    const icon = L.divIcon({ className:'',
+      html:`<div class="cowpin ${cls}">${esc(c.tag_code.replace('YT-',''))}</div>`,
+      iconSize:[54,20], iconAnchor:[27,10] });
+    const mk = L.marker([c.last_lat,c.last_lng],{icon}).addTo(map);
+    mk.bindPopup(popupHtml(c));
+    markers.push(mk);
+    bounds.push([c.last_lat,c.last_lng]);
+  });
 
-  if(mapMode==='osm' && map){
-    markers.forEach(m=>map.removeLayer(m)); markers=[];
-    const bounds=[];
-    rows.forEach(c=>{
-      const days = daysSince(c.last_seen_at);
-      const lost = c.status==='lost'||c.status==='stolen'||c.reported_lost_at;
-      const cls = lost ? 'lost' : (days>7 ? 'stale' : '');
-      const icon = L.divIcon({className:'',
-        html:`<div class="cowpin ${cls}">${esc(c.tag_code.replace('YT-',''))}</div>`,
-        iconSize:[54,20], iconAnchor:[27,10]});
-      const mk = L.marker([c.last_lat,c.last_lng],{icon}).addTo(map);
-      mk.bindPopup(popupHtml(c));
-      markers.push(mk); bounds.push([c.last_lat,c.last_lng]);
-    });
-    if(bounds.length) map.fitBounds(bounds,{padding:[50,50],maxZoom:14});
-  }
+  if(bounds.length) map.fitBounds(bounds,{padding:[50,50],maxZoom:13});
 }
 
 // ---------- MILK MODAL ----------

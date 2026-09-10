@@ -373,7 +373,11 @@ function renderCow() {
       <div class="kv"><span>Дараагийн вакцин</span><span>${cow.next_vaccination_due ? fmtDate(cow.next_vaccination_due) : '—'}</span></div>
       <div class="kv"><span>Сүүлд харагдсан</span><span>${fmtDateTime(cow.last_seen_at)}</span></div>
       <div class="kv"><span>Сүүлийн байршил</span>
-        <span class="mono">${cow.last_lat ? Number(cow.last_lat).toFixed(4) + ', ' + Number(cow.last_lng).toFixed(4) : '—'}</span></div>
+        <span class="mono">${cow.last_lat
+          ? `<a href="https://www.google.com/maps?q=${cow.last_lat},${cow.last_lng}"
+               target="_blank" rel="noopener" style="color:#1B4FA8;text-decoration:none">
+               ${Number(cow.last_lat).toFixed(4)}, ${Number(cow.last_lng).toFixed(4)} ↗</a>`
+          : '—'}</span></div>
     </div>
   `;
 
