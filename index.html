@@ -3,376 +3,1131 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YAK-TAG — Удирдлагын самбар</title>
-<link rel="icon" href="../assets/favicon.ico">
+<title>YAK-TAG — Мал бүр цахим үнэмлэхтэй</title>
+<link rel="icon" href="assets/favicon.ico">
+<link rel="apple-touch-icon" href="assets/logo-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Mongolian&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#0E1929;
-  --ink-soft:#55627A;
-  --line:#E2E6EC;
-  --bg:#F7F8FA;
-  --card:#FFFFFF;
-  --khukh:#1B4FA8;
-  --khukh-light:#EAF0FB;
-  --gold:#B8892C;
-  --gold-light:#FBF3E2;
-  --steppe:#2F7A46;
-  --steppe-light:#E9F4ED;
-  --alert:#B3341F;
-  --alert-light:#FBEBE8;
-  --body:'Inter',system-ui,sans-serif;
+  --ink:#080F1C;
+  --ink2:#0E1929;
+  --ink3:#152438;
+  --line:rgba(255,255,255,.09);
+  --bone:#F4F2EC;
+  --mist:#93A3BA;
+  /* Мөнх хөх тэнгэр — the eternal blue sky */
+  --khukh:#3D7FE0;
+  --khukh-deep:#1B4FA8;
+  --khukh-dim:rgba(61,127,224,.14);
+  /* алт — gold ornament */
+  --gold:#D4A94A;
+  --gold-dim:rgba(212,169,74,.13);
+  /* тал — steppe, now secondary */
+  --steppe:#5F9E62;
+  --steppe-dim:rgba(95,158,98,.14);
+  /* эсгий — felt / milk */
+  --felt:#EFE9DC;
+  --felt2:#E3DACA;
+  --sky:var(--khukh);
+  --sky-dim:var(--khukh-dim);
+  --warn:#E0A33C;
+  --display:'Unbounded',sans-serif;
+  --body:'Inter',sans-serif;
   --mono:'JetBrains Mono',monospace;
+  --mgl:'Noto Sans Mongolian',serif;
+  --r:14px;
+  --maxw:1180px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55}
-button{font-family:inherit;cursor:pointer}
-input,select{font-family:inherit;font-size:15px}
+html{scroll-behavior:smooth}
+body{
+  background:var(--ink);color:var(--bone);
+  font-family:var(--body);font-size:16px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+h1,h2,h3,.disp{font-family:var(--display);font-weight:800;line-height:1.08;letter-spacing:-.02em}
+h1{font-size:clamp(2.1rem,5.6vw,4.1rem)}
+h2{font-size:clamp(1.6rem,3.6vw,2.6rem)}
+h3{font-size:1.06rem;font-weight:600;letter-spacing:-.01em}
+p{color:#C9D3DF}
+a{color:inherit;text-decoration:none}
+section{padding:clamp(64px,9vw,124px) 0;position:relative}
+.eyebrow{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--gold);display:flex;align-items:center;gap:10px;margin-bottom:18px;
+}
+.eyebrow::before{content:"";width:26px;height:1px;background:var(--gold)}
+.lead{font-size:clamp(1rem,1.7vw,1.14rem);color:var(--mist);max-width:62ch;margin-top:16px}
 
-/* ---------- LOGIN ---------- */
-.login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px;
-  background:linear-gradient(170deg,#0E1929,#16283F)}
-.login-card{background:var(--card);border-radius:18px;padding:40px 36px;width:100%;max-width:400px;
-  box-shadow:0 24px 60px rgba(0,0,0,.35)}
-.login-logo{width:72px;height:72px;display:block;margin:0 auto 20px}
-.login-card h1{font-size:1.3rem;font-weight:700;text-align:center;letter-spacing:-.01em}
-.login-card .sub{text-align:center;color:var(--ink-soft);font-size:.88rem;margin-top:6px;margin-bottom:28px}
-.field{margin-bottom:16px}
-.field label{display:block;font-size:.82rem;font-weight:600;margin-bottom:6px;color:var(--ink-soft)}
-.field input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;
-  background:#fff;transition:border-color .15s}
-.field input:focus{outline:none;border-color:var(--khukh);box-shadow:0 0 0 3px var(--khukh-light)}
-.btn-primary{width:100%;padding:13px;background:var(--khukh);color:#fff;border:0;border-radius:10px;
-  font-weight:600;font-size:.95rem;transition:background .15s}
-.btn-primary:hover{background:#16418C}
-.btn-primary:disabled{opacity:.55;cursor:not-allowed}
-.err{background:var(--alert-light);color:var(--alert);padding:10px 13px;border-radius:9px;
-  font-size:.85rem;margin-bottom:16px;display:none}
+/* ---------- NAV ---------- */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(10,17,28,.72);backdrop-filter:blur(16px);
+  border-bottom:1px solid transparent;transition:border-color .3s,background .3s;
+}
+nav.on{border-color:var(--line)}
+.navin{max-width:var(--maxw);margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:32px}
+.logo{font-family:var(--display);font-weight:800;font-size:1rem;letter-spacing:.09em;display:flex;align-items:center;gap:9px}
+.marklogo{width:30px;height:30px;filter:invert(1);flex:0 0 auto}
+body.light .marklogo{filter:none}
+.navlogin{display:none}
+@media(max-width:900px){
+  .navlinks.open .navlogin{display:block;font-weight:600;color:var(--khukh)}
+}
 
-/* ---------- APP SHELL ---------- */
-.app{display:none;min-height:100vh}
-header.topbar{background:var(--ink);color:#fff;padding:0 24px;display:flex;align-items:center;
-  gap:16px;height:60px;position:sticky;top:0;z-index:20}
-.topbar img{width:32px;height:32px;filter:invert(1)}
-.topbar .brand{font-weight:700;letter-spacing:.02em;font-size:1rem}
-.topbar .who{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:.85rem;color:#B4C0D2}
-.topbar .who b{color:#fff;font-weight:600}
-.role-chip{background:rgba(255,255,255,.13);padding:3px 10px;border-radius:20px;font-size:.72rem;
-  font-weight:600;letter-spacing:.03em}
-.signout{background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 13px;
-  border-radius:8px;font-size:.82rem}
-.signout:hover{background:rgba(255,255,255,.1)}
+.navlinks{display:flex;gap:26px;margin-left:auto;font-size:.87rem;color:var(--mist)}
+.navlinks a:hover{color:var(--bone)}
+.btn{
+  font-family:var(--body);font-weight:600;font-size:.87rem;
+  padding:10px 20px;border-radius:100px;border:1px solid var(--line);
+  background:transparent;color:var(--bone);cursor:pointer;transition:.2s;display:inline-block;
+}
+.btn:hover{border-color:rgba(255,255,255,.3)}
+.btn.pri{background:var(--khukh);border-color:var(--khukh);color:#04101F}
+.btn.pri:hover{background:#5A93E8;border-color:#5A93E8}
+.burger{display:none;margin-left:auto;background:none;border:0;color:var(--bone);font-size:1.5rem;cursor:pointer}
+@media(max-width:900px){
+  .navlinks{display:none}
+  .navlinks.open{
+    display:flex;flex-direction:column;position:absolute;top:100%;left:0;right:0;
+    background:var(--ink2);padding:20px 24px;gap:16px;border-bottom:1px solid var(--line);margin:0;
+  }
+  .burger{display:block}
+  nav .btn.pri{display:none}
+}
 
-main{padding:26px 24px 60px;max-width:1500px;margin:0 auto}
+/* ---------- HERO ---------- */
+.hero{
+  min-height:100svh;display:flex;align-items:center;padding-top:96px;
+  background:
+    radial-gradient(940px 500px at 76% 20%,rgba(61,127,224,.20),transparent 64%),
+    radial-gradient(720px 440px at 6% 84%,rgba(212,169,74,.11),transparent 62%),
+    linear-gradient(#080F1C,#0B1A2E);
+  overflow:hidden;
+}
+.hero::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:64px 64px;mask-image:radial-gradient(circle at 50% 40%,#000,transparent 78%);opacity:.5;
+}
+.herogrid{display:grid;grid-template-columns:1.08fr .92fr;gap:56px;align-items:center;position:relative;z-index:2}
+@media(max-width:960px){.herogrid{grid-template-columns:1fr;gap:44px}}
+h1 em{font-style:normal;color:var(--khukh)}
+.herocta{display:flex;gap:12px;margin-top:34px;flex-wrap:wrap}
+.trustrow{display:flex;gap:26px;margin-top:38px;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;color:var(--mist);letter-spacing:.05em}
+.trustrow span{display:flex;align-items:center;gap:7px}
+.trustrow span::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--gold)}
 
-/* ---------- STATS ---------- */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:26px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:17px 19px}
-.stat .lbl{font-size:.78rem;color:var(--ink-soft);font-weight:500}
-.stat .val{font-size:1.65rem;font-weight:700;font-family:var(--mono);margin-top:5px;letter-spacing:-.02em}
-.stat .val small{font-size:.9rem;color:var(--ink-soft);font-weight:400;margin-left:3px}
+/* tag card */
+.tagcard{
+  background:linear-gradient(160deg,var(--ink3),#0D1726);
+  border:1px solid var(--line);border-radius:20px;padding:26px;
+  box-shadow:0 32px 80px rgba(0,0,0,.5);position:relative;overflow:hidden;
+}
+.tagcard::before{
+  content:"";position:absolute;top:-45%;left:-25%;width:150%;height:190%;
+  background:conic-gradient(from 0deg,transparent,rgba(61,127,224,.18),transparent 42%);
+  animation:spin 11s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tagcard>*{position:relative;z-index:1}
+.tagtop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+.pill{
+  font-family:var(--mono);font-size:.63rem;letter-spacing:.14em;padding:5px 11px;border-radius:100px;
+  background:var(--khukh-dim);color:var(--khukh);border:1px solid rgba(61,127,224,.3);text-transform:uppercase;
+}
+.pill.blue{background:var(--gold-dim);color:var(--gold);border-color:rgba(212,169,74,.32)}
+.fobwrap{display:flex;gap:22px;align-items:center;padding:18px 0;border-block:1px solid var(--line)}
+.fob{
+  width:104px;height:132px;flex:0 0 auto;border-radius:16px;
+  background:linear-gradient(150deg,#1D3049,#0F1B2B);border:1px solid rgba(255,255,255,.13);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;position:relative;
+}
+.fob::before{content:"";position:absolute;top:9px;width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.18)}
+.qr{width:52px;height:52px;margin-top:14px;image-rendering:pixelated;border-radius:3px;background:#F3F5F2;padding:3px}
+.fobno{font-family:var(--mono);font-size:.62rem;color:var(--mist);letter-spacing:.08em}
+.fobmeta{display:flex;flex-direction:column;gap:11px;font-size:.8rem;min-width:0}
+.fobmeta div{display:flex;gap:9px;align-items:baseline}
+.fobmeta b{font-family:var(--mono);font-size:.62rem;color:var(--mist);letter-spacing:.1em;min-width:52px;text-transform:uppercase;font-weight:400}
+.fobmeta s{text-decoration:none;font-family:var(--mono);font-size:.79rem;color:var(--bone)}
 
-/* ---------- CONTROLS ---------- */
-.controls{display:flex;gap:11px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
-.controls input,.controls select{padding:9px 13px;border:1px solid var(--line);border-radius:9px;background:#fff}
-.controls input:focus,.controls select:focus{outline:none;border-color:var(--khukh)}
-.controls input[type=search]{min-width:230px}
-.count-note{margin-left:auto;font-size:.83rem;color:var(--ink-soft)}
+.flow{display:flex;align-items:center;justify-content:space-between;margin-top:20px;gap:5px}
+.flow i{
+  flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.05);
+  border:1px solid var(--line);display:grid;place-items:center;font-size:.95rem;font-style:normal;
+}
+.flowline{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(61,127,224,.6),transparent);position:relative}
+.flowline::after{
+  content:"";position:absolute;top:-2px;width:5px;height:5px;border-radius:50%;background:var(--khukh);
+  box-shadow:0 0 9px var(--khukh);animation:run 2.6s ease-in-out infinite;
+}
+@keyframes run{0%{left:0;opacity:0}18%{opacity:1}82%{opacity:1}100%{left:100%;opacity:0}}
+.flowlabels{display:flex;justify-content:space-between;margin-top:9px;font-family:var(--mono);font-size:.55rem;color:var(--mist);letter-spacing:.08em}
 
-/* ---------- TABLE ---------- */
-.table-wrap{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:auto}
-table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:1000px}
-thead th{text-align:left;padding:12px 15px;font-size:.76rem;font-weight:600;color:var(--ink-soft);
-  border-bottom:1px solid var(--line);white-space:nowrap;background:#FAFBFC;position:sticky;top:0}
-tbody td{padding:12px 15px;border-bottom:1px solid #F0F2F5;white-space:nowrap}
-tbody tr:last-child td{border-bottom:0}
-tbody tr:hover{background:#FAFBFD}
-.tag-code{font-family:var(--mono);font-weight:600;font-size:.85rem}
-.tag-code a{color:var(--khukh);text-decoration:none}
-.tag-code a:hover{text-decoration:underline}
-.muted{color:var(--ink-soft)}
-.num{font-family:var(--mono);text-align:right}
-.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.75rem;font-weight:600}
-.badge.ok{background:var(--steppe-light);color:var(--steppe)}
-.badge.warn{background:var(--gold-light);color:var(--gold)}
-.badge.late{background:var(--alert-light);color:var(--alert)}
-.badge.none{background:#F0F2F5;color:var(--ink-soft)}
-.loading,.empty{padding:50px;text-align:center;color:var(--ink-soft)}
-.geo{font-family:var(--mono);font-size:.79rem;color:var(--ink-soft)}
+/* ---------- TICKER (signature) ---------- */
+.ticker{border-block:1px solid var(--line);background:#080E17;overflow:hidden;padding:13px 0}
+.tickrun{display:flex;gap:44px;white-space:nowrap;animation:tick 42s linear infinite;width:max-content}
+@keyframes tick{to{transform:translateX(-50%)}}
+.tickrun span{font-family:var(--mono);font-size:.72rem;color:var(--mist);letter-spacing:.05em;display:flex;gap:11px;align-items:center}
+.tickrun b{color:var(--khukh);font-weight:400}
+.tickrun u{text-decoration:none;color:#5E6E82}
+
+/* ---------- GENERIC ---------- */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:start}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+@media(max-width:900px){.grid2,.grid3,.grid4{grid-template-columns:1fr;gap:22px}}
+.card{
+  background:linear-gradient(165deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+  border:1px solid var(--line);border-radius:var(--r);padding:24px;transition:.25s;
+}
+.card:hover{border-color:rgba(61,127,224,.36);transform:translateY(-2px)}
+.card h3{margin-bottom:9px}
+.card p{font-size:.9rem;color:var(--mist);line-height:1.6}
+.num{font-family:var(--mono);font-size:.68rem;color:var(--gold);letter-spacing:.16em;margin-bottom:13px;display:block}
+
+/* problem list */
+.probs{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line)}
+.prob{display:flex;gap:18px;padding:17px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.prob b{font-family:var(--mono);font-size:.7rem;color:#4C5A6E;flex:0 0 26px;font-weight:400}
+.prob p{font-size:.94rem;color:#C4CFDB}
+
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.step{padding:28px 22px;border-right:1px solid var(--line);background:rgba(255,255,255,.02)}
+.step:last-child{border-right:0}
+@media(max-width:900px){.steps{grid-template-columns:1fr}.step{border-right:0;border-bottom:1px solid var(--line)}}
+.step h3{margin:12px 0 8px}
+.step p{font-size:.87rem;color:var(--mist)}
+
+/* ---------- DASHBOARD MOCK ---------- */
+.dash{
+  border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  background:#0B1420;box-shadow:0 30px 70px rgba(0,0,0,.5);
+}
+.dashbar{display:flex;align-items:center;gap:9px;padding:12px 16px;background:#0E1926;border-bottom:1px solid var(--line)}
+.dot{width:9px;height:9px;border-radius:50%;background:#26364A}
+.dashurl{
+  font-family:var(--mono);font-size:.66rem;color:var(--mist);background:#0A121D;
+  padding:5px 13px;border-radius:100px;margin-left:12px;border:1px solid var(--line);
+}
+.dashbody{display:grid;grid-template-columns:190px 1fr;min-height:440px}
+@media(max-width:820px){.dashbody{grid-template-columns:1fr}.dashside{display:none}}
+.dashside{border-right:1px solid var(--line);padding:16px 12px;background:#0A121D}
+.farmsel{
+  border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:16px;
+  background:rgba(61,127,224,.08);cursor:pointer;
+}
+.farmsel small{font-family:var(--mono);font-size:.55rem;color:var(--mist);letter-spacing:.13em;display:block;text-transform:uppercase}
+.farmsel span{font-size:.83rem;font-weight:600;display:flex;justify-content:space-between;align-items:center;margin-top:3px}
+.snav{display:flex;flex-direction:column;gap:2px}
+.snav a{padding:8px 11px;border-radius:8px;font-size:.82rem;color:var(--mist);cursor:pointer}
+.snav a.act{background:rgba(61,127,224,.15);color:var(--bone)}
+.snav a:hover{color:var(--bone)}
+.dashmain{padding:20px}
+.tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.tab{
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.09em;padding:7px 13px;border-radius:100px;
+  border:1px solid var(--line);color:var(--mist);cursor:pointer;background:none;text-transform:uppercase;
+}
+.tab.act{background:var(--bone);color:var(--ink);border-color:var(--bone)}
+.pane{display:none}.pane.act{display:block}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:11px;padding:14px}
+.stat b{font-family:var(--display);font-size:1.5rem;font-weight:800;display:block;letter-spacing:-.02em}
+.stat small{font-family:var(--mono);font-size:.57rem;color:var(--mist);letter-spacing:.11em;text-transform:uppercase}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{
+  font-family:var(--mono);font-size:.57rem;letter-spacing:.12em;color:var(--mist);text-transform:uppercase;
+  text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);font-weight:400;
+}
+td{padding:11px 10px;border-bottom:1px solid rgba(255,255,255,.05);color:#C6D1DE}
+td.m{font-family:var(--mono);font-size:.76rem}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{font-family:var(--mono);font-size:.58rem;padding:3px 8px;border-radius:100px;letter-spacing:.06em}
+.badge.ok{background:var(--steppe-dim);color:#7CBB7F}
+.badge.w{background:rgba(224,163,60,.14);color:var(--warn)}
+.badge.b{background:var(--sky-dim);color:var(--sky)}
+.maprect{
+  height:250px;border-radius:11px;border:1px solid var(--line);position:relative;overflow:hidden;
+  background:
+    radial-gradient(400px 220px at 30% 40%,rgba(61,127,224,.18),transparent 70%),
+    linear-gradient(#0C1723,#0A1420);
+}
+.maprect::before{
+  content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.mk{position:absolute;width:11px;height:11px;border-radius:50%;background:var(--khukh);box-shadow:0 0 0 4px rgba(61,127,224,.24)}
+.mk.b{background:var(--gold);box-shadow:0 0 0 4px rgba(212,169,74,.22)}
+.mk::after{
+  content:attr(data-l);position:absolute;left:16px;top:-4px;font-family:var(--mono);font-size:.6rem;
+  color:var(--mist);white-space:nowrap;
+}
+.mapnote{font-family:var(--mono);font-size:.62rem;color:#5E6E82;margin-top:11px;letter-spacing:.04em}
+
+/* phone */
+.phone{
+  width:255px;border-radius:30px;border:1px solid rgba(255,255,255,.15);background:#0B1420;
+  padding:11px;box-shadow:0 30px 70px rgba(0,0,0,.55);margin:0 auto;
+}
+.pscr{background:#0E1926;border-radius:22px;overflow:hidden;min-height:440px;display:flex;flex-direction:column}
+.phead{padding:15px 16px 11px;border-bottom:1px solid var(--line)}
+.phead b{font-size:.94rem;font-family:var(--display);font-weight:600}
+.phead small{font-family:var(--mono);font-size:.55rem;color:var(--khukh);letter-spacing:.1em;display:block;margin-top:3px}
+.pbody{padding:15px 16px;display:flex;flex-direction:column;gap:11px;flex:1}
+.field{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+.field small{font-family:var(--mono);font-size:.53rem;color:var(--mist);letter-spacing:.11em;text-transform:uppercase;display:block}
+.field span{font-size:.85rem;display:block;margin-top:2px}
+.field.g{border-color:rgba(61,127,224,.42);background:rgba(61,127,224,.09)}
+.photobox{
+  height:88px;border-radius:9px;border:1px dashed rgba(255,255,255,.2);display:grid;place-items:center;
+  font-size:.75rem;color:var(--mist);background:rgba(255,255,255,.02);
+}
+.pbtn{background:var(--khukh);color:#04101F;text-align:center;padding:11px;border-radius:9px;font-weight:600;font-size:.87rem;margin-top:auto}
+
+/* compare */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:820px){.cmp{grid-template-columns:1fr}}
+.cmpcol{border:1px solid var(--line);border-radius:var(--r);padding:24px;background:rgba(255,255,255,.02)}
+.cmpcol.hi{border-color:rgba(61,127,224,.4);background:rgba(61,127,224,.07)}
+.cmpcol ul{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:9px}
+.cmpcol li{font-size:.88rem;color:#C6D1DE;display:flex;gap:10px;align-items:flex-start}
+.cmpcol li::before{content:"—";color:var(--mist);flex:0 0 auto}
+.cmpcol.hi li::before{content:"+";color:var(--khukh)}
+
+/* phases */
+.phases{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:820px){.phases{grid-template-columns:1fr 1fr}}
+.phase{border:1px solid var(--line);border-radius:var(--r);padding:20px;background:rgba(255,255,255,.025);position:relative}
+.phase.now{border-color:var(--khukh);background:var(--khukh-dim)}
+.phase b{font-family:var(--display);font-size:1.35rem;display:block;letter-spacing:-.02em}
+.phase small{font-family:var(--mono);font-size:.58rem;color:var(--mist);letter-spacing:.11em;text-transform:uppercase;display:block;margin-bottom:9px}
+.phase p{font-size:.82rem;color:var(--mist);margin-top:6px}
+
+/* data fields */
+.fieldset{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:820px){.fieldset{grid-template-columns:1fr}}
+.fbox{border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.fbox.req{border-color:rgba(61,127,224,.34);background:rgba(61,127,224,.06)}
+.fbox ul{list-style:none;margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.fbox li{font-size:.87rem;color:#C6D1DE;display:flex;gap:10px;align-items:baseline}
+.fbox li b{font-family:var(--mono);font-size:.6rem;color:var(--mist);letter-spacing:.09em;flex:0 0 24px;font-weight:400}
+
+/* final */
+.final{
+  background:
+    radial-gradient(780px 430px at 50% 0%,rgba(61,127,224,.20),transparent 68%),
+    linear-gradient(#080F1C,#060C17);
+  text-align:center;border-top:1px solid var(--line);
+}
+footer{background:#070D16;border-top:1px solid var(--line);padding:52px 0 34px}
+.fgrid{display:grid;grid-template-columns:1.4fr repeat(3,1fr);gap:32px}
+@media(max-width:820px){.fgrid{grid-template-columns:1fr 1fr;gap:26px}}
+.fgrid h4{font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;color:var(--mist);text-transform:uppercase;margin-bottom:13px;font-weight:400}
+.fgrid a{display:block;font-size:.85rem;color:#A8B6C6;padding:4px 0}
+.fgrid a:hover{color:var(--bone)}
+.fbot{
+  margin-top:38px;padding-top:20px;border-top:1px solid var(--line);
+  font-family:var(--mono);font-size:.63rem;color:#4C5A6E;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;
+}
+.disclaim{
+  font-family:var(--mono);font-size:.62rem;color:#5A6878;letter-spacing:.04em;
+  border-left:2px solid rgba(224,163,60,.5);padding-left:12px;margin-top:20px;line-height:1.7;
+}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* ===== МОНГОЛ ЧИМЭГЛЭЛ — Mongolian ornament ===== */
+
+/* Тооно — ger roof crown, used as the brand mark */
+.toono{width:22px;height:22px;flex:0 0 auto;display:block}
+.toono circle,.toono path,.toono line{fill:none;stroke:var(--gold);stroke-width:1.6;stroke-linecap:round}
+
+/* Алхан хээ — stepped meander, used as section divider */
+.khee{height:22px;width:100%;display:block;opacity:.5}
+.kheewrap{border-block:1px solid var(--line);background:#060C17;padding:11px 0}
+
+/* Монгол бичиг — vertical classical script accent */
+.mglvert{
+  font-family:var(--mgl);
+  writing-mode:vertical-lr;text-orientation:upright;
+  font-size:1.5rem;color:var(--gold);opacity:.42;letter-spacing:.1em;
+  position:absolute;right:34px;top:120px;z-index:3;pointer-events:none;
+}
+@media(max-width:1100px){.mglvert{display:none}}
+
+/* Тооно watermark behind the hero */
+.toonobg{
+  position:absolute;right:-140px;top:50%;transform:translateY(-50%);
+  width:620px;height:620px;opacity:.09;pointer-events:none;z-index:1;
+}
+.toonobg circle,.toonobg line,.toonobg path{fill:none;stroke:var(--gold);stroke-width:1.2}
+@media(max-width:960px){.toonobg{right:-260px;width:520px;height:520px;opacity:.06}}
+
+/* Эсгий — felt / milk section, breaks up the dark */
+.felt{
+  background:
+    radial-gradient(700px 380px at 78% 12%,rgba(212,169,74,.13),transparent 66%),
+    linear-gradient(var(--felt),var(--felt2));
+  color:#1A2233;border-block:1px solid rgba(0,0,0,.09);
+}
+.felt h2,.felt h3{color:#101927}
+.felt p,.felt .lead{color:#44536B}
+.felt .eyebrow{color:#8A6A1E}
+.felt .eyebrow::before{background:#8A6A1E}
+.felt .card{background:rgba(255,255,255,.5);border-color:rgba(0,0,0,.1)}
+.felt .card:hover{border-color:rgba(27,79,168,.35)}
+.felt .card p{color:#55637A}
+.felt .num{color:var(--khukh-deep)}
+.felt .pill{background:rgba(27,79,168,.1);color:var(--khukh-deep);border-color:rgba(27,79,168,.25)}
+.felt .pill.blue{background:rgba(138,106,30,.12);color:#7A5C15;border-color:rgba(138,106,30,.3)}
+.felt .disclaim{color:#6B7891;border-left-color:rgba(138,106,30,.5)}
+.felt .toono circle,.felt .toono path,.felt .toono line{stroke:#8A6A1E}
+
+:focus-visible{outline:2px solid var(--khukh);outline-offset:3px;border-radius:4px}
+
+/* ============ ГЭРЭЛТ ХУВИЛБАР — light institutional theme ============ */
+body.light{
+  --ink:#FBF9F4;--ink2:#FFFFFF;--ink3:#F2EDE2;
+  --line:rgba(16,25,39,.13);--bone:#101927;--mist:#5D6B80;
+  --khukh:#1B4FA8;--khukh-dim:rgba(27,79,168,.10);
+  --gold:#96702A;--gold-dim:rgba(150,112,42,.12);
+  background:var(--ink);color:var(--bone);
+}
+body.light nav{background:rgba(251,249,244,.82)}
+body.light .hero{
+  background:radial-gradient(900px 480px at 76% 18%,rgba(27,79,168,.12),transparent 64%),
+             linear-gradient(#FBF9F4,#F1EDE3);
+}
+body.light .hero::after{opacity:.35}
+body.light .btn{color:var(--bone)}
+body.light .btn:hover{border-color:rgba(16,25,39,.34)}
+body.light .btn.pri{background:var(--khukh);border-color:var(--khukh);color:#fff}
+body.light .btn.pri:hover{background:#2A62C4;border-color:#2A62C4}
+body.light p,body.light .lead{color:#4A5870}
+body.light .tagcard{background:linear-gradient(160deg,#FFFFFF,#F4F0E7);box-shadow:0 24px 60px rgba(16,25,39,.13)}
+body.light .tagcard::before{background:conic-gradient(from 0deg,transparent,rgba(27,79,168,.10),transparent 42%)}
+body.light .fobmeta s{color:#101927}
+body.light .flow i{background:rgba(16,25,39,.04);border-color:var(--line)}
+body.light .ticker{background:#F2EDE2;border-color:var(--line)}
+body.light .card{background:rgba(255,255,255,.72);border-color:var(--line)}
+body.light .card p{color:#54627A}
+body.light .prob p{color:#3E4B60}
+body.light .step{background:rgba(255,255,255,.6)}
+body.light .cmpcol{background:rgba(255,255,255,.6)}
+body.light .cmpcol li{color:#3E4B60}
+body.light .cmpcol.hi{background:rgba(27,79,168,.06)}
+body.light .fbox li{color:#3E4B60}
+body.light .phase{background:rgba(255,255,255,.6)}
+body.light .phase p{color:#5D6B80}
+body.light .kheewrap{background:#F2EDE2}
+body.light .disclaim{color:#6B7891}
+body.light .final{background:radial-gradient(760px 420px at 50% 0%,rgba(27,79,168,.13),transparent 68%),linear-gradient(#FBF9F4,#F4F0E6)}
+body.light footer{background:#F2EDE2}
+body.light .fgrid a{color:#4A5870}
+body.light .fbot{color:#7C8899}
+body.light .mglvert{opacity:.3}
+body.light .toonobg{opacity:.07}
+body.light section[style*="0B1729"]{background:#F4F0E6 !important}
+/* dashboard + phone stay dark inside the light theme */
+body.light .dash,body.light .phone{box-shadow:0 24px 60px rgba(16,25,39,.18)}
+body.light .dash{background:#0B1420;color:#F3F5F2;--bone:#F3F5F2;--line:rgba(255,255,255,.09)}
+body.light .dash *{--bone:#F3F5F2;--mist:#93A2B6;--line:rgba(255,255,255,.09)}
+body.light .phone{background:#0B1420;--bone:#F3F5F2;--line:rgba(255,255,255,.09)}
+body.light .phone *{--bone:#F3F5F2;--mist:#93A2B6;--line:rgba(255,255,255,.09)}
+body.light .dash td{color:#C6D1DE}
+body.light .dash .stat b{color:#F3F5F2}
+body.light .phone .field span{color:#F3F5F2}
+body.light .phead b{color:#F3F5F2}
+
+.themebtn{
+  background:none;border:1px solid var(--line);border-radius:100px;
+  width:34px;height:34px;cursor:pointer;color:var(--bone);
+  display:grid;place-items:center;font-size:.85rem;flex:0 0 auto;
+}
+.themebtn:hover{border-color:rgba(150,112,42,.55)}
+
+.heroPhoto{position:absolute;inset:0;z-index:0;overflow:hidden}
+.heroPhoto img{width:100%;height:100%;object-fit:cover;opacity:.32}
+.heroPhoto::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,var(--ink) 4%,rgba(0,0,0,0) 60%),
+             linear-gradient(0deg,var(--ink) 1%,rgba(0,0,0,0) 44%);
+}
+body.light .heroPhoto img{opacity:.44}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  .reveal{opacity:1;transform:none}
+}
 </style>
 </head>
 <body>
 
-<!-- ============ LOGIN ============ -->
-<div class="login-wrap" id="loginView">
-  <div class="login-card">
-    <img src="../assets/logo-256.png" alt="YAK-TAG" class="login-logo">
-    <h1>YAK-TAG</h1>
-    <p class="sub">Удирдлагын самбарт нэвтрэх</p>
-    <div class="err" id="loginErr"></div>
-    <div class="field">
-      <label for="email">И-мэйл</label>
-      <input type="email" id="email" autocomplete="username" placeholder="admin@yaktag.test">
+<nav id="nav">
+  <div class="navin">
+    <a href="#" class="logo">
+      <img src="assets/logo-256.png" alt="" class="marklogo">YAK-TAG</a>
+    <div class="navlinks" id="nl">
+      <a href="#how">Хэрхэн ажилладаг</a>
+      <a href="#tech">Технологи</a>
+      <a href="#platform">Систем</a>
+      <a href="#data">Мэдээлэл</a>
+      <a href="#pilot">Туршилт</a>
+      <a href="admin/" class="navlogin">Нэвтрэх</a>
     </div>
-    <div class="field">
-      <label for="password">Нууц үг</label>
-      <input type="password" id="password" autocomplete="current-password">
-    </div>
-    <button class="btn-primary" id="loginBtn">Нэвтрэх</button>
+    <button class="themebtn" id="theme" aria-label="Өнгө солих" title="Гэрэлт / бараан">◐</button>
+    <button class="burger" id="bg" aria-label="Цэс">☰</button>
+    <a href="admin/" class="btn">Нэвтрэх</a>
+    <a href="#pilot" class="btn pri">Туршилт хүсэх</a>
   </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <svg class="toonobg" viewBox="0 0 200 200" aria-hidden="true">
+    <circle cx="100" cy="100" r="92"/><circle cx="100" cy="100" r="74"/><circle cx="100" cy="100" r="30"/>
+    <g>
+      <line x1="100" y1="8"  x2="100" y2="192"/><line x1="8" y1="100" x2="192" y2="100"/>
+      <line x1="35" y1="35" x2="165" y2="165"/><line x1="165" y1="35" x2="35" y2="165"/>
+      <line x1="100" y1="8" x2="35" y2="165"/><line x1="100" y1="8" x2="165" y2="165"/>
+      <line x1="8" y1="100" x2="165" y2="35"/><line x1="8" y1="100" x2="165" y2="165"/>
+      <line x1="192" y1="100" x2="35" y2="35"/><line x1="192" y1="100" x2="35" y2="165"/>
+      <line x1="100" y1="192" x2="35" y2="35"/><line x1="100" y1="192" x2="165" y2="35"/>
+    </g>
+  </svg>
+  <div class="heroPhoto">
+    <picture>
+      <source media="(max-width:820px)" srcset="assets/herd-760.webp" type="image/webp">
+      <source media="(max-width:1400px)" srcset="assets/herd-1200.webp" type="image/webp">
+      <source srcset="assets/herd-1920.webp" type="image/webp">
+      <img src="assets/herd-1200.jpg" alt="Монголын тал дахь үхрийн сүрэг" loading="eager" decoding="async">
+    </picture>
+  </div>
+  <div class="mglvert">ᠮᠣᠩᠭᠣᠯ</div>
+  <div class="wrap herogrid">
+    <div>
+      <div class="eyebrow">Мал аж ахуйн цахим бүртгэл</div>
+      <h1>Үхэр бүр<br><em>цахим үнэмлэхтэй.</em></h1>
+      <p class="lead">RFID таг малыг таниулна. Малчны гар утас байршил, огноо, цагийг нь бүртгэнэ. Ингэснээр мал бүр төрснөөс хойшх бүрэн цахим түүхтэй болно.</p>
+      <div class="herocta">
+        <a href="#how" class="btn pri">Хэрхэн ажилладаг вэ</a>
+        <a href="#pilot" class="btn">Туршилтын хөтөлбөр</a>
+      </div>
+      <div class="trustrow">
+        <span>Батерейгүй таг</span>
+        <span>Сүлжээгүй ажиллана</span>
+        <span>Ферм бүр тусдаа админ</span>
+      </div>
+    </div>
+
+    <div class="tagcard">
+      <div class="tagtop">
+        <div>
+          <div class="pill">Түлхүүрийн таг</div>
+          <div style="font-family:var(--mono);font-size:.66rem;color:var(--mist);margin-top:9px;letter-spacing:.08em">ФЕРМ #12 · ХОГНО ХААН</div>
+        </div>
+        <div class="pill blue">Баталгаажсан</div>
+      </div>
+
+      <div class="fobwrap">
+        <div class="fob">
+          <img class="qr" alt="QR код" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 21 21' shape-rendering='crispEdges'><rect width='21' height='21' fill='%23F3F5F2'/><g fill='%230A111C'><rect x='1' y='1' width='5' height='5'/><rect x='2' y='2' width='3' height='3' fill='%23F3F5F2'/><rect x='3' y='3' width='1' height='1'/><rect x='15' y='1' width='5' height='5'/><rect x='16' y='2' width='3' height='3' fill='%23F3F5F2'/><rect x='17' y='3' width='1' height='1'/><rect x='1' y='15' width='5' height='5'/><rect x='2' y='16' width='3' height='3' fill='%23F3F5F2'/><rect x='3' y='17' width='1' height='1'/><rect x='8' y='1' width='1' height='2'/><rect x='10' y='2' width='1' height='3'/><rect x='12' y='1' width='1' height='1'/><rect x='8' y='4' width='2' height='1'/><rect x='1' y='8' width='2' height='1'/><rect x='4' y='9' width='3' height='1'/><rect x='2' y='11' width='1' height='2'/><rect x='8' y='8' width='2' height='2'/><rect x='11' y='8' width='1' height='1'/><rect x='13' y='9' width='2' height='1'/><rect x='9' y='11' width='1' height='2'/><rect x='12' y='12' width='2' height='1'/><rect x='16' y='8' width='1' height='2'/><rect x='18' y='9' width='2' height='1'/><rect x='15' y='11' width='1' height='1'/><rect x='17' y='12' width='2' height='2'/><rect x='8' y='15' width='1' height='2'/><rect x='10' y='16' width='2' height='1'/><rect x='12' y='18' width='1' height='2'/><rect x='14' y='15' width='1' height='1'/><rect x='16' y='16' width='1' height='3'/><rect x='18' y='17' width='2' height='1'/><rect x='9' y='19' width='2' height='1'/></g></svg>">
+          <div class="fobno">MN-008521</div>
+        </div>
+        <div class="fobmeta">
+          <div><b>Таг</b><s>E280·6890·0521</s></div>
+          <div><b>Уншсан</b><s>09:42</s></div>
+          <div><b>Өргөрөг</b><s>47.9212° N</s></div>
+          <div><b>Уртраг</b><s>106.9187° E</s></div>
+        </div>
+      </div>
+
+      <div class="flow">
+        <i>◎</i><div class="flowline"></div>
+        <i>▤</i><div class="flowline"></div>
+        <i>▲</i><div class="flowline"></div>
+        <i>☰</i>
+      </div>
+      <div class="flowlabels"><span>ТАГ</span><span>УТАС</span><span>GPS</span><span>СЕРВЕР</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="tickrun" id="tick"></div>
 </div>
 
-<!-- ============ APP ============ -->
-<div class="app" id="appView">
-  <header class="topbar">
-    <img src="../assets/logo-64.png" alt="">
-    <span class="brand">YAK-TAG</span>
-    <div class="who">
-      <span><b id="userName">—</b></span>
-      <span class="role-chip" id="userRole">—</span>
-      <button class="signout" id="signoutBtn">Гарах</button>
+<!-- PROBLEM -->
+<section id="how">
+  <div class="wrap">
+    <div class="grid2">
+      <div class="reveal">
+        <div class="eyebrow">Асуудал</div>
+        <h2>Мянган толгой малыг цаасан дээр бүртгэх боломжгүй.</h2>
+        <p class="lead">Том сүрэгтэй аж ахуйд хамгийн энгийн асуулт хариултгүй үлддэг: энэ мал хэн бэ, хэзээ, хаана хамгийн сүүлд харагдсан бэ.</p>
+      </div>
+      <div class="probs reveal">
+        <div class="prob"><b>01</b><p>Мал тус бүрийг ялган таних боломжгүй</p></div>
+        <div class="prob"><b>02</b><p>Бүртгэл дутуу, эсвэл огт байхгүй</p></div>
+        <div class="prob"><b>03</b><p>Хөдөлгөөний найдвартай түүх алга</p></div>
+        <div class="prob"><b>04</b><p>Гар бүртгэл удаан, алдаатай</p></div>
+        <div class="prob"><b>05</b><p>Вакцин, эмчилгээний бүртгэл тархай бутархай</p></div>
+        <div class="prob"><b>06</b><p>Өргөн бэлчээр дээр харагдац муу</p></div>
+        <div class="prob"><b>07</b><p>Цаасан бүртгэл үрэгддэг, шатдаг</p></div>
+        <div class="prob"><b>08</b><p>Малчид ихэвчлэн сүлжээгүй бүсэд ажилладаг</p></div>
+      </div>
     </div>
-  </header>
+  </div>
+</section>
 
-  <main>
-    <div class="stats" id="stats"></div>
-
-    <div class="controls">
-      <input type="search" id="search" placeholder="Тагийн дугаар, эзэмшигчээр хайх…">
-      <select id="filterStatus">
-        <option value="">Бүх төлөв</option>
-        <option value="active">Идэвхтэй</option>
-        <option value="sold">Зарагдсан</option>
-        <option value="dead">Үхсэн</option>
-        <option value="lost">Алдагдсан</option>
-        <option value="stolen">Хулгайлагдсан</option>
-      </select>
-      <select id="filterMilk">
-        <option value="">Сүү — бүгд</option>
-        <option value="missing">Өнөөдөр бүртгэгдээгүй</option>
-        <option value="logged">Өнөөдөр бүртгэгдсэн</option>
-      </select>
-      <select id="filterVacc">
-        <option value="">Вакцин — бүгд</option>
-        <option value="overdue">Хугацаа хэтэрсэн</option>
-        <option value="soon">30 хоногт дуусах</option>
-      </select>
-      <span class="count-note" id="countNote"></span>
+<!-- SOLUTION -->
+<section style="background:#0B1729;border-block:1px solid var(--line)">
+  <div class="wrap">
+    <div class="reveal" style="max-width:70ch">
+      <div class="eyebrow">Шийдэл</div>
+      <h2>Нэг таг. Нэг бүрэн цахим бүртгэл.</h2>
+      <p class="lead">Малчин талбар дээр өөрөө бүртгэнэ. Нэг удаа. Дараа нь уншуулах болгонд байршлын мөр автоматаар нэмэгдэнэ.</p>
     </div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Тагийн дугаар</th>
-            <th>Эзэмшигч</th>
-            <th>Хүйс / Нас</th>
-            <th>Үүлдэр</th>
-            <th class="num">Сүү өнөөдөр</th>
-            <th class="num">Сарын нийт</th>
-            <th>Сүүлд тэжээсэн</th>
-            <th>Вакцин</th>
-            <th>Сүүлд харагдсан</th>
-            <th>Байршил</th>
-            <th>Төлөв</th>
-          </tr>
-        </thead>
-        <tbody id="tbody">
-          <tr><td colspan="11" class="loading">Ачаалж байна…</td></tr>
-        </tbody>
-      </table>
+    <div class="steps reveal" style="margin-top:44px">
+      <div class="step">
+        <span class="num">АЛХАМ 01</span>
+        <h3>Таг зүүх</h3>
+        <p>Ферм бүрт хуваарилагдсан багцаас нэг давхардахгүй таг сонгож малд зүүнэ.</p>
+      </div>
+      <div class="step">
+        <span class="num">АЛХАМ 02</span>
+        <h3>Зураг авах</h3>
+        <p>Малчин гар утсаараа малын зургийг авна. Зураг бүртгэлийн үндсэн баримт болно.</p>
+      </div>
+      <div class="step">
+        <span class="num">АЛХАМ 03</span>
+        <h3>Мэдээлэл оруулах</h3>
+        <p>Хүйс, төрсөн он, эзэмшигч — зөвхөн 6 талбар. Бусдыг нь дараа нөхөж болно.</p>
+      </div>
+      <div class="step">
+        <span class="num">АЛХАМ 04</span>
+        <h3>Байршил хадгалах</h3>
+        <p>Утас GPS координат, огноо, цаг, малчны дугаарыг өөрөө хавсаргана.</p>
+      </div>
     </div>
-  </main>
+
+    <div class="disclaim reveal" style="max-width:72ch">
+      Байршил гэдэг нь таг уншуулах үед малчны гар утасны GPS байрлалыг илэрхийлнэ. Таг дотор GPS төхөөрөмж байхгүй.
+    </div>
+  </div>
+</section>
+
+<div class="kheewrap">
+  <svg class="khee" viewBox="0 0 240 22" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <pattern id="alkhan" width="40" height="22" patternUnits="userSpaceOnUse">
+        <path d="M0,19 H33 V3 H11 V15 H25 V8 H17"
+              fill="none" stroke="#D4A94A" stroke-width="1.4" stroke-linecap="square"/>
+      </pattern>
+    </defs>
+    <rect width="240" height="22" fill="url(#alkhan)"/>
+  </svg>
 </div>
 
-<script src="../config.js"></script>
+<!-- DATA MODEL -->
+<section id="data" class="felt">
+  <div class="wrap">
+    <div class="reveal" style="max-width:70ch">
+      <div class="eyebrow">Ямар мэдээлэл цуглуулах вэ</div>
+      <h2>Эхэндээ бага. Дараа нь бүрэн.</h2>
+      <p class="lead">Малчин хүйтэнд, талбай дээр бүртгэл хийнэ. Талбар олон байх тусам бүртгэл дуусахгүй үлдэх магадлал өснө. Тиймээс эхний бүртгэлийг зөвхөн 6 талбараар барина.</p>
+    </div>
+
+    <div class="fieldset reveal" style="margin-top:38px">
+      <div class="fbox req">
+        <div class="pill">Заавал — эхний бүртгэл</div>
+        <ul>
+          <li><b>01</b>Тагийн дугаар (уншуулах / QR)</li>
+          <li><b>02</b>Малын зураг</li>
+          <li><b>03</b>Хүйс</li>
+          <li><b>04</b>Төрсөн он (ойролцоо)</li>
+          <li><b>05</b>Эзэмшигч / малчин</li>
+          <li><b>06</b>GPS, огноо, цаг — автомат</li>
+        </ul>
+      </div>
+      <div class="fbox">
+        <div class="pill blue">Сонголтоор — дараа нөхөж болно</div>
+        <ul>
+          <li><b>07</b>Үүлдэр</li>
+          <li><b>08</b>Зүс, онцлог тэмдэг</li>
+          <li><b>09</b>Жин</li>
+          <li><b>10</b>Эхийн тагийн дугаар</li>
+          <li><b>11</b>Эрүүл мэндийн тэмдэглэл</li>
+          <li><b>12</b>Вакцин, эмчилгээ</li>
+          <li><b>13</b>Төллөлт, үржлийн бүртгэл</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PLATFORM / DASHBOARD -->
+<section id="platform" style="background:#0B1729;border-block:1px solid var(--line)">
+  <div class="wrap">
+    <div class="reveal" style="max-width:70ch">
+      <div class="eyebrow">Удирдлагын самбар</div>
+      <h2>Ферм бүр өөрийн тусдаа админтай.</h2>
+      <p class="lead">Нэг ферм зөвхөн өөрийн малыг харна. Тагийн багц, QR кодыг ферм тус бүрд тусад нь хуваарилна — давхардал үүсэхгүй. Ерөнхий админ бүх фермийг нэгтгэж хардаг.</p>
+    </div>
+
+    <div class="dash reveal" style="margin-top:38px">
+      <div class="dashbar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="dashurl">yaktag.mn/admin/ferm-12</span>
+      </div>
+      <div class="dashbody">
+        <aside class="dashside">
+          <div class="farmsel">
+            <small>Идэвхтэй ферм</small>
+            <span>Ферм #12 · Хогно Хаан ▾</span>
+          </div>
+          <div class="snav">
+            <a class="act">Хяналтын самбар</a>
+            <a>Малын бүртгэл</a>
+            <a>Уншилтын түүх</a>
+            <a>Газрын зураг</a>
+            <a>Тагийн багц</a>
+            <a>Малчид</a>
+            <a>Эрүүл мэнд</a>
+            <a>Тайлан</a>
+          </div>
+        </aside>
+
+        <div class="dashmain">
+          <div class="tabs">
+            <button class="tab act" data-p="p1">Хяналт</button>
+            <button class="tab" data-p="p2">Малын бүртгэл</button>
+            <button class="tab" data-p="p3">Газрын зураг</button>
+            <button class="tab" data-p="p4">Тагийн багц</button>
+          </div>
+
+          <div class="pane act" id="p1">
+            <div class="stats">
+              <div class="stat"><b>3,184</b><small>Бүртгэлтэй мал</small></div>
+              <div class="stat"><b>41</b><small>Малчин</small></div>
+              <div class="stat"><b>612</b><small>7 хоногийн уншилт</small></div>
+              <div class="stat"><b>98.7%</b><small>Синк хийгдсэн</small></div>
+            </div>
+            <table>
+              <thead><tr><th>Мал</th><th>Малчин</th><th>Сүүлд уншсан</th><th>Байршил</th><th>Төлөв</th></tr></thead>
+              <tbody>
+                <tr><td class="m">MN-008521</td><td>Бат-Эрдэнэ</td><td class="m">17 VIII · 09:42</td><td class="m">47.9212 N</td><td><span class="badge ok">Хэвийн</span></td></tr>
+                <tr><td class="m">MN-008522</td><td>Бат-Эрдэнэ</td><td class="m">17 VIII · 09:44</td><td class="m">47.9212 N</td><td><span class="badge ok">Хэвийн</span></td></tr>
+                <tr><td class="m">MN-007310</td><td>Ганзориг</td><td class="m">16 VIII · 15:18</td><td class="m">47.8840 N</td><td><span class="badge w">Вакцин хугацаа</span></td></tr>
+                <tr><td class="m">MN-006044</td><td>Оюунчимэг</td><td class="m">14 VIII · 11:03</td><td class="m">47.9401 N</td><td><span class="badge b">Хээлтэй</span></td></tr>
+                <tr><td class="m">MN-005918</td><td>Ганзориг</td><td class="m">11 VIII · 17:42</td><td class="m">47.8712 N</td><td><span class="badge ok">Хэвийн</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pane" id="p2">
+            <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+              <div class="stat"><b>1,902</b><small>Эм</small></div>
+              <div class="stat"><b>1,282</b><small>Эр</small></div>
+              <div class="stat"><b>147</b><small>Энэ сард нэмэгдсэн</small></div>
+            </div>
+            <table>
+              <thead><tr><th>Дугаар</th><th>Хүйс</th><th>Төрсөн</th><th>Үүлдэр</th><th>Жин</th><th>Эзэмшигч</th></tr></thead>
+              <tbody>
+                <tr><td class="m">MN-008521</td><td>Эм</td><td class="m">2023</td><td>Монгол</td><td class="m">385 кг</td><td>Бат-Эрдэнэ</td></tr>
+                <tr><td class="m">MN-008520</td><td>Эр</td><td class="m">2022</td><td>Монгол</td><td class="m">470 кг</td><td>Бат-Эрдэнэ</td></tr>
+                <tr><td class="m">MN-007310</td><td>Эм</td><td class="m">2021</td><td>Эрлийз</td><td class="m">402 кг</td><td>Ганзориг</td></tr>
+                <tr><td class="m">MN-006044</td><td>Эм</td><td class="m">2020</td><td>Монгол</td><td class="m">391 кг</td><td>Оюунчимэг</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pane" id="p3">
+            <div class="maprect">
+              <span class="mk" style="left:22%;top:34%" data-l="MN-008521 · 09:42"></span>
+              <span class="mk" style="left:47%;top:56%" data-l="MN-007310 · 15:18"></span>
+              <span class="mk b" style="left:66%;top:28%" data-l="Худаг"></span>
+              <span class="mk" style="left:33%;top:72%" data-l="MN-006044 · 11:03"></span>
+            </div>
+            <div class="mapnote">Цэг бүр = таг уншуулсан үеийн утасны GPS байрлал. Тасралтгүй хөдөлгөөний зам биш.</div>
+          </div>
+
+          <div class="pane" id="p4">
+            <table>
+              <thead><tr><th>Багц</th><th>Ферм</th><th>Дугаарын муж</th><th>Тоо</th><th>Төлөв</th></tr></thead>
+              <tbody>
+                <tr><td class="m">BATCH-012-A</td><td>Ферм #12</td><td class="m">MN-008000 – 008999</td><td class="m">1,000</td><td><span class="badge ok">Хуваарилсан</span></td></tr>
+                <tr><td class="m">BATCH-012-B</td><td>Ферм #12</td><td class="m">MN-009000 – 009499</td><td class="m">500</td><td><span class="badge w">Хэвлэгдэж байна</span></td></tr>
+                <tr><td class="m">BATCH-007-A</td><td>Ферм #7</td><td class="m">MN-007000 – 007999</td><td class="m">1,000</td><td><span class="badge ok">Хуваарилсан</span></td></tr>
+                <tr><td class="m">BATCH-003-A</td><td>Ферм #3</td><td class="m">MN-003000 – 003999</td><td class="m">1,000</td><td><span class="badge b">Нөөцөд</span></td></tr>
+              </tbody>
+            </table>
+            <div class="mapnote">Дугаарын муж давхцахгүй. Ферм тус бүрийн таг, QR код тусад нь үүсгэгдэнэ.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="disclaim">Дээрх тоо баримт нь жишээ нэвтрүүлэлтийн загвар өгөгдөл бөгөөд бодит үйлчлүүлэгчийн мэдээлэл биш.</div>
+  </div>
+</section>
+
+<!-- MOBILE APP -->
+<section>
+  <div class="wrap grid2">
+    <div class="reveal">
+      <div class="eyebrow">Малчны гар утас</div>
+      <h2>Сүлжээ байхгүй газар ч ажиллана.</h2>
+      <p class="lead">Малчин бүртгэлээ офлайнаар хийнэ. Утас нь бүх бичлэгийг өөр дээрээ хадгална. Сүлжээнд орсон даруйд автоматаар сервер рүү илгээнэ.</p>
+      <div style="display:flex;gap:12px;margin-top:26px;flex-wrap:wrap">
+        <span class="pill">Офлайн бүртгэл</span>
+        <span class="pill blue">Автомат синк</span>
+        <span class="pill">Том товчлуур</span>
+      </div>
+      <p class="lead" style="margin-top:26px">Интерфэйс нь талбарын ажилтанд зориулагдсан: том бичиг, том товч, бээлийтэй дарж болно.</p>
+    </div>
+    <div class="reveal">
+      <div class="phone">
+        <div class="pscr">
+          <div class="phead">
+            <b>Мал бүртгэх</b>
+            <small>ОФЛАЙН · 7 БИЧЛЭГ ХҮЛЭЭГДЭЖ БАЙНА</small>
+          </div>
+          <div class="pbody">
+            <div class="field g"><small>Тагийн дугаар</small><span>MN-008521</span></div>
+            <div class="photobox">＋ Зураг авах</div>
+            <div class="field"><small>Хүйс</small><span>Эм</span></div>
+            <div class="field"><small>Төрсөн он</small><span>2023</span></div>
+            <div class="field"><small>Эзэмшигч</small><span>Бат-Эрдэнэ</span></div>
+            <div class="field g"><small>GPS · автомат</small><span>47.9212 N · 106.9187 E</span></div>
+            <div class="pbtn">Хадгалах</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH -->
+<section id="tech" style="background:#0B1729;border-block:1px solid var(--line)">
+  <div class="wrap">
+    <div class="reveal" style="max-width:70ch">
+      <div class="eyebrow">Технологи</div>
+      <h2>Таг нь малыг таньна. Утас нь байршлыг өгнө.</h2>
+      <p class="lead">Энэ ялгаа маш чухал. Таг дотор батерей ч, GPS ч байхгүй. Тагийн үүрэг ганцхан — давхардахгүй дугаараа хэлэх.</p>
+    </div>
+
+    <div class="reveal" style="margin-top:34px;border-radius:16px;overflow:hidden;border:1px solid var(--line);max-height:330px">
+      <picture>
+        <source media="(max-width:820px)" srcset="assets/yak-760.webp" type="image/webp">
+        <source srcset="assets/yak-1200.webp" type="image/webp">
+        <img src="assets/yak-1200.jpg" alt="Монголын сарлаг" loading="lazy" decoding="async"
+             style="width:100%;height:330px;object-fit:cover;display:block">
+      </picture>
+    </div>
+
+    <div class="grid3 reveal" style="margin-top:22px">
+      <div class="card">
+        <span class="num">ДАВХАРГА 01</span>
+        <h3>QR код</h3>
+        <p>Тагийн гадна талд хэвлэгдсэн. Ямар ч утасны камер уншина, хэдэн метрийн зайнаас. Нэмэлт төхөөрөмж шаардахгүй.</p>
+      </div>
+      <div class="card">
+        <span class="num">ДАВХАРГА 02</span>
+        <h3>NFC чип</h3>
+        <p>Утсанд суурилагдсан NFC уншигчаар шууд уншина. Уншигч худалдаж авах шаардлагагүй. Ойролцоогоор 4 см.</p>
+      </div>
+      <div class="card">
+        <span class="num">ДАВХАРГА 03</span>
+        <h3>UHF чип</h3>
+        <p>Гадаад уншигчтай хослуулан 1–3 метрийн зайнаас, олон тагийг зэрэг уншина. Хожим нэмэх боломжтой.</p>
+      </div>
+    </div>
+
+    <div class="disclaim reveal" style="max-width:78ch">
+      Уншилтын бодит зай нь тагийн загвар, уншигчийн чадал, антений байрлал, малын байрлал болон цаг агаарын нөхцөлөөс шалтгаална. Тогтмол зай баталгаажуулахгүй. UHF хэсэг нь EPC Gen2 / ISO 18000-6C стандартад нийцнэ.
+    </div>
+  </div>
+</section>
+
+<!-- COMPARE -->
+<section>
+  <div class="wrap">
+    <div class="reveal" style="max-width:70ch">
+      <div class="eyebrow">Харьцуулалт</div>
+      <h2>Яагаад GPS хүзүүвч биш вэ.</h2>
+      <p class="lead">Хоёулаа өөр өөрийн давуу талтай. Бид шударгаар харьцуулъя.</p>
+    </div>
+    <div class="cmp reveal" style="margin-top:34px">
+      <div class="cmpcol">
+        <h3>GPS хүзүүвч / ээмэг</h3>
+        <ul>
+          <li>Малыг хаана ч байсан шууд олно</li>
+          <li>Батерей цэнэглэх, солих шаардлагатай</li>
+          <li>Нэгж үнэ 25–60 ам.доллар</li>
+          <li>12,000 толгойд асар өндөр өртөгтэй</li>
+          <li>Засвар үйлчилгээ тогтмол</li>
+        </ul>
+      </div>
+      <div class="cmpcol hi">
+        <h3>YAK-TAG · идэвхгүй таг</h3>
+        <ul>
+          <li>Батерейгүй, цэнэглэх шаардлагагүй</li>
+          <li>Нэгж өртөг олон дахин бага</li>
+          <li>Уншилт бүр байршлын мөр үүсгэнэ</li>
+          <li>Мал бүрийн бүрэн түүх хадгалагдана</li>
+          <li>12,000 толгойд бодитоор хэрэгжинэ</li>
+        </ul>
+      </div>
+    </div>
+    <div class="disclaim reveal">
+      Илэн далангүй хэлэхэд: алдагдсан малыг яг одоо хаана байгааг мэдэх шаардлагатай бол GPS хүзүүвч илүү тохиромжтой. YAK-TAG нь тасралтгүй хяналт биш, харин бүртгэл, таних, түүх хөтлөх зориулалттай.
+    </div>
+  </div>
+</section>
+
+<!-- USE CASES -->
+<section style="background:#0B1729;border-block:1px solid var(--line)">
+  <div class="wrap">
+    <div class="reveal"><div class="eyebrow">Хэрэглээ</div><h2>Хэнд зориулагдсан бэ.</h2></div>
+    <div class="grid4 reveal" style="margin-top:34px">
+      <div class="card"><h3>Мал аж ахуй</h3><p>Том сүрэгтэй фермүүд</p></div>
+      <div class="card"><h3>Малчид, хоршоо</h3><p>Хамтын бүртгэл, эзэмшил</p></div>
+      <div class="card"><h3>Мал эмнэлэг</h3><p>Вакцин, эмчилгээний түүх</p></div>
+      <div class="card"><h3>Үржлийн ажил</h3><p>Удам, төллөлтийн бүртгэл</p></div>
+      <div class="card"><h3>Төрийн хөтөлбөр</h3><p>Малын тооллого, бүртгэл</p></div>
+      <div class="card"><h3>Мах боловсруулалт</h3><p>Гарал үүслийн мөшгөлт</p></div>
+      <div class="card"><h3>Судалгаа</h3><p>Бэлчээр, ашиг шимийн судалгаа</p></div>
+      <div class="card"><h3>Даатгал</h3><p>Малын үнэлгээ, нэхэмжлэл</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="kheewrap">
+  <svg class="khee" viewBox="0 0 240 22" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <pattern id="alkhan" width="40" height="22" patternUnits="userSpaceOnUse">
+        <path d="M0,19 H33 V3 H11 V15 H25 V8 H17"
+              fill="none" stroke="#D4A94A" stroke-width="1.4" stroke-linecap="square"/>
+      </pattern>
+    </defs>
+    <rect width="240" height="22" fill="url(#alkhan)"/>
+  </svg>
+</div>
+
+<!-- TIERS -->
+<section id="tiers">
+  <div class="wrap">
+    <div class="reveal" style="max-width:70ch">
+      <div class="eyebrow">Багцууд</div>
+      <h2>Нэг систем. Гурван хурд.</h2>
+      <p class="lead">Таг, программ, удирдлагын самбар бүх багцад ижил. Ялгаа нь зөвхөн та малаа хэр хурдан, хэр ойроос уншуулах вэ гэдэгт л байна.</p>
+    </div>
+
+    <div class="grid3 reveal" style="margin-top:38px">
+      <div class="card">
+        <span class="num">БАГЦ 01</span>
+        <h3>Үндсэн</h3>
+        <p style="margin-bottom:16px">Тагийн QR кодыг ямар ч утасны камераар уншина. Нэмэлт төхөөрөмж огт шаардлагагүй.</p>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:.83rem;color:#C6D1DE">
+          <span>· Хэдэн метрийн зайнаас</span>
+          <span>· Төхөөрөмж авах шаардлагагүй</span>
+          <span>· Бүрэн бүртгэл, түүх</span>
+        </div>
+        <div class="pill" style="margin-top:18px">Уншигч: 0 ₮</div>
+      </div>
+
+      <div class="card">
+        <span class="num">БАГЦ 02</span>
+        <h3>Стандарт</h3>
+        <p style="margin-bottom:16px">Утсаа тагт хүргэхэд шууд уншина. Хурдан, шороо тоос, харанхуйд ч найдвартай.</p>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:.83rem;color:#C6D1DE">
+          <span>· Утсанд суурилагдсан NFC</span>
+          <span>· Төхөөрөмж авах шаардлагагүй</span>
+          <span>· Хамгийн хурдан бүртгэл</span>
+        </div>
+        <div class="pill" style="margin-top:18px">Уншигч: 0 ₮</div>
+      </div>
+
+      <div class="card" style="border-color:rgba(95,158,98,.34);background:rgba(95,158,98,.06)">
+        <span class="num">БАГЦ 03</span>
+        <h3>Про</h3>
+        <p style="margin-bottom:16px">Малд ойртохгүйгээр, хэдэн толгойг зэрэг уншина. Том сүрэгт тоолол хийхэд.</p>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:.83rem;color:#C6D1DE">
+          <span>· 1–3 метрийн зайнаас</span>
+          <span>· Олон тагийг зэрэг</span>
+          <span>· Малчин бүрт нэг уншигч</span>
+        </div>
+        <div class="pill blue" style="margin-top:18px">Гадаад уншигч шаардлагатай</div>
+      </div>
+    </div>
+
+    <div class="disclaim reveal">
+      Багц солиход өгөгдөл шилжүүлэх шаардлагагүй. Бүртгэл, түүх, удирдлагын самбар бүгд ижил системд хадгалагдана. Про багцын уншилтын зай нь тагийн загвар, уншигчийн чадал, антений байрлал, малын байрлал болон цаг агаарын нөхцөлөөс шалтгаална.
+    </div>
+  </div>
+</section>
+
+<!-- PILOT -->
+<section id="pilot" style="background:#0B1729;border-block:1px solid var(--line)">
+  <div class="wrap">
+    <div class="reveal" style="max-width:70ch">
+      <div class="eyebrow">Нэвтрүүлэлт</div>
+      <h2>10 малаас эхэл. 12,000 хүртэл өргөж.</h2>
+      <p class="lead">Бид эхнээсээ бүх сүргийг хамруулахыг зөвлөдөггүй. Эхлээд жижиг туршилтаар системийг талбар дээр батал.</p>
+    </div>
+    <div class="phases reveal" style="margin-top:34px">
+      <div class="phase now">
+        <small>Үе шат 1</small><b>10–20</b>
+        <p>Талбарын туршилт, тагийн бат бөх байдал, уншилтын зай</p>
+      </div>
+      <div class="phase">
+        <small>Үе шат 2</small><b>100–500</b>
+        <p>Малчдын сургалт, офлайн синк, ажлын урсгал</p>
+      </div>
+      <div class="phase">
+        <small>Үе шат 3</small><b>1,000+</b>
+        <p>Олон ферм, тагийн багц хуваарилалт, тайлан</p>
+      </div>
+      <div class="phase">
+        <small>Үе шат 4</small><b>12,000+</b>
+        <p>Бүрэн нэвтрүүлэлт, мөшгөлтийн систем</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section style="background:#0B1729;border-block:1px solid var(--line)">
+  <div class="wrap grid2">
+    <div class="reveal">
+      <div class="eyebrow">Аюулгүй байдал</div>
+      <h2>Мэдээлэл нь фермийнх.</h2>
+      <p class="lead">Нэг фермийн админ өөр фермийн малыг ямар ч тохиолдолд харахгүй. Хандалт нь үүргээр хязгаарлагдана.</p>
+    </div>
+    <div class="reveal" style="display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line)">
+      <div class="prob"><b>·</b><p>Нэвтрэлтийн баталгаажуулалт</p></div>
+      <div class="prob"><b>·</b><p>Үүрэгт суурилсан хандалт — ерөнхий админ, ферм админ, малчин</p></div>
+      <div class="prob"><b>·</b><p>Ферм тус бүрийн өгөгдлийн хатуу тусгаарлалт</p></div>
+      <div class="prob"><b>·</b><p>Шифрлэгдсэн холболт</p></div>
+      <div class="prob"><b>·</b><p>Үйлдлийн бүртгэл — хэн, хэзээ, юу өөрчилсөн</p></div>
+      <div class="prob"><b>·</b><p>Утсан дээрх офлайн өгөгдөл шифрлэгдэнэ</p></div>
+      <div class="prob"><b>·</b><p>Өгөгдлийн нөөцлөлт</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="kheewrap">
+  <svg class="khee" viewBox="0 0 240 22" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <pattern id="alkhan" width="40" height="22" patternUnits="userSpaceOnUse">
+        <path d="M0,19 H33 V3 H11 V15 H25 V8 H17"
+              fill="none" stroke="#D4A94A" stroke-width="1.4" stroke-linecap="square"/>
+      </pattern>
+    </defs>
+    <rect width="240" height="22" fill="url(#alkhan)"/>
+  </svg>
+</div>
+
+<!-- FINAL -->
+<section class="final">
+  <div class="wrap reveal">
+    <h2 style="max-width:16ch;margin:0 auto">Сүргээ мэд.<br>Хаана ч байсан.</h2>
+    <p class="lead" style="margin:20px auto 0;text-align:center">Мал бүрд цахим үнэмлэх, бүрэн түүх бий болгох ажлыг өнөөдөр эхлүүлээрэй.</p>
+    <div class="herocta" style="justify-content:center;margin-top:32px">
+      <a href="#" class="btn pri">Туршилт хүсэх</a>
+      <a href="#" class="btn">Багтай холбогдох</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <a href="#" class="logo" style="margin-bottom:12px"><img src="assets/logo-256.png" alt="" class="marklogo">YAK-TAG</a>
+        <p style="font-size:.83rem;color:#8494A6;max-width:34ch">Мал аж ахуйн цахим бүртгэл, таних, мөшгөлтийн систем. Улаанбаатар, Монгол Улс.</p>
+      </div>
+      <div>
+        <h4>Систем</h4>
+        <a href="#how">Хэрхэн ажилладаг</a><a href="#tech">Технологи</a><a href="#platform">Удирдлагын самбар</a><a href="#data">Мэдээллийн загвар</a>
+      </div>
+      <div>
+        <h4>Компани</h4>
+        <a href="#">Бидний тухай</a><a href="#pilot">Туршилтын хөтөлбөр</a><a href="#">Холбоо барих</a>
+      </div>
+      <div>
+        <h4>Нэвтрэх</h4>
+        <a href="admin/">Малчны нэвтрэлт</a><a href="admin/">Ферм админ</a><a href="admin/">Ерөнхий админ</a><a href="#">Нууцлалын бодлого</a>
+      </div>
+    </div>
+    <div class="fbot">
+      <span>© 2026 YAK-TAG</span>
+      <span>Хуудсан дахь бүх тоо баримт жишээ загвар өгөгдөл</span>
+    </div>
+  </div>
+</footer>
+
 <script>
-let allCattle = [];
-
-// ---------- LOGIN ----------
-const loginBtn = document.getElementById('loginBtn');
-const loginErr = document.getElementById('loginErr');
-
-async function doLogin() {
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  if (!email || !password) {
-    showErr('И-мэйл болон нууц үгээ оруулна уу.');
-    return;
-  }
-  loginBtn.disabled = true;
-  loginBtn.textContent = 'Нэвтэрч байна…';
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-  loginBtn.disabled = false;
-  loginBtn.textContent = 'Нэвтрэх';
-  if (error) {
-    showErr('Нэвтэрч чадсангүй. И-мэйл эсвэл нууц үг буруу байна.');
-    return;
-  }
-  boot();
+// ticker
+const farms=['ФЕРМ #12','ФЕРМ #07','ФЕРМ #03','ФЕРМ #21'];
+const rows=[];
+for(let i=0;i<14;i++){
+  const id='MN-0'+(Math.floor(Math.random()*9000)+1000)+Math.floor(Math.random()*9);
+  const lat=(47.7+Math.random()*.45).toFixed(4), lng=(106.5+Math.random()*.7).toFixed(4);
+  const h=String(Math.floor(Math.random()*14)+6).padStart(2,'0'), m=String(Math.floor(Math.random()*60)).padStart(2,'0');
+  rows.push(`<span><b>${id.slice(0,10)}</b><u>${farms[i%4]}</u><u>${lat} N · ${lng} E</u><u>${h}:${m}</u></span>`);
 }
+document.getElementById('tick').innerHTML=rows.join('')+rows.join('');
 
-function showErr(msg) {
-  loginErr.textContent = msg;
-  loginErr.style.display = 'block';
-}
+// tabs
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('act'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('act'));
+  t.classList.add('act');
+  document.getElementById(t.dataset.p).classList.add('act');
+}));
 
-loginBtn.addEventListener('click', doLogin);
-document.getElementById('password').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
+// theme toggle — remembers choice for this visit only
+const tb=document.getElementById('theme');
+tb.addEventListener('click',()=>{
+  document.body.classList.toggle('light');
+  tb.textContent = document.body.classList.contains('light') ? '◑' : '◐';
 });
 
-document.getElementById('signoutBtn').addEventListener('click', async () => {
-  await sb.auth.signOut();
-  location.reload();
+// nav
+const nav=document.getElementById('nav');
+addEventListener('scroll',()=>nav.classList.toggle('on',scrollY>40));
+document.getElementById('bg').addEventListener('click',()=>document.getElementById('nl').classList.toggle('open'));
+
+// reveal
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(e=>io.observe(e));
+
+// counters
+document.querySelectorAll('.stat b').forEach(el=>{
+  const raw=el.textContent, num=parseFloat(raw.replace(/[^\d.]/g,''));
+  if(isNaN(num))return;
+  const io2=new IntersectionObserver(es=>es.forEach(e=>{
+    if(!e.isIntersecting)return; io2.unobserve(el);
+    let s=null;
+    const step=ts=>{ if(!s)s=ts; const p=Math.min((ts-s)/1100,1);
+      const v=num*(1-Math.pow(1-p,3));
+      el.textContent = raw.includes('%') ? v.toFixed(1)+'%' : Math.floor(v).toLocaleString('en-US');
+      if(p<1)requestAnimationFrame(step); else el.textContent=raw;
+    };
+    requestAnimationFrame(step);
+  }),{threshold:.5});
+  io2.observe(el);
 });
-
-// ---------- BOOT ----------
-async function boot() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
-    document.getElementById('loginView').style.display = 'grid';
-    document.getElementById('appView').style.display = 'none';
-    return;
-  }
-  document.getElementById('loginView').style.display = 'none';
-  document.getElementById('appView').style.display = 'block';
-
-  const profile = await myProfile();
-  if (profile) {
-    document.getElementById('userName').textContent = profile.full_name;
-    document.getElementById('userRole').textContent = roleLabel(profile.role);
-  }
-  await loadCattle();
-}
-
-function roleLabel(role) {
-  return { super_admin:'Ерөнхий админ', farm_admin:'Ферм админ', herder:'Малчин' }[role] || role;
-}
-
-// ---------- DATA ----------
-async function loadCattle() {
-  const { data, error } = await sb
-    .from('cattle_dashboard')
-    .select('*')
-    .order('tag_code');
-
-  if (error) {
-    document.getElementById('tbody').innerHTML =
-      `<tr><td colspan="11" class="empty">Мэдээлэл ачаалахад алдаа гарлаа: ${error.message}</td></tr>`;
-    return;
-  }
-  allCattle = data || [];
-  renderStats();
-  render();
-}
-
-function renderStats() {
-  const active = allCattle.filter(c => c.status === 'active');
-  const milkToday = allCattle.reduce((s,c) => s + (Number(c.milk_today) || 0), 0);
-  const milkMonth = allCattle.reduce((s,c) => s + (Number(c.milk_this_month) || 0), 0);
-  const missing = active.filter(c => c.milk_today == null).length;
-  const overdue = allCattle.filter(c => {
-    const d = daysUntil(c.next_vaccination_due);
-    return d !== null && d < 0;
-  }).length;
-
-  document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="lbl">Нийт мал</div>
-      <div class="val">${allCattle.length}</div></div>
-    <div class="stat"><div class="lbl">Идэвхтэй</div>
-      <div class="val">${active.length}</div></div>
-    <div class="stat"><div class="lbl">Өнөөдрийн сүү</div>
-      <div class="val">${milkToday.toFixed(1)}<small>л</small></div></div>
-    <div class="stat"><div class="lbl">Энэ сарын сүү</div>
-      <div class="val">${milkMonth.toFixed(0)}<small>л</small></div></div>
-    <div class="stat"><div class="lbl">Өнөөдөр бүртгэгдээгүй</div>
-      <div class="val">${missing}</div></div>
-    <div class="stat"><div class="lbl">Вакцин хэтэрсэн</div>
-      <div class="val">${overdue}</div></div>
-  `;
-}
-
-function vaccBadge(dueDate) {
-  const d = daysUntil(dueDate);
-  if (d === null) return '<span class="badge none">Бүртгэлгүй</span>';
-  if (d < 0)  return `<span class="badge late">${Math.abs(d)} хоног хэтэрсэн</span>`;
-  if (d <= 30) return `<span class="badge warn">${d} хоногт</span>`;
-  return `<span class="badge ok">${fmtDate(dueDate)}</span>`;
-}
-
-function statusBadge(status) {
-  const map = {
-    active:['ok','Идэвхтэй'], sold:['none','Зарагдсан'], slaughtered:['none','Нядалсан'],
-    dead:['late','Үхсэн'], lost:['warn','Алдагдсан'], stolen:['late','Хулгайлагдсан']
-  };
-  const [cls,label] = map[status] || ['none',status];
-  return `<span class="badge ${cls}">${label}</span>`;
-}
-
-function render() {
-  const q = document.getElementById('search').value.toLowerCase().trim();
-  const fStatus = document.getElementById('filterStatus').value;
-  const fMilk = document.getElementById('filterMilk').value;
-  const fVacc = document.getElementById('filterVacc').value;
-
-  let rows = allCattle.filter(c => {
-    if (q && !(`${c.tag_code} ${c.owner_name}`.toLowerCase().includes(q))) return false;
-    if (fStatus && c.status !== fStatus) return false;
-    if (fMilk === 'missing' && c.milk_today != null) return false;
-    if (fMilk === 'logged'  && c.milk_today == null) return false;
-    if (fVacc) {
-      const d = daysUntil(c.next_vaccination_due);
-      if (fVacc === 'overdue' && !(d !== null && d < 0)) return false;
-      if (fVacc === 'soon'    && !(d !== null && d >= 0 && d <= 30)) return false;
-    }
-    return true;
-  });
-
-  document.getElementById('countNote').textContent =
-    `${rows.length} / ${allCattle.length} мал харагдаж байна`;
-
-  if (!rows.length) {
-    document.getElementById('tbody').innerHTML =
-      `<tr><td colspan="11" class="empty">Хайлтад тохирох мал олдсонгүй.</td></tr>`;
-    return;
-  }
-
-  document.getElementById('tbody').innerHTML = rows.map(c => {
-    const age = c.birth_year ? (new Date().getFullYear() - c.birth_year) + ' нас' : '—';
-    const sex = c.sex === 'female' ? 'Эм' : 'Эр';
-    const loc = (c.last_lat && c.last_lng)
-      ? `<span class="geo">${Number(c.last_lat).toFixed(4)}, ${Number(c.last_lng).toFixed(4)}</span>`
-      : '<span class="muted">—</span>';
-    const milkToday = c.milk_today != null
-      ? `${Number(c.milk_today).toFixed(1)}`
-      : '<span class="badge warn">—</span>';
-    const milkMonth = c.milk_this_month != null ? Number(c.milk_this_month).toFixed(1) : '0.0';
-
-    return `<tr>
-      <td class="tag-code"><a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${c.tag_code}</a></td>
-      <td>${c.owner_name || '—'}</td>
-      <td>${sex} · ${age}</td>
-      <td>${c.breed || '—'}</td>
-      <td class="num">${milkToday}</td>
-      <td class="num">${milkMonth}</td>
-      <td class="muted">${fmtDate(c.last_fed_at)}</td>
-      <td>${vaccBadge(c.next_vaccination_due)}</td>
-      <td class="muted">${fmtDateTime(c.last_seen_at)}</td>
-      <td>${loc}</td>
-      <td>${statusBadge(c.status)}</td>
-    </tr>`;
-  }).join('');
-}
-
-['search','filterStatus','filterMilk','filterVacc'].forEach(id => {
-  document.getElementById(id).addEventListener('input', render);
-});
-
-boot();
 </script>
 </body>
 </html>

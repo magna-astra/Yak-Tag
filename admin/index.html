@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YAK-TAG — Удирдлагын самбар</title>
+<link rel="icon" href="../assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --ink:#0E1929;
+  --ink-soft:#55627A;
+  --line:#E2E6EC;
+  --bg:#F7F8FA;
+  --card:#FFFFFF;
+  --khukh:#1B4FA8;
+  --khukh-light:#EAF0FB;
+  --gold:#B8892C;
+  --gold-light:#FBF3E2;
+  --steppe:#2F7A46;
+  --steppe-light:#E9F4ED;
+  --alert:#B3341F;
+  --alert-light:#FBEBE8;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit;font-size:15px}
+
+/* ---------- LOGIN ---------- */
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px;
+  background:linear-gradient(170deg,#0E1929,#16283F)}
+.login-card{background:var(--card);border-radius:18px;padding:40px 36px;width:100%;max-width:400px;
+  box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.login-logo{width:72px;height:72px;display:block;margin:0 auto 20px}
+.login-card h1{font-size:1.3rem;font-weight:700;text-align:center;letter-spacing:-.01em}
+.login-card .sub{text-align:center;color:var(--ink-soft);font-size:.88rem;margin-top:6px;margin-bottom:28px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:.82rem;font-weight:600;margin-bottom:6px;color:var(--ink-soft)}
+.field input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;
+  background:#fff;transition:border-color .15s}
+.field input:focus{outline:none;border-color:var(--khukh);box-shadow:0 0 0 3px var(--khukh-light)}
+.btn-primary{width:100%;padding:13px;background:var(--khukh);color:#fff;border:0;border-radius:10px;
+  font-weight:600;font-size:.95rem;transition:background .15s}
+.btn-primary:hover{background:#16418C}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed}
+.err{background:var(--alert-light);color:var(--alert);padding:10px 13px;border-radius:9px;
+  font-size:.85rem;margin-bottom:16px;display:none}
+
+/* ---------- APP SHELL ---------- */
+.app{display:none;min-height:100vh}
+header.topbar{background:var(--ink);color:#fff;padding:0 24px;display:flex;align-items:center;
+  gap:16px;height:60px;position:sticky;top:0;z-index:20}
+.topbar img{width:32px;height:32px;filter:invert(1)}
+.topbar .brand{font-weight:700;letter-spacing:.02em;font-size:1rem}
+.topbar .who{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:.85rem;color:#B4C0D2}
+.topbar .who b{color:#fff;font-weight:600}
+.role-chip{background:rgba(255,255,255,.13);padding:3px 10px;border-radius:20px;font-size:.72rem;
+  font-weight:600;letter-spacing:.03em}
+.signout{background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 13px;
+  border-radius:8px;font-size:.82rem}
+.signout:hover{background:rgba(255,255,255,.1)}
+
+main{padding:26px 24px 60px;max-width:1500px;margin:0 auto}
+
+/* ---------- STATS ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:26px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:17px 19px}
+.stat .lbl{font-size:.78rem;color:var(--ink-soft);font-weight:500}
+.stat .val{font-size:1.65rem;font-weight:700;font-family:var(--mono);margin-top:5px;letter-spacing:-.02em}
+.stat .val small{font-size:.9rem;color:var(--ink-soft);font-weight:400;margin-left:3px}
+
+/* ---------- CONTROLS ---------- */
+.controls{display:flex;gap:11px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.controls input,.controls select{padding:9px 13px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.controls input:focus,.controls select:focus{outline:none;border-color:var(--khukh)}
+.controls input[type=search]{min-width:230px}
+.count-note{margin-left:auto;font-size:.83rem;color:var(--ink-soft)}
+
+/* ---------- TABLE ---------- */
+.table-wrap{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem;min-width:1000px}
+thead th{text-align:left;padding:12px 15px;font-size:.76rem;font-weight:600;color:var(--ink-soft);
+  border-bottom:1px solid var(--line);white-space:nowrap;background:#FAFBFC;position:sticky;top:0}
+tbody td{padding:12px 15px;border-bottom:1px solid #F0F2F5;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#FAFBFD}
+.tag-code{font-family:var(--mono);font-weight:600;font-size:.85rem}
+.tag-code a{color:var(--khukh);text-decoration:none}
+.tag-code a:hover{text-decoration:underline}
+.muted{color:var(--ink-soft)}
+.num{font-family:var(--mono);text-align:right}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.75rem;font-weight:600}
+.badge.ok{background:var(--steppe-light);color:var(--steppe)}
+.badge.warn{background:var(--gold-light);color:var(--gold)}
+.badge.late{background:var(--alert-light);color:var(--alert)}
+.badge.none{background:#F0F2F5;color:var(--ink-soft)}
+.loading,.empty{padding:50px;text-align:center;color:var(--ink-soft)}
+.geo{font-family:var(--mono);font-size:.79rem;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div class="login-wrap" id="loginView">
+  <div class="login-card">
+    <img src="../assets/logo-256.png" alt="YAK-TAG" class="login-logo">
+    <h1>YAK-TAG</h1>
+    <p class="sub">Удирдлагын самбарт нэвтрэх</p>
+    <div class="err" id="loginErr"></div>
+    <div class="field">
+      <label for="email">И-мэйл</label>
+      <input type="email" id="email" autocomplete="username" placeholder="admin@yaktag.test">
+    </div>
+    <div class="field">
+      <label for="password">Нууц үг</label>
+      <input type="password" id="password" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="loginBtn">Нэвтрэх</button>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="app" id="appView">
+  <header class="topbar">
+    <img src="../assets/logo-64.png" alt="">
+    <span class="brand">YAK-TAG</span>
+    <div class="who">
+      <span><b id="userName">—</b></span>
+      <span class="role-chip" id="userRole">—</span>
+      <button class="signout" id="signoutBtn">Гарах</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="stats" id="stats"></div>
+
+    <div class="controls">
+      <input type="search" id="search" placeholder="Тагийн дугаар, эзэмшигчээр хайх…">
+      <select id="filterStatus">
+        <option value="">Бүх төлөв</option>
+        <option value="active">Идэвхтэй</option>
+        <option value="sold">Зарагдсан</option>
+        <option value="dead">Үхсэн</option>
+        <option value="lost">Алдагдсан</option>
+        <option value="stolen">Хулгайлагдсан</option>
+      </select>
+      <select id="filterMilk">
+        <option value="">Сүү — бүгд</option>
+        <option value="missing">Өнөөдөр бүртгэгдээгүй</option>
+        <option value="logged">Өнөөдөр бүртгэгдсэн</option>
+      </select>
+      <select id="filterVacc">
+        <option value="">Вакцин — бүгд</option>
+        <option value="overdue">Хугацаа хэтэрсэн</option>
+        <option value="soon">30 хоногт дуусах</option>
+      </select>
+      <span class="count-note" id="countNote"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Тагийн дугаар</th>
+            <th>Эзэмшигч</th>
+            <th>Хүйс / Нас</th>
+            <th>Үүлдэр</th>
+            <th class="num">Сүү өнөөдөр</th>
+            <th class="num">Сарын нийт</th>
+            <th>Сүүлд тэжээсэн</th>
+            <th>Вакцин</th>
+            <th>Сүүлд харагдсан</th>
+            <th>Байршил</th>
+            <th>Төлөв</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="11" class="loading">Ачаалж байна…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script src="../config.js"></script>
+<script>
+let allCattle = [];
+
+// ---------- LOGIN ----------
+const loginBtn = document.getElementById('loginBtn');
+const loginErr = document.getElementById('loginErr');
+
+async function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  if (!email || !password) {
+    showErr('И-мэйл болон нууц үгээ оруулна уу.');
+    return;
+  }
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Нэвтэрч байна…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  loginBtn.disabled = false;
+  loginBtn.textContent = 'Нэвтрэх';
+  if (error) {
+    showErr('Нэвтэрч чадсангүй. И-мэйл эсвэл нууц үг буруу байна.');
+    return;
+  }
+  boot();
+}
+
+function showErr(msg) {
+  loginErr.textContent = msg;
+  loginErr.style.display = 'block';
+}
+
+loginBtn.addEventListener('click', doLogin);
+document.getElementById('password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+document.getElementById('signoutBtn').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  location.reload();
+});
+
+// ---------- BOOT ----------
+async function boot() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    document.getElementById('loginView').style.display = 'grid';
+    document.getElementById('appView').style.display = 'none';
+    return;
+  }
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('appView').style.display = 'block';
+
+  const profile = await myProfile();
+  if (profile) {
+    document.getElementById('userName').textContent = profile.full_name;
+    document.getElementById('userRole').textContent = roleLabel(profile.role);
+  }
+  await loadCattle();
+}
+
+function roleLabel(role) {
+  return { super_admin:'Ерөнхий админ', farm_admin:'Ферм админ', herder:'Малчин' }[role] || role;
+}
+
+// ---------- DATA ----------
+async function loadCattle() {
+  const { data, error } = await sb
+    .from('cattle_dashboard')
+    .select('*')
+    .order('tag_code');
+
+  if (error) {
+    document.getElementById('tbody').innerHTML =
+      `<tr><td colspan="11" class="empty">Мэдээлэл ачаалахад алдаа гарлаа: ${error.message}</td></tr>`;
+    return;
+  }
+  allCattle = data || [];
+  renderStats();
+  render();
+}
+
+function renderStats() {
+  const active = allCattle.filter(c => c.status === 'active');
+  const milkToday = allCattle.reduce((s,c) => s + (Number(c.milk_today) || 0), 0);
+  const milkMonth = allCattle.reduce((s,c) => s + (Number(c.milk_this_month) || 0), 0);
+  const missing = active.filter(c => c.milk_today == null).length;
+  const overdue = allCattle.filter(c => {
+    const d = daysUntil(c.next_vaccination_due);
+    return d !== null && d < 0;
+  }).length;
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="lbl">Нийт мал</div>
+      <div class="val">${allCattle.length}</div></div>
+    <div class="stat"><div class="lbl">Идэвхтэй</div>
+      <div class="val">${active.length}</div></div>
+    <div class="stat"><div class="lbl">Өнөөдрийн сүү</div>
+      <div class="val">${milkToday.toFixed(1)}<small>л</small></div></div>
+    <div class="stat"><div class="lbl">Энэ сарын сүү</div>
+      <div class="val">${milkMonth.toFixed(0)}<small>л</small></div></div>
+    <div class="stat"><div class="lbl">Өнөөдөр бүртгэгдээгүй</div>
+      <div class="val">${missing}</div></div>
+    <div class="stat"><div class="lbl">Вакцин хэтэрсэн</div>
+      <div class="val">${overdue}</div></div>
+  `;
+}
+
+function vaccBadge(dueDate) {
+  const d = daysUntil(dueDate);
+  if (d === null) return '<span class="badge none">Бүртгэлгүй</span>';
+  if (d < 0)  return `<span class="badge late">${Math.abs(d)} хоног хэтэрсэн</span>`;
+  if (d <= 30) return `<span class="badge warn">${d} хоногт</span>`;
+  return `<span class="badge ok">${fmtDate(dueDate)}</span>`;
+}
+
+function statusBadge(status) {
+  const map = {
+    active:['ok','Идэвхтэй'], sold:['none','Зарагдсан'], slaughtered:['none','Нядалсан'],
+    dead:['late','Үхсэн'], lost:['warn','Алдагдсан'], stolen:['late','Хулгайлагдсан']
+  };
+  const [cls,label] = map[status] || ['none',status];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function render() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const fStatus = document.getElementById('filterStatus').value;
+  const fMilk = document.getElementById('filterMilk').value;
+  const fVacc = document.getElementById('filterVacc').value;
+
+  let rows = allCattle.filter(c => {
+    if (q && !(`${c.tag_code} ${c.owner_name}`.toLowerCase().includes(q))) return false;
+    if (fStatus && c.status !== fStatus) return false;
+    if (fMilk === 'missing' && c.milk_today != null) return false;
+    if (fMilk === 'logged'  && c.milk_today == null) return false;
+    if (fVacc) {
+      const d = daysUntil(c.next_vaccination_due);
+      if (fVacc === 'overdue' && !(d !== null && d < 0)) return false;
+      if (fVacc === 'soon'    && !(d !== null && d >= 0 && d <= 30)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('countNote').textContent =
+    `${rows.length} / ${allCattle.length} мал харагдаж байна`;
+
+  if (!rows.length) {
+    document.getElementById('tbody').innerHTML =
+      `<tr><td colspan="11" class="empty">Хайлтад тохирох мал олдсонгүй.</td></tr>`;
+    return;
+  }
+
+  document.getElementById('tbody').innerHTML = rows.map(c => {
+    const age = c.birth_year ? (new Date().getFullYear() - c.birth_year) + ' нас' : '—';
+    const sex = c.sex === 'female' ? 'Эм' : 'Эр';
+    const loc = (c.last_lat && c.last_lng)
+      ? `<span class="geo">${Number(c.last_lat).toFixed(4)}, ${Number(c.last_lng).toFixed(4)}</span>`
+      : '<span class="muted">—</span>';
+    const milkToday = c.milk_today != null
+      ? `${Number(c.milk_today).toFixed(1)}`
+      : '<span class="badge warn">—</span>';
+    const milkMonth = c.milk_this_month != null ? Number(c.milk_this_month).toFixed(1) : '0.0';
+
+    return `<tr>
+      <td class="tag-code"><a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${c.tag_code}</a></td>
+      <td>${c.owner_name || '—'}</td>
+      <td>${sex} · ${age}</td>
+      <td>${c.breed || '—'}</td>
+      <td class="num">${milkToday}</td>
+      <td class="num">${milkMonth}</td>
+      <td class="muted">${fmtDate(c.last_fed_at)}</td>
+      <td>${vaccBadge(c.next_vaccination_due)}</td>
+      <td class="muted">${fmtDateTime(c.last_seen_at)}</td>
+      <td>${loc}</td>
+      <td>${statusBadge(c.status)}</td>
+    </tr>`;
+  }).join('');
+}
+
+['search','filterStatus','filterMilk','filterVacc'].forEach(id => {
+  document.getElementById(id).addEventListener('input', render);
+});
+
+boot();
+</script>
+</body>
+</html>
