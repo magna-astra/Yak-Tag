@@ -102,6 +102,12 @@ tbody tr:hover{background:#FAFBFD}
 .badge.none{background:#F0F2F5;color:var(--ink-soft)}
 .loading,.empty{padding:50px;text-align:center;color:var(--ink-soft)}
 .geo{font-family:var(--mono);font-size:.79rem;color:var(--ink-soft)}
+
+/* ---------- HERDER VIEW ----------
+   A herder manages their own animals; they don't audit a farm.
+   Hide the owner column (it's always them) and the farm-level filters. */
+body.herder-view .col-owner{display:none}
+body.herder-view .admin-only{display:none}
 </style>
 </head>
 <body>
@@ -142,7 +148,7 @@ tbody tr:hover{background:#FAFBFD}
 
     <div class="controls">
       <input type="search" id="search" placeholder="Тагийн дугаар, эзэмшигчээр хайх…">
-      <select id="filterStatus">
+      <select id="filterStatus" class="admin-only">
         <option value="">Бүх төлөв</option>
         <option value="active">Идэвхтэй</option>
         <option value="sold">Зарагдсан</option>
@@ -155,7 +161,7 @@ tbody tr:hover{background:#FAFBFD}
         <option value="missing">Өнөөдөр бүртгэгдээгүй</option>
         <option value="logged">Өнөөдөр бүртгэгдсэн</option>
       </select>
-      <select id="filterVacc">
+      <select id="filterVacc" class="admin-only">
         <option value="">Вакцин — бүгд</option>
         <option value="overdue">Хугацаа хэтэрсэн</option>
         <option value="soon">30 хоногт дуусах</option>
@@ -168,7 +174,7 @@ tbody tr:hover{background:#FAFBFD}
         <thead>
           <tr>
             <th>Тагийн дугаар</th>
-            <th>Эзэмшигч</th>
+            <th class="col-owner">Эзэмшигч</th>
             <th>Хүйс / Нас</th>
             <th>Үүлдэр</th>
             <th class="num">Сүү өнөөдөр</th>
@@ -191,6 +197,7 @@ tbody tr:hover{background:#FAFBFD}
 <script src="../config.js"></script>
 <script>
 let allCattle = [];
+let myRole = null;
 
 // ---------- LOGIN ----------
 const loginBtn = document.getElementById('loginBtn');
@@ -243,14 +250,24 @@ async function boot() {
 
   const profile = await myProfile();
   if (profile) {
+    myRole = profile.role;
     document.getElementById('userName').textContent = profile.full_name;
     document.getElementById('userRole').textContent = roleLabel(profile.role);
+    applyRoleView(profile.role);
   }
   await loadCattle();
 }
 
 function roleLabel(role) {
   return { super_admin:'Ерөнхий админ', farm_admin:'Ферм админ', herder:'Малчин' }[role] || role;
+}
+
+// Herders get a simpler screen: fewer filters, fewer columns.
+// They manage animals, they don't audit a farm.
+function applyRoleView(role) {
+  if (role !== 'herder') return;
+  document.body.classList.add('herder-view');
+  document.getElementById('search').placeholder = 'Тагийн дугаараар хайх…';
 }
 
 // ---------- DATA ----------
@@ -354,7 +371,7 @@ function render() {
 
     return `<tr>
       <td class="tag-code"><a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${c.tag_code}</a></td>
-      <td>${c.owner_name || '—'}</td>
+      <td class="col-owner">${c.owner_name || '—'}</td>
       <td>${sex} · ${age}</td>
       <td>${c.breed || '—'}</td>
       <td class="num">${milkToday}</td>
