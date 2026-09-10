@@ -103,12 +103,10 @@ nav.on{border-color:var(--line)}
     linear-gradient(#080F1C,#0B1A2E);
   overflow:hidden;
 }
-.hero::after{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
-  background-size:64px 64px;mask-image:radial-gradient(circle at 50% 40%,#000,transparent 78%);opacity:.5;
-}
-.herogrid{display:grid;grid-template-columns:minmax(0,660px);gap:56px;align-items:center;position:relative;z-index:2;min-height:clamp(460px,62vh,640px)}
+
+.herogrid{display:grid;grid-template-columns:minmax(0,min(560px,52%));gap:56px;
+  align-items:center;position:relative;z-index:2;min-height:clamp(470px,64vh,660px);
+  justify-content:start}
 @media(max-width:960px){.herogrid{grid-template-columns:1fr;gap:44px}}
 h1 em{font-style:normal;color:var(--khukh)}
 .herocta{display:flex;gap:12px;margin-top:34px;flex-wrap:wrap}
@@ -396,11 +394,22 @@ body.light{
   background:var(--ink);color:var(--bone);
 }
 body.light nav{background:rgba(251,249,244,.82)}
-body.light .hero{
-  background:radial-gradient(900px 480px at 76% 18%,rgba(27,79,168,.12),transparent 64%),
-             linear-gradient(#FBF9F4,#F1EDE3);
-}
-body.light .hero::after{opacity:.35}
+/* The hero keeps its dark treatment in light mode. White text over a
+   photograph needs a dark scrim to stay readable — flipping it to cream
+   washes the image out and drops the text contrast below usable. */
+body.light .hero{background:#0B1729}
+body.light .hero h1,
+body.light .hero .lead,
+body.light .hero .trustrow{color:#F3F5F2}
+body.light .hero .lead{color:#C3D0E2}
+body.light .hero .eyebrow{color:#E3D029}
+body.light .hero .eyebrow::before{background:#E3D029}
+body.light .hero h1 em{color:#6FA0E8}
+body.light .hero .btn{color:#fff;border-color:rgba(255,255,255,.3)}
+body.light .hero .btn:hover{border-color:rgba(255,255,255,.55)}
+body.light .hero .btn.pri{background:#1B4FA8;border-color:#1B4FA8;color:#fff}
+body.light .hero .trustrow{color:#9FB0C6}
+body.light .heroPhoto img{opacity:.92}
 body.light .btn{color:var(--bone)}
 body.light .btn:hover{border-color:rgba(16,25,39,.34)}
 body.light .btn.pri{background:var(--khukh);border-color:var(--khukh);color:#fff}
@@ -452,8 +461,8 @@ body.light .phead b{color:#F3F5F2}
 .heroPhoto img{width:100%;height:100%;object-fit:cover;opacity:.92;filter:saturate(1.06) contrast(1.05)}
 .heroPhoto::after{
   content:"";position:absolute;inset:0;
-  background:linear-gradient(90deg,var(--ink) 0%,rgba(11,23,41,.90) 30%,rgba(11,23,41,.35) 62%,rgba(11,23,41,.12) 100%),
-             linear-gradient(0deg,var(--ink) 0%,rgba(11,23,41,.25) 40%,rgba(0,0,0,0) 70%);
+  background:linear-gradient(90deg,#0B1729 0%,rgba(11,23,41,.93) 26%,rgba(11,23,41,.55) 48%,rgba(11,23,41,.10) 72%,rgba(11,23,41,0) 100%),
+             linear-gradient(0deg,rgba(11,23,41,.88) 0%,rgba(11,23,41,.20) 34%,rgba(0,0,0,0) 62%);
 }
 body.light .heroPhoto img{opacity:.95}
 
@@ -558,6 +567,31 @@ body.light .heroPhoto img{opacity:.95}
 .contacts b{color:var(--bone);font-weight:600}
 .contacts a:hover b{color:var(--gold)}
 
+
+/* Order section stays dark in both themes */
+body.light #order{background:#0B1729 !important}
+body.light #order h2,
+body.light #order .ordercard h3,
+body.light #order .tagspec span,
+body.light #order .contacts b{color:#F3F5F2}
+body.light #order .lead,
+body.light #order .pricenote,
+body.light #order .contacts span{color:#9FB0C6}
+body.light #order .eyebrow{color:#E3D029}
+body.light #order .eyebrow::before{background:#E3D029}
+body.light #order .tagspec b{color:#E3D029}
+body.light #order .ordercard{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14)}
+body.light #order .qbtn,
+body.light #order input{color:#F3F5F2;border-color:rgba(255,255,255,.18);
+  background:rgba(255,255,255,.06)}
+body.light #order .pricebox b{color:#E3D029}
+body.light #order .pricebox{border-color:rgba(255,255,255,.14)}
+body.light #order .contacts{border-color:rgba(255,255,255,.14)}
+body.light #order .btn.pri{background:#1B4FA8;border-color:#1B4FA8;color:#fff}
+
+/* Marker rings read against light backgrounds too */
+body.light .cowspot{border-color:rgba(255,255,255,.92);background:rgba(11,23,41,.78)}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -595,11 +629,11 @@ body.light .heroPhoto img{opacity:.95}
        nudge them if you swap the image. Clicking one opens the same page
        a real NFC tap opens, with live data from the database. -->
   <div class="cowspots" id="cowspots">
-    <button class="cowspot" style="left:26.5%;top:57%"  data-tag="YT-008000" aria-label="YT-008000">
+    <button class="cowspot" style="left:60%;top:70%"  data-tag="YT-008000" aria-label="YT-008000">
       <img src="assets/logo-256.png" alt=""><span class="ping"></span></button>
-    <button class="cowspot" style="left:49%;top:63%"    data-tag="YT-008001" aria-label="YT-008001">
+    <button class="cowspot" style="left:75%;top:60%"  data-tag="YT-008001" aria-label="YT-008001">
       <img src="assets/logo-256.png" alt=""><span class="ping"></span></button>
-    <button class="cowspot" style="left:71.5%;top:54%"  data-tag="YT-008002" aria-label="YT-008002">
+    <button class="cowspot" style="left:86%;top:73%"  data-tag="YT-008002" aria-label="YT-008002">
       <img src="assets/logo-256.png" alt=""><span class="ping"></span></button>
     <div class="spothint">Тагийн тэмдэг дээр дарж үзээрэй →</div>
   </div>
@@ -607,14 +641,14 @@ body.light .heroPhoto img{opacity:.95}
     <div>
       <div class="eyebrow">Мал аж ахуйн цахим бүртгэл</div>
       <h1>Үхэр бүр<br><em>цахим үнэмлэхтэй.</em></h1>
-      <p class="lead">RFID таг малыг таниулна. Малчны гар утас байршил, огноо, цагийг нь бүртгэнэ. Ингэснээр мал бүр төрснөөс хойшх бүрэн цахим түүхтэй болно.</p>
+      <p class="lead">NFC таг малыг таниулна. Малчин утсаа ойртуулахад л мал тодорхойлогдож, байршил, огноо, цаг автоматаар бүртгэгдэнэ. Апп суулгах шаардлагагүй.</p>
       <div class="herocta">
         <a href="#order" class="btn pri">Захиалах</a>
         <a href="#how" class="btn">Хэрхэн ажилладаг</a>
       </div>
       <div class="trustrow">
         <span>Батерейгүй таг</span>
-        <span>Сүлжээгүй ажиллана</span>
+        <span>Апп суулгахгүй</span>
         <span>Ферм бүр тусдаа админ</span>
       </div>
     </div>
