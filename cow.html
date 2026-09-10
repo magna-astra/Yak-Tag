@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>YAK-TAG — Малын бүртгэл</title>
+<link rel="icon" href="assets/favicon.ico">
+<link rel="apple-touch-icon" href="assets/logo-180.png">
+<meta name="theme-color" content="#0E1929">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --ink:#0E1929;
+  --ink-soft:#55627A;
+  --line:#E2E6EC;
+  --bg:#F7F8FA;
+  --card:#FFFFFF;
+  --khukh:#1B4FA8;
+  --khukh-light:#EAF0FB;
+  --gold:#B8892C;
+  --gold-light:#FBF3E2;
+  --steppe:#2F7A46;
+  --steppe-light:#E9F4ED;
+  --alert:#B3341F;
+  --alert-light:#FBEBE8;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;
+  padding-bottom:40px;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit;font-size:16px}
+
+/* ---------- LOGIN ---------- */
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px;
+  background:linear-gradient(170deg,#0E1929,#16283F)}
+.login-card{background:var(--card);border-radius:18px;padding:36px 30px;width:100%;max-width:400px;
+  box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.login-logo{width:68px;height:68px;display:block;margin:0 auto 18px}
+.login-card h1{font-size:1.2rem;font-weight:700;text-align:center}
+.login-card .sub{text-align:center;color:var(--ink-soft);font-size:.87rem;margin:6px 0 24px}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:.82rem;font-weight:600;margin-bottom:6px;color:var(--ink-soft)}
+.field input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:11px}
+.field input:focus{outline:none;border-color:var(--khukh);box-shadow:0 0 0 3px var(--khukh-light)}
+.btn-primary{width:100%;padding:14px;background:var(--khukh);color:#fff;border:0;border-radius:11px;
+  font-weight:600;font-size:1rem}
+.btn-primary:disabled{opacity:.55}
+.err{background:var(--alert-light);color:var(--alert);padding:10px 13px;border-radius:9px;
+  font-size:.85rem;margin-bottom:15px;display:none}
+
+/* ---------- APP ---------- */
+.app{display:none;max-width:560px;margin:0 auto;padding:0 16px}
+
+header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px 20px 22px;
+  border-radius:0 0 20px 20px}
+.cowhead .row1{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.cowhead img{width:28px;height:28px;filter:invert(1)}
+.cowhead .brand{font-weight:700;font-size:.9rem;letter-spacing:.04em}
+.cowhead .out{margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,.25);
+  color:#fff;padding:5px 11px;border-radius:8px;font-size:.78rem}
+.tagbig{font-family:var(--mono);font-size:2rem;font-weight:700;letter-spacing:-.01em}
+.cowmeta{color:#9FB0C6;font-size:.88rem;margin-top:4px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+.card h2{font-size:.95rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--khukh);flex:0 0 auto}
+
+.kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F0F2F5;font-size:.9rem}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:var(--ink-soft)}
+.kv span:last-child{font-weight:600;text-align:right}
+.kv .mono{font-family:var(--mono);font-size:.85rem}
+
+/* milk entry */
+.milk-entry{display:flex;gap:10px;align-items:stretch}
+.milk-entry input{flex:1;padding:15px;border:2px solid var(--line);border-radius:12px;
+  font-family:var(--mono);font-size:1.5rem;font-weight:700;text-align:center}
+.milk-entry input:focus{outline:none;border-color:var(--khukh)}
+.milk-entry button{padding:0 24px;background:var(--steppe);color:#fff;border:0;border-radius:12px;
+  font-weight:700;font-size:1rem;white-space:nowrap}
+.milk-entry button:disabled{opacity:.5}
+.milk-done{background:var(--steppe-light);color:var(--steppe);padding:13px;border-radius:11px;
+  font-weight:600;text-align:center;font-size:.92rem}
+.hint{font-size:.8rem;color:var(--ink-soft);margin-top:9px}
+
+/* photo */
+.photo-btn{width:100%;padding:20px;background:var(--khukh);color:#fff;border:0;border-radius:13px;
+  font-weight:700;font-size:1.05rem;display:flex;align-items:center;justify-content:center;gap:10px}
+.photo-btn:disabled{opacity:.55}
+.photo-btn.locked{background:#EEF0F4;color:var(--ink-soft)}
+.kind-pick{display:flex;gap:8px;margin-bottom:13px}
+.kind-pick button{flex:1;padding:11px 6px;border:1.5px solid var(--line);background:#fff;
+  border-radius:10px;font-size:.84rem;font-weight:600;color:var(--ink-soft)}
+.kind-pick button.on{border-color:var(--khukh);background:var(--khukh-light);color:var(--khukh)}
+#preview{width:100%;border-radius:12px;margin-top:13px;display:none}
+.gps-note{display:flex;align-items:center;gap:8px;font-size:.83rem;color:var(--ink-soft);
+  margin-top:12px;padding:11px;background:#F7F8FA;border-radius:10px}
+.gps-note.ok{background:var(--steppe-light);color:var(--steppe)}
+.gps-note.bad{background:var(--gold-light);color:var(--gold)}
+
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.photo-grid figure{position:relative}
+.photo-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:9px;background:#EEF0F4}
+.photo-grid figcaption{font-size:.7rem;color:var(--ink-soft);margin-top:4px;text-align:center}
+.lockicon{position:absolute;top:5px;right:5px;background:rgba(14,25,41,.82);color:#fff;
+  font-size:.62rem;padding:2px 6px;border-radius:5px;font-weight:600}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:var(--ink);color:#fff;
+  padding:13px 22px;border-radius:11px;font-size:.9rem;font-weight:500;opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;z-index:50;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+.toast.bad{background:var(--alert)}
+
+.notfound{text-align:center;padding:60px 20px;color:var(--ink-soft)}
+.notfound h2{color:var(--ink);margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div class="login-wrap" id="loginView">
+  <div class="login-card">
+    <img src="assets/logo-256.png" alt="YAK-TAG" class="login-logo">
+    <h1>YAK-TAG</h1>
+    <p class="sub">Малын бүртгэл рүү нэвтрэх</p>
+    <div class="err" id="loginErr"></div>
+    <div class="field">
+      <label for="email">И-мэйл</label>
+      <input type="email" id="email" autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="password">Нууц үг</label>
+      <input type="password" id="password" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="loginBtn">Нэвтрэх</button>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="app" id="appView">
+  <header class="cowhead">
+    <div class="row1">
+      <img src="assets/logo-64.png" alt="">
+      <span class="brand">YAK-TAG</span>
+      <button class="out" id="signoutBtn">Гарах</button>
+    </div>
+    <div class="tagbig" id="tagBig">—</div>
+    <div class="cowmeta" id="cowMeta">Ачаалж байна…</div>
+  </header>
+
+  <div id="cowBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
+
+<script src="config.js"></script>
+<script>
+let cow = null;
+let gps = null;
+let photoKind = 'muzzle';
+
+// ---------- helpers ----------
+function toast(msg, bad=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (bad ? ' bad' : '');
+  setTimeout(() => t.className = 'toast', 2600);
+}
+
+function getTagFromUrl() {
+  const p = new URLSearchParams(location.search);
+  return p.get('tag') || p.get('slug') || p.get('uid');
+}
+
+// ---------- login ----------
+const loginBtn = document.getElementById('loginBtn');
+async function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  loginBtn.disabled = true; loginBtn.textContent = 'Нэвтэрч байна…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  loginBtn.disabled = false; loginBtn.textContent = 'Нэвтрэх';
+  if (error) {
+    const e = document.getElementById('loginErr');
+    e.textContent = 'И-мэйл эсвэл нууц үг буруу байна.';
+    e.style.display = 'block';
+    return;
+  }
+  boot();
+}
+loginBtn.addEventListener('click', doLogin);
+document.getElementById('password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('signoutBtn').addEventListener('click', async () => {
+  await sb.auth.signOut(); location.reload();
+});
+
+// ---------- GPS ----------
+function requestGps() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      gps = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy
+      };
+      updateGpsNote();
+    },
+    () => updateGpsNote(),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+  );
+}
+
+function updateGpsNote() {
+  const el = document.getElementById('gpsNote');
+  if (!el) return;
+  if (gps) {
+    el.className = 'gps-note ok';
+    el.textContent = `Байршил тогтоогдсон · ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)} (±${Math.round(gps.accuracy)}м)`;
+  } else {
+    el.className = 'gps-note bad';
+    el.textContent = 'Байршил тогтоогдоогүй — утасныхаа байршлын зөвшөөрлийг асаана уу.';
+  }
+}
+
+// ---------- boot ----------
+async function boot() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    document.getElementById('loginView').style.display = 'grid';
+    document.getElementById('appView').style.display = 'none';
+    return;
+  }
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('appView').style.display = 'block';
+
+  const tag = getTagFromUrl();
+  if (!tag) {
+    document.getElementById('cowBody').innerHTML =
+      `<div class="notfound"><h2>Таг заагаагүй байна</h2>
+       <p>NFC таг уншуулах эсвэл хаяганд ?tag=MN-008000 нэмнэ үү.</p></div>`;
+    return;
+  }
+  await loadCow(tag);
+  requestGps();
+}
+
+async function loadCow(tag) {
+  const { data, error } = await sb
+    .from('cattle_dashboard')
+    .select('*')
+    .eq('tag_code', tag)
+    .maybeSingle();
+
+  if (error || !data) {
+    document.getElementById('tagBig').textContent = tag;
+    document.getElementById('cowMeta').textContent = 'Олдсонгүй';
+    document.getElementById('cowBody').innerHTML =
+      `<div class="notfound"><h2>Мал олдсонгүй</h2>
+       <p>Энэ таг таны ферм дээр бүртгэлгүй байна.</p></div>`;
+    return;
+  }
+  cow = data;
+  renderCow();
+  loadPhotos();
+  // log this scan as an encounter
+  logScan();
+}
+
+function renderCow() {
+  const age = cow.birth_year ? (new Date().getFullYear() - cow.birth_year) : null;
+  const sex = cow.sex === 'female' ? 'Эм' : 'Эр';
+
+  document.getElementById('tagBig').textContent = cow.tag_code;
+  document.getElementById('cowMeta').textContent =
+    `${sex}${age ? ' · ' + age + ' нас' : ''}${cow.breed ? ' · ' + cow.breed : ''} · ${cow.owner_name}`;
+
+  const milkLogged = cow.milk_today != null;
+
+  document.getElementById('cowBody').innerHTML = `
+    <!-- MILK -->
+    <div class="card">
+      <h2><span class="dot"></span>Өнөөдрийн сүү</h2>
+      <div id="milkZone">
+        ${milkLogged
+          ? `<div class="milk-done">Өнөөдөр ${Number(cow.milk_today).toFixed(1)} литр бүртгэгдсэн</div>
+             <p class="hint">Засах шаардлагатай бол доор шинэ утга оруулна уу.</p>
+             <div class="milk-entry" style="margin-top:10px">
+               <input type="number" id="milkInput" inputmode="decimal" step="0.1" min="0"
+                      value="${Number(cow.milk_today).toFixed(1)}">
+               <button id="milkBtn">Засах</button>
+             </div>`
+          : `<div class="milk-entry">
+               <input type="number" id="milkInput" inputmode="decimal" step="0.1" min="0" placeholder="0.0">
+               <button id="milkBtn">Хадгалах</button>
+             </div>
+             <p class="hint">Литрээр оруулна уу. Өдөрт нэг удаа бүртгэнэ.</p>`}
+      </div>
+      <div class="kv" style="margin-top:14px;border-top:1px solid #F0F2F5;padding-top:12px">
+        <span>Энэ сарын нийт</span>
+        <span class="mono">${cow.milk_this_month != null ? Number(cow.milk_this_month).toFixed(1) : '0.0'} л</span>
+      </div>
+    </div>
+
+    <!-- PHOTO -->
+    <div class="card">
+      <h2><span class="dot"></span>Зураг авах</h2>
+      <div class="kind-pick" id="kindPick">
+        <button data-kind="muzzle" class="on">Хамар</button>
+        <button data-kind="profile">Бүтэн бие</button>
+        <button data-kind="marking">Тэмдэг</button>
+      </div>
+      <button class="photo-btn" id="photoBtn">Камер нээх</button>
+      <div class="gps-note" id="gpsNote">Байршил тогтоож байна…</div>
+      <img id="preview" alt="">
+      <p class="hint">Зураг хадгалагдсаны дараа засах боломжгүй. Байршил, цаг автоматаар бүртгэгдэнэ.</p>
+      <div class="photo-grid" id="photoGrid"></div>
+    </div>
+
+    <!-- INFO -->
+    <div class="card">
+      <h2><span class="dot"></span>Мэдээлэл</h2>
+      <div class="kv"><span>Эзэмшигч</span><span>${cow.owner_name}</span></div>
+      <div class="kv"><span>Хүйс</span><span>${sex}</span></div>
+      <div class="kv"><span>Төрсөн он</span><span class="mono">${cow.birth_year || '—'}</span></div>
+      <div class="kv"><span>Үүлдэр</span><span>${cow.breed || '—'}</span></div>
+      <div class="kv"><span>Жин</span><span class="mono">${cow.weight_kg ? cow.weight_kg + ' кг' : '—'}</span></div>
+      <div class="kv"><span>Сүүлд тэжээсэн</span><span>${fmtDate(cow.last_fed_at)}</span></div>
+      <div class="kv"><span>Дараагийн вакцин</span><span>${cow.next_vaccination_due ? fmtDate(cow.next_vaccination_due) : '—'}</span></div>
+      <div class="kv"><span>Сүүлд харагдсан</span><span>${fmtDateTime(cow.last_seen_at)}</span></div>
+      <div class="kv"><span>Сүүлийн байршил</span>
+        <span class="mono">${cow.last_lat ? Number(cow.last_lat).toFixed(4) + ', ' + Number(cow.last_lng).toFixed(4) : '—'}</span></div>
+    </div>
+  `;
+
+  document.getElementById('milkBtn').addEventListener('click', saveMilk);
+  document.getElementById('photoBtn').addEventListener('click', () => {
+    document.getElementById('fileInput').click();
+  });
+  document.querySelectorAll('#kindPick button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#kindPick button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      photoKind = b.dataset.kind;
+    });
+  });
+  updateGpsNote();
+}
+
+// ---------- milk ----------
+async function saveMilk() {
+  const input = document.getElementById('milkInput');
+  const btn = document.getElementById('milkBtn');
+  const liters = parseFloat(input.value);
+  if (isNaN(liters) || liters < 0) {
+    toast('Зөв тоо оруулна уу.', true);
+    return;
+  }
+  btn.disabled = true;
+  const { data: { user } } = await sb.auth.getUser();
+  const today = new Date().toISOString().slice(0,10);
+
+  const { error } = await sb.from('milk_yield').upsert({
+    farm_id: cow.farm_id,
+    cattle_id: cow.id,
+    recorded_by: user.id,
+    liters: liters,
+    yield_date: today
+  }, { onConflict: 'cattle_id,yield_date' });
+
+  btn.disabled = false;
+  if (error) { toast('Хадгалж чадсангүй: ' + error.message, true); return; }
+  toast(`${liters.toFixed(1)} литр хадгалагдлаа`);
+  await loadCow(cow.tag_code);
+}
+
+// ---------- photo ----------
+document.getElementById('fileInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const preview = document.getElementById('preview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+
+  const btn = document.getElementById('photoBtn');
+  btn.disabled = true;
+  btn.textContent = 'Хадгалж байна…';
+
+  const { data: { user } } = await sb.auth.getUser();
+  const path = `farm-${cow.farm_id}/cow-${cow.id}/${photoKind}-${Date.now()}.jpg`;
+
+  // NOTE: file bytes are not uploaded yet — storage bucket comes next.
+  // The record + GPS + timestamp are captured now so the evidence trail
+  // starts from the first tap.
+  const { error } = await sb.from('cattle_photos').insert({
+    farm_id: cow.farm_id,
+    cattle_id: cow.id,
+    kind: photoKind,
+    storage_path: path,
+    bytes: file.size,
+    taken_lat: gps ? gps.lat : null,
+    taken_lng: gps ? gps.lng : null,
+    taken_at: new Date().toISOString()
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Камер нээх';
+  e.target.value = '';
+
+  if (error) { toast('Зураг бүртгэж чадсангүй: ' + error.message, true); return; }
+  toast(gps ? 'Зураг байршилтай хадгалагдлаа' : 'Зураг хадгалагдлаа (байршилгүй)');
+  loadPhotos();
+});
+
+async function loadPhotos() {
+  const { data } = await sb
+    .from('cattle_photos')
+    .select('kind, taken_at, taken_lat')
+    .eq('cattle_id', cow.id)
+    .order('taken_at', { ascending: false })
+    .limit(6);
+
+  const grid = document.getElementById('photoGrid');
+  if (!grid) return;
+  if (!data || !data.length) { grid.innerHTML = ''; return; }
+
+  const label = { muzzle:'Хамар', profile:'Бүтэн бие', marking:'Тэмдэг',
+                  transfer:'Шилжүүлэг', health:'Эрүүл мэнд' };
+  grid.innerHTML = data.map(p => `
+    <figure>
+      <img src="assets/logo-256.png" alt="" style="object-fit:contain;padding:18%;opacity:.25">
+      <span class="lockicon">Түгжээтэй</span>
+      <figcaption>${label[p.kind] || p.kind}<br>${fmtDate(p.taken_at)}</figcaption>
+    </figure>`).join('');
+}
+
+// ---------- scan log ----------
+async function logScan() {
+  const { data: { user } } = await sb.auth.getUser();
+  await sb.from('scan_events').insert({
+    client_uuid: crypto.randomUUID(),
+    farm_id: cow.farm_id,
+    cattle_id: cow.id,
+    scanned_by: user.id,
+    method: 'nfc',
+    lat: gps ? gps.lat : null,
+    lng: gps ? gps.lng : null,
+    accuracy_m: gps ? gps.accuracy : null,
+    scanned_at: new Date().toISOString(),
+    was_offline: false
+  });
+}
+
+boot();
+</script>
+</body>
+</html>
