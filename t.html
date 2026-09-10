@@ -60,9 +60,19 @@ header{background:var(--ink);color:#fff;padding:16px 0 26px;margin-bottom:-16px}
 /* verified location */
 .locrow{display:flex;align-items:center;gap:9px;justify-content:flex-end}
 .tick{width:19px;height:19px;border-radius:50%;background:var(--steppe);color:#fff;
-  display:grid;place-items:center;font-size:.7rem;flex:0 0 auto;font-weight:700}
+  display:grid;place-items:center;font-size:.7rem;flex:0 0 auto;font-weight:700;
+  animation:pop .3s cubic-bezier(.2,1.3,.4,1)}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
 .verified{color:var(--steppe);font-weight:700}
 .unverified{color:var(--ink-soft);font-weight:500}
+.pending{color:var(--ink-soft);font-weight:500}
+.failed{color:var(--gold);font-weight:600}
+.spin{width:15px;height:15px;border:2px solid #D9DEE6;border-top-color:var(--khukh);
+  border-radius:50%;animation:sp .7s linear infinite;flex:0 0 auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+#locRow{transition:none}
+.locsub{display:block;font-family:var(--mono);font-size:.72rem;color:var(--ink-soft);
+  font-weight:400;margin-top:3px}
 
 /* call */
 .callbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
@@ -159,17 +169,16 @@ function render(c) {
   cowPhone = c.owner_phone;
   const sex = c.sex === 'female' ? 'Эм' : 'Эр';
   const age = c.birth_year ? `${new Date().getFullYear() - c.birth_year} нас` : '—';
-  const hasLoc = c.registered_lat && c.registered_lng;
 
-  // A registered location is a verified fact about where the animal belongs.
-  // We deliberately never show the animal's live position on a public page:
-  // that would help thieves more than owners.
-  const locBlock = hasLoc
-    ? `<div class="locrow">
-         <span class="tick">✓</span>
-         <span class="verified">Бүртгэгдсэн</span>
-       </div>`
-    : `<span class="unverified">Бүртгэгдээгүй</span>`;
+  // This row reports THIS tap's GPS capture, live. It starts as "locating",
+  // then turns green the moment the position is recorded — so whoever is
+  // holding the animal can see the scan was logged, not just claimed.
+  // The animal's live position is never displayed publicly; only the fact
+  // that it was captured.
+  const locBlock = `<div class="locrow" id="locRow">
+       <span class="spin"></span>
+       <span class="pending">Тогтоож байна…</span>
+     </div>`;
 
   const lostBanner = c.is_lost
     ? `<div class="lostbar">
@@ -207,7 +216,7 @@ function render(c) {
           <span class="v">${esc(c.farm_aimag)}${c.farm_soum ? ', ' + esc(c.farm_soum) : ''}</span></div>
         <div class="row"><span class="k">Эзэмшигч</span>
           <span class="v">${esc(c.owner_name)}</span></div>
-        <div class="row"><span class="k">Бүртгэлийн байршил</span>
+        <div class="row"><span class="k">Уншсан байршил</span>
           <span class="v">${locBlock}</span></div>
       </div>
     </div>
@@ -229,6 +238,20 @@ function render(c) {
   }
 }
 
+// Update the location row as the GPS result comes in.
+function setLocState(state, detail) {
+  const el = document.getElementById('locRow');
+  if (!el) return;
+  if (state === 'ok') {
+    el.innerHTML = `<span class="tick">✓</span>
+      <span class="verified">Бүртгэгдлээ${detail ? `<span class="locsub">${detail}</span>` : ''}</span>`;
+  } else if (state === 'denied') {
+    el.innerHTML = `<span class="failed">Байршил аваагүй</span>`;
+  } else {
+    el.innerHTML = `<span class="unverified">Боломжгүй</span>`;
+  }
+}
+
 // Record that someone tapped this tag. For a stolen animal this is the
 // most valuable signal the system produces: someone has the animal in
 // their hands right now. The owner sees these in their dashboard.
@@ -238,14 +261,24 @@ function logScan(tag) {
       p_tag_code: tag,
       p_lat: lat, p_lng: lng, p_accuracy: acc,
       p_user_agent: navigator.userAgent.slice(0, 200)
-    }).then(({ data }) => { scanId = data; });
+    }).then(({ data, error }) => {
+      scanId = data;
+      // Only claim it was registered once the server actually accepted it.
+      if (error) { setLocState('unavailable'); return; }
+      if (lat != null) {
+        setLocState('ok', `${lat.toFixed(4)}, ${lng.toFixed(4)}` +
+                          (acc ? ` · ±${Math.round(acc)}м` : ''));
+      } else {
+        setLocState('denied');
+      }
+    });
   };
 
-  if (!navigator.geolocation) { send(null, null, null); return; }
+  if (!navigator.geolocation) { setLocState('unavailable'); send(null, null, null); return; }
   navigator.geolocation.getCurrentPosition(
     pos => send(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
     ()  => send(null, null, null),
-    { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
   );
 }
 
