@@ -212,6 +212,7 @@ body.role-herder .col-owner{display:none}
       <button data-tab="herd" class="on">Мал сүрэг</button>
       <button data-tab="map">Газрын зураг</button>
       <button data-tab="users" class="super-only">Хэрэглэгчид</button>
+      <button data-tab="farms" class="super-only">Фермүүд</button>
     </div>
 
     <!-- ===== HERD ===== -->
@@ -298,8 +299,32 @@ body.role-herder .col-owner{display:none}
           <div><span class="legdot" style="background:#B3341F"></span> Алга болсон</div>
         </div>
       </div>
+      <p class="mapnote" id="mapKeyNote" style="display:none;color:#B8892C">
+        Google Maps түлхүүр тохируулаагүй тул OpenStreetMap ашиглаж байна.
+        config.js дотор GOOGLE_MAPS_KEY-г нэмнэ үү — хиймэл дагуулын зураг илүү тодорхой.
+      </p>
       <p class="mapnote">Цэг бүр = таг сүүлд уншуулсан үеийн GPS байрлал. Тасралтгүй хөдөлгөөний зам биш.
         Уншуулаагүй мал газрын зураг дээр харагдахгүй.</p>
+    </div>
+
+    <!-- ===== FARMS (super admin) ===== -->
+    <div class="tabpane" id="tab-farms">
+      <div class="filters">
+        <div class="frow">
+          <button class="chip on" id="newFarmBtn">+ Шинэ ферм</button>
+          <span class="count-note" id="farmCount"></span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Код</th><th>Нэр</th><th>Аймаг / Сум</th>
+                <th class="num">Мал</th><th class="num">Хэрэглэгч</th><th class="num">Таг</th>
+                <th>Төлөв</th><th>Үйлдэл</th></tr>
+          </thead>
+          <tbody id="farmsBody"><tr><td colspan="8" class="loading">Ачаалж байна…</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ===== USERS (super admin) ===== -->
@@ -408,6 +433,23 @@ body.role-herder .col-owner{display:none}
   </div>
 </div>
 
+<div class="modal" id="farmModal">
+  <div class="modalbox">
+    <h3 id="farmModalTitle">Шинэ ферм</h3>
+    <p class="msub">Ферм үүсгэсний дараа хэрэглэгч, таг хуваарилна.</p>
+    <label>Код</label><input type="text" id="nfCode" placeholder="FERM-21">
+    <label>Нэр</label><input type="text" id="nfName" placeholder="Хогно Хаан">
+    <label>Аймаг</label><input type="text" id="nfAimag" placeholder="Булган">
+    <label>Сум</label><input type="text" id="nfSoum" placeholder="Рашаант">
+    <label>Өргөрөг (lat)</label><input type="number" id="nfLat" step="0.0001" placeholder="47.9212">
+    <label>Уртраг (lng)</label><input type="number" id="nfLng" step="0.0001" placeholder="103.5140">
+    <div class="mactions">
+      <button class="mcancel" onclick="closeModal('farmModal')">Болих</button>
+      <button class="msave" id="farmSave">Үүсгэх</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="../config.js"></script>
@@ -484,7 +526,8 @@ document.querySelectorAll('.tabs button').forEach(b=>{
     document.querySelectorAll('.tabpane').forEach(x=>x.classList.remove('on'));
     b.classList.add('on');
     document.getElementById('tab-'+b.dataset.tab).classList.add('on');
-    if(b.dataset.tab==='map'){ setTimeout(()=>{ initMap(); drawMap(); }, 60); }
+    if(b.dataset.tab==='map'){ setTimeout(async()=>{ await initMap(); drawMap(); }, 60); }
+    if(b.dataset.tab==='farms'){ loadAdminFarms(); }
   });
 });
 
@@ -546,8 +589,107 @@ async function loadUsers(){
       <td>
         <button class="pwbtn" onclick="openUser('${u.id}')">Засах</button>
         <button class="pwbtn" onclick="resetPw('${u.id}')">Нууц үг</button>
+        <button class="pwbtn" style="color:#B3341F" onclick="delUser('${u.id}')">Устгах</button>
       </td>
     </tr>`).join('');
+}
+
+// ---------- farms (super admin) ----------
+let adminFarms = [];
+async function loadAdminFarms(){
+  const {data,error} = await sb.from('admin_farms').select('*');
+  if(error){
+    document.getElementById('farmsBody').innerHTML =
+      `<tr><td colspan="8" class="empty">Алдаа: ${esc(error.message)}</td></tr>`;
+    return;
+  }
+  adminFarms = data||[];
+  document.getElementById('farmCount').textContent = `${adminFarms.length} ферм`;
+  document.getElementById('farmsBody').innerHTML = adminFarms.map(f=>`
+    <tr>
+      <td class="tag-code">${esc(f.code)}</td>
+      <td><b>${esc(f.name)}</b></td>
+      <td class="muted">${esc(f.aimag||'—')}${f.soum?' · '+esc(f.soum):''}</td>
+      <td class="num">${f.cattle_count}</td>
+      <td class="num">${f.user_count}</td>
+      <td class="num">${f.tag_count}</td>
+      <td>${f.status==='active'?'<span class="badge ok">Идэвхтэй</span>':'<span class="badge warn">Түр хаагдсан</span>'}</td>
+      <td>
+        ${f.status==='active'
+          ? `<button class="pwbtn" onclick="archFarm('${f.id}','${esc(f.name)}')">Түр хаах</button>`
+          : `<button class="pwbtn" onclick="restFarm('${f.id}')">Сэргээх</button>`}
+        <button class="pwbtn" style="color:#B3341F" onclick="delFarm('${f.id}','${esc(f.name)}',${f.cattle_count},${f.user_count})">Устгах</button>
+      </td>
+    </tr>`).join('');
+}
+
+document.getElementById('newFarmBtn').addEventListener('click',()=>{
+  ['nfCode','nfName','nfAimag','nfSoum','nfLat','nfLng'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('farmModal').classList.add('on');
+});
+
+document.getElementById('farmSave').addEventListener('click', async ()=>{
+  const code = document.getElementById('nfCode').value.trim();
+  const name = document.getElementById('nfName').value.trim();
+  if(!code||!name){toast('Код болон нэрийг оруулна уу.',true);return;}
+  const {error} = await sb.rpc('create_farm',{
+    p_code:code, p_name:name,
+    p_aimag:document.getElementById('nfAimag').value.trim()||null,
+    p_soum:document.getElementById('nfSoum').value.trim()||null,
+    p_lat:parseFloat(document.getElementById('nfLat').value)||null,
+    p_lng:parseFloat(document.getElementById('nfLng').value)||null});
+  if(error){toast('Үүсгэж чадсангүй: '+error.message,true);return;}
+  closeModal('farmModal'); toast('Ферм үүслээ');
+  loadFarms(); loadAdminFarms();
+});
+
+async function archFarm(id,name){
+  if(!confirm(`"${name}" фермийг түр хаах уу?\n\nБүх мэдээлэл хадгалагдана, дараа нь сэргээж болно.`)) return;
+  const {error} = await sb.rpc('archive_farm',{p_farm_id:id,p_reason:'admin'});
+  if(error){toast(error.message,true);return;}
+  toast('Ферм түр хаагдлаа'); loadAdminFarms();
+}
+async function restFarm(id){
+  const {error} = await sb.rpc('restore_farm',{p_farm_id:id});
+  if(error){toast(error.message,true);return;}
+  toast('Сэргээгдлээ'); loadAdminFarms();
+}
+
+// Deletes ask twice when real data is involved. The first attempt runs
+// without force; the database refuses and reports exactly what would be
+// lost, and only then do we offer the forced delete.
+async function delFarm(id,name,nCattle,nUsers){
+  if(!confirm(`"${name}" фермийг УСТГАХ уу?`)) return;
+  let {error} = await sb.rpc('delete_farm',{p_farm_id:id,p_force:false});
+  if(error){
+    if(!confirm(`${error.message}\n\nБүгдийг УСТГАХ уу? Энэ үйлдлийг буцаах боломжгүй.`)) return;
+    ({error} = await sb.rpc('delete_farm',{p_farm_id:id,p_force:true}));
+    if(error){toast(error.message,true);return;}
+  }
+  toast('Ферм устлаа'); loadFarms(); loadAdminFarms(); loadCattle();
+}
+
+async function delCattle(id,tag){
+  if(!confirm(`${tag} малыг устгах уу?`)) return;
+  let {error} = await sb.rpc('delete_cattle',{p_cattle_id:id,p_force:false});
+  if(error){
+    if(!confirm(`${error.message}\n\nБүгдийг УСТГАХ уу?`)) return;
+    ({error} = await sb.rpc('delete_cattle',{p_cattle_id:id,p_force:true}));
+    if(error){toast(error.message,true);return;}
+  }
+  toast('Устлаа'); loadCattle();
+}
+
+async function delUser(id){
+  const u = users.find(x=>x.id===id);
+  if(!confirm(`${u.full_name}-г устгах уу?`)) return;
+  let {error} = await sb.rpc('delete_profile',{p_profile_id:id,p_force:false});
+  if(error){
+    if(!confirm(`${error.message}\n\nБүгдийг УСТГАХ уу?`)) return;
+    ({error} = await sb.rpc('delete_profile',{p_profile_id:id,p_force:true}));
+    if(error){toast(error.message,true);return;}
+  }
+  toast('Устлаа'); loadUsers();
 }
 
 // ---------- filtering ----------
@@ -643,7 +785,10 @@ function render(){
       <td>${vaccBadge(c.next_vaccination_due)}</td>
       <td class="muted">${fmtDT(c.last_seen_at)}</td>
       <td>${statusBadge(c.status)}</td>
-      <td class="super-only"><button class="minibtn" onclick="openEdit('${c.id}')">Засах</button></td>
+      <td class="super-only">
+        <button class="minibtn" onclick="openEdit('${c.id}')">Засах</button>
+        <button class="minibtn" style="color:#B3341F" onclick="delCattle('${c.id}','${esc(c.tag_code)}')">Устгах</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -688,55 +833,117 @@ document.getElementById('mFarm').addEventListener('change',e=>{mFarm=e.target.va
 document.getElementById('search').addEventListener('input',render);
 
 // ---------- MAP ----------
-function initMap(){
-  if(map) { map.invalidateSize(); return; }
-  map = L.map('map',{scrollWheelZoom:true}).setView([47.92,103.5],9);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    maxZoom:18, attribution:'© OpenStreetMap'
-  }).addTo(map);
+// Google Maps when a key is configured, OpenStreetMap otherwise.
+// Satellite is the default view: in rural Mongolia the road map is
+// nearly blank, but the satellite imagery shows the actual terrain,
+// water, and winter camps a herder recognises.
+let gmap = null, gmarkers = [], gInfo = null, mapMode = 'none';
+
+function loadGoogle(){
+  return new Promise((resolve,reject)=>{
+    if(window.google && window.google.maps) return resolve();
+    if(!GOOGLE_MAPS_KEY) return reject('no key');
+    const sc = document.createElement('script');
+    sc.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&v=weekly`;
+    sc.async = true;
+    sc.onload = resolve;
+    sc.onerror = ()=>reject('script failed');
+    document.head.appendChild(sc);
+  });
 }
 
-function drawMap(){
-  if(!map) return;
-  markers.forEach(m=>map.removeLayer(m));
-  markers = [];
+async function initMap(){
+  if(mapMode !== 'none'){
+    if(mapMode==='osm' && map) map.invalidateSize();
+    return;
+  }
+  try{
+    await loadGoogle();
+    gmap = new google.maps.Map(document.getElementById('map'),{
+      center:{lat:47.92,lng:103.5}, zoom:9,
+      mapTypeId:'hybrid',                 // satellite + labels
+      mapTypeControl:true, streetViewControl:false, fullscreenControl:true
+    });
+    gInfo = new google.maps.InfoWindow();
+    mapMode = 'google';
+  }catch(e){
+    // Fallback keeps the product usable before a key is configured.
+    map = L.map('map',{scrollWheelZoom:true}).setView([47.92,103.5],9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {maxZoom:18, attribution:'© OpenStreetMap'}).addTo(map);
+    mapMode = 'osm';
+    document.getElementById('mapKeyNote').style.display = 'block';
+  }
+}
 
-  // Only animals with a real scan position appear. An animal that has
-  // never been scanned has no known location — inventing one would make
-  // the map lie.
+function mapRows(){
   let rows = allCattle.filter(c=>c.last_lat && c.last_lng);
   if(mFarm) rows = rows.filter(c=>c.farm_id===mFarm);
   if(mAge){
     const cutoff = Number(mAge);
     rows = rows.filter(c=>{const d=daysSince(c.last_seen_at); return d!==null && d<=cutoff;});
   }
+  return rows;
+}
 
+function popupHtml(c){
+  const days = daysSince(c.last_seen_at);
+  return `<div style="font-family:Inter,sans-serif;font-size:13px;line-height:1.5;min-width:170px">
+    <b style="font-family:monospace;font-size:14px">${esc(c.tag_code)}</b><br>
+    ${esc(c.owner_name)}<br>
+    <span style="color:#5A6880">
+      ${c.sex==='female'?'Эм':'Эр'} · ${esc(c.breed||'—')}<br>
+      Сүүлд: ${fmtDT(c.last_seen_at)}${days!==null?` (${days} хоног)`:''}
+    </span><br>
+    <a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}"
+       style="color:#1B4FA8;font-weight:600">Дэлгэрэнгүй →</a>
+  </div>`;
+}
+
+function drawMap(){
+  const rows = mapRows();
   document.getElementById('mapCount').textContent =
-    `${rows.length} мал газрын зураг дээр · ${allCattle.length-rows.length} уншуулаагүй`;
+    `${rows.length} мал зураг дээр · ${allCattle.length-rows.length} уншуулаагүй`;
 
-  const bounds = [];
-  rows.forEach(c=>{
-    const days = daysSince(c.last_seen_at);
-    const lost = c.status==='lost'||c.status==='stolen'||c.reported_lost_at;
-    const cls = lost ? 'lost' : (days>7 ? 'stale' : '');
-    const icon = L.divIcon({
-      className:'', html:`<div class="cowpin ${cls}">${esc(c.tag_code.replace('YT-',''))}</div>`,
-      iconSize:[54,20], iconAnchor:[27,10]
+  if(mapMode==='google' && gmap){
+    gmarkers.forEach(m=>m.setMap(null)); gmarkers=[];
+    const bounds = new google.maps.LatLngBounds();
+    rows.forEach(c=>{
+      const days = daysSince(c.last_seen_at);
+      const lost = c.status==='lost'||c.status==='stolen'||c.reported_lost_at;
+      const color = lost ? '#B3341F' : (days>7 ? '#8794A8' : '#1B4FA8');
+      const pos = {lat:Number(c.last_lat), lng:Number(c.last_lng)};
+      const mk = new google.maps.Marker({
+        position:pos, map:gmap,
+        label:{text:c.tag_code.replace('YT-',''), color:'#fff',
+               fontSize:'11px', fontWeight:'700', fontFamily:'monospace'},
+        icon:{path:'M -22 -11 h 44 a 4 4 0 0 1 4 4 v 14 a 4 4 0 0 1 -4 4 h -44 a 4 4 0 0 1 -4 -4 v -14 a 4 4 0 0 1 4 -4 z',
+              fillColor:color, fillOpacity:1, strokeColor:'#fff', strokeWeight:2, scale:1, labelOrigin:new google.maps.Point(0,0)}
+      });
+      mk.addListener('click',()=>{ gInfo.setContent(popupHtml(c)); gInfo.open(gmap,mk); });
+      gmarkers.push(mk); bounds.extend(pos);
     });
-    const mk = L.marker([c.last_lat,c.last_lng],{icon}).addTo(map);
-    mk.bindPopup(`
-      <b style="font-family:monospace">${esc(c.tag_code)}</b><br>
-      ${esc(c.owner_name)}<br>
-      <span style="color:#5A6880;font-size:.85em">
-        ${c.sex==='female'?'Эм':'Эр'} · ${c.breed||'—'}<br>
-        Сүүлд: ${fmtDT(c.last_seen_at)}${days!==null?` (${days} хоногийн өмнө)`:''}
-      </span><br>
-      <a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">Дэлгэрэнгүй →</a>`);
-    markers.push(mk);
-    bounds.push([c.last_lat,c.last_lng]);
-  });
+    if(rows.length){ gmap.fitBounds(bounds); 
+      google.maps.event.addListenerOnce(gmap,'idle',()=>{ if(gmap.getZoom()>14) gmap.setZoom(14); }); }
+    return;
+  }
 
-  if(bounds.length) map.fitBounds(bounds,{padding:[50,50],maxZoom:13});
+  if(mapMode==='osm' && map){
+    markers.forEach(m=>map.removeLayer(m)); markers=[];
+    const bounds=[];
+    rows.forEach(c=>{
+      const days = daysSince(c.last_seen_at);
+      const lost = c.status==='lost'||c.status==='stolen'||c.reported_lost_at;
+      const cls = lost ? 'lost' : (days>7 ? 'stale' : '');
+      const icon = L.divIcon({className:'',
+        html:`<div class="cowpin ${cls}">${esc(c.tag_code.replace('YT-',''))}</div>`,
+        iconSize:[54,20], iconAnchor:[27,10]});
+      const mk = L.marker([c.last_lat,c.last_lng],{icon}).addTo(map);
+      mk.bindPopup(popupHtml(c));
+      markers.push(mk); bounds.push([c.last_lat,c.last_lng]);
+    });
+    if(bounds.length) map.fitBounds(bounds,{padding:[50,50],maxZoom:14});
+  }
 }
 
 // ---------- MILK MODAL ----------

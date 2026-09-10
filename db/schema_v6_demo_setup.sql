@@ -46,7 +46,7 @@ begin
   raise notice 'Five demo animals assigned to Bat-Erdene on Farm 12.';
 end $$;
 
--- Give the demo animals believable recent milk history (last 30 days),
+-- Give the demo animals believable recent milk history (last 14 days),
 -- so the charts on the cow page and the dashboard are not empty during
 -- a demo. Real entries the farmer makes will simply add to this.
 do $$
@@ -62,7 +62,7 @@ begin
        and sex = 'female'          -- males give no milk
   loop
     base := 8 + random() * 4;          -- 8-12 litres a day
-    d := current_date - 29;
+    d := current_date - 13;
     while d < current_date loop
       -- occasional missed day, which is realistic
       if random() > 0.12 then

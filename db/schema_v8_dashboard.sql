@@ -272,7 +272,7 @@ begin
   for rec in select id, farm_id from cattle
              where tag_code in ('YT-008000','YT-008001','YT-008002','YT-008003','YT-008004')
   loop
-    n := 3 + floor(random() * 4);      -- 3-6 scans each
+    n := 2;                            -- keep the demo data minimal
     for i in 1..n loop
       insert into scan_events
         (client_uuid, farm_id, cattle_id, scanned_by, method,
