@@ -444,7 +444,7 @@ document.getElementById('fileInput').addEventListener('change', async e => {
     const { data: { user } } = await sb.auth.getUser();
 
     // shrink before upload — herder phones on 3G in the countryside
-    const blob = await shrinkImage(file, 1600, 0.82);
+    const blob = await shrinkImage(file, 1200, 0.75);
     const path = `farm-${cow.farm_id}/cow-${cow.id}/${photoKind}-${Date.now()}.jpg`;
 
     // 1. upload the actual file
@@ -468,7 +468,8 @@ document.getElementById('fileInput').addEventListener('change', async e => {
     });
     if (dbErr) throw dbErr;
 
-    toast(gps ? 'Зураг байршилтай түгжигдлээ' : 'Зураг түгжигдлээ (байршилгүй)');
+    const kb = Math.round(blob.size/1024);
+    toast(gps ? `Зураг хадгалагдлаа · ${kb}KB · GPS` : `Зураг хадгалагдлаа · ${kb}KB`);
     preview.style.display = 'none';
     loadPhotos();
   } catch (err) {
@@ -480,9 +481,11 @@ document.getElementById('fileInput').addEventListener('change', async e => {
   }
 });
 
-// Resize on the phone before upload: a 12MP photo is ~4MB, which is
-// slow and expensive over rural mobile data. 1600px is plenty for
-// muzzle-print identification.
+// Resize on the phone before upload. Two reasons:
+//  1. A 12MP phone photo is ~4MB — slow and expensive on rural mobile data.
+//  2. Storage adds up: at 1200px/0.75 a photo is ~190KB, so 1GB holds
+//     ~5,500 photos. At full size it would hold ~2,400.
+// 1200px still resolves muzzle-print detail clearly.
 function shrinkImage(file, maxSide, quality) {
   return new Promise((resolve, reject) => {
     const img = new Image();
