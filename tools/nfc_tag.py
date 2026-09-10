@@ -41,7 +41,7 @@ except ImportError:
 # ============================================================
 # CONFIG — change before production
 # ============================================================
-BASE_URL = "https://magna-astra.github.io/Yak-Tag/cow.html?tag="
+BASE_URL = "https://magna-astra.github.io/Yak-Tag/t.html?tag="
 
 TAG_PASSWORD = b"YKTG"          # exactly 4 bytes
 TAG_PACK     = b"\x59\x41"      # 2 bytes

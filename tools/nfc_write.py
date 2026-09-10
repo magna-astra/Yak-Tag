@@ -16,7 +16,7 @@ Usage:
     python nfc_write.py lock                # PERMANENT, see warnings
 
 What gets written:
-    https://magna-astra.github.io/Yak-Tag/cow.html?tag=YT-008000
+    https://magna-astra.github.io/Yak-Tag/t.html?tag=YT-008000
 
 Encoded as an NDEF URI record with the https:// prefix abbreviated
 to a single byte (NFC Forum URI abbreviation code 0x04), which saves
@@ -36,7 +36,7 @@ except ImportError:
 # CHANGE THIS if you move to a custom domain later.
 # Keep the trailing '?tag=' — the tag code is appended to it.
 # ============================================================
-BASE_URL = "https://magna-astra.github.io/Yak-Tag/cow.html?tag="
+BASE_URL = "https://magna-astra.github.io/Yak-Tag/t.html?tag="
 
 PAGE_SIZE = 4
 FIRST_USER_PAGE = 4

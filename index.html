@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="assets/logo-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Mongolian&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Mongolian&display=swap" rel="stylesheet">
 <style>
 :root{
   --ink:#080F1C;
@@ -33,7 +33,7 @@
   --sky:var(--khukh);
   --sky-dim:var(--khukh-dim);
   --warn:#E0A33C;
-  --display:'Unbounded',sans-serif;
+  --display:'Inter',system-ui,sans-serif;
   --body:'Inter',sans-serif;
   --mono:'JetBrains Mono',monospace;
   --mgl:'Noto Sans Mongolian',serif;
@@ -48,7 +48,7 @@ body{
   -webkit-font-smoothing:antialiased;overflow-x:hidden;
 }
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
-h1,h2,h3,.disp{font-family:var(--display);font-weight:800;line-height:1.08;letter-spacing:-.02em}
+h1,h2,h3,.disp{font-family:var(--display);font-weight:800;line-height:1.12;letter-spacing:-.025em}
 h1{font-size:clamp(2.1rem,5.6vw,4.1rem)}
 h2{font-size:clamp(1.6rem,3.6vw,2.6rem)}
 h3{font-size:1.06rem;font-weight:600;letter-spacing:-.01em}
@@ -497,18 +497,14 @@ body.light .heroPhoto img{opacity:.44}
     <a href="#" class="logo">
       <img src="assets/logo-256.png" alt="" class="marklogo">YAK-TAG</a>
     <div class="navlinks" id="nl">
-      <a href="#demo">Амьд туршилт</a>
       <a href="#how">Хэрхэн ажилладаг</a>
       <a href="#tech">Технологи</a>
       <a href="#platform">Систем</a>
-      <a href="#data">Мэдээлэл</a>
-      <a href="#pilot">Туршилт</a>
       <a href="admin/" class="navlogin">Нэвтрэх</a>
     </div>
     <button class="themebtn" id="theme" aria-label="Өнгө солих" title="Гэрэлт / бараан">◐</button>
     <button class="burger" id="bg" aria-label="Цэс">☰</button>
-    <a href="admin/" class="btn">Нэвтрэх</a>
-    <a href="#pilot" class="btn pri">Туршилт хүсэх</a>
+    <a href="admin/" class="btn pri">Нэвтрэх</a>
   </div>
 </nav>
 
@@ -540,8 +536,8 @@ body.light .heroPhoto img{opacity:.44}
       <h1>Үхэр бүр<br><em>цахим үнэмлэхтэй.</em></h1>
       <p class="lead">NFC таг малыг таниулна. Малчин утсаа ойртуулахад л мал тодорхойлогдож, байршил, огноо, цаг автоматаар бүртгэгдэнэ. Апп суулгах шаардлагагүй.</p>
       <div class="herocta">
-        <a href="cow.html?tag=YT-008000" class="btn pri">Жишээ малыг үзэх →</a>
-        <a href="#demo" class="btn">Амьд туршилт</a>
+        <a href="admin/" class="btn pri">Нэвтрэх</a>
+        <a href="#how" class="btn">Хэрхэн ажилладаг</a>
       </div>
       <div class="trustrow">
         <span>Батерейгүй таг</span>
@@ -587,55 +583,6 @@ body.light .heroPhoto img{opacity:.44}
 <div class="ticker">
   <div class="tickrun" id="tick"></div>
 </div>
-
-
-<!-- LIVE DEMO -->
-<section id="demo" class="felt">
-  <div class="wrap">
-    <div class="reveal" style="text-align:center;max-width:760px;margin:0 auto 44px">
-      <div class="eyebrow">Амьд туршилт</div>
-      <h2>Тайлбар сонсохгүйгээр өөрөө үзээрэй.</h2>
-      <p class="lead">Энэ бол үзүүлэн биш. Доорх холбоос нь жинхэнэ мал, жинхэнэ өгөгдлийн сан руу очно — таг уншуулахад малчны утсанд гарч ирдэг яг тэр хуудас.</p>
-    </div>
-
-    <div class="demogrid">
-      <div class="democard reveal">
-        <div class="demonum">1</div>
-        <h3>Таг уншуулах</h3>
-        <p>NFC таг руу утсаа ойртуулна. Апп суулгах шаардлагагүй — вэб хөтөч шууд нээгдэнэ.</p>
-        <div class="demotag">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M6 8.5a8 8 0 0 1 0 7M9.5 6a12 12 0 0 1 0 12M13 3.5a16 16 0 0 1 0 17"/>
-          </svg>
-          <span>YT-008000</span>
-        </div>
-      </div>
-
-      <div class="democard reveal">
-        <div class="demonum">2</div>
-        <h3>Малын хуудас нээгдэнэ</h3>
-        <p>Тухайн малын бүртгэл, сүүний түүх, байршил, зураг — бүгд тэр даруй.</p>
-        <a href="cow.html?tag=YT-008000" class="btn pri" style="margin-top:14px">Хуудсыг нээх →</a>
-      </div>
-
-      <div class="democard reveal">
-        <div class="demonum">3</div>
-        <h3>Самбар руу нэвтрэх</h3>
-        <p>Ферм админ бүх малаа хардаг. Малчин зөвхөн өөрийнхөө малыг хардаг.</p>
-        <div class="creds">
-          <div><span>Малчин</span><code>bat@yaktag.test</code></div>
-          <div><span>Ферм админ</span><code>admin12@yaktag.test</code></div>
-        </div>
-        <a href="admin/" class="btn" style="margin-top:12px">Самбар нээх →</a>
-      </div>
-    </div>
-
-    <div class="demonote reveal">
-      <b>Туршилтын үе шат.</b> Одоогоор 1 ферм, 5 таг, жинхэнэ NFC төхөөрөмжөөр туршиж байна.
-      Нууц үгийг туршилт үзүүлэх үед өгнө. Бодит малчны мэдээлэл ороогүй болно.
-    </div>
-  </div>
-</section>
 
 <!-- PROBLEM -->
 <section id="how">
@@ -709,43 +656,6 @@ body.light .heroPhoto img{opacity:.44}
     <rect width="240" height="22" fill="url(#alkhan)"/>
   </svg>
 </div>
-
-<!-- DATA MODEL -->
-<section id="data" class="felt">
-  <div class="wrap">
-    <div class="reveal" style="max-width:70ch">
-      <div class="eyebrow">Ямар мэдээлэл цуглуулах вэ</div>
-      <h2>Эхэндээ бага. Дараа нь бүрэн.</h2>
-      <p class="lead">Малчин хүйтэнд, талбай дээр бүртгэл хийнэ. Талбар олон байх тусам бүртгэл дуусахгүй үлдэх магадлал өснө. Тиймээс эхний бүртгэлийг зөвхөн 6 талбараар барина.</p>
-    </div>
-
-    <div class="fieldset reveal" style="margin-top:38px">
-      <div class="fbox req">
-        <div class="pill">Заавал — эхний бүртгэл</div>
-        <ul>
-          <li><b>01</b>Тагийн дугаар (уншуулах / QR)</li>
-          <li><b>02</b>Малын зураг</li>
-          <li><b>03</b>Хүйс</li>
-          <li><b>04</b>Төрсөн он (ойролцоо)</li>
-          <li><b>05</b>Эзэмшигч / малчин</li>
-          <li><b>06</b>GPS, огноо, цаг — автомат</li>
-        </ul>
-      </div>
-      <div class="fbox">
-        <div class="pill blue">Сонголтоор — дараа нөхөж болно</div>
-        <ul>
-          <li><b>07</b>Үүлдэр</li>
-          <li><b>08</b>Зүс, онцлог тэмдэг</li>
-          <li><b>09</b>Жин</li>
-          <li><b>10</b>Эхийн тагийн дугаар</li>
-          <li><b>11</b>Эрүүл мэндийн тэмдэглэл</li>
-          <li><b>12</b>Вакцин, эмчилгээ</li>
-          <li><b>13</b>Төллөлт, үржлийн бүртгэл</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- PLATFORM / DASHBOARD -->
 <section id="platform" style="background:#0B1729;border-block:1px solid var(--line)">
@@ -995,88 +905,6 @@ body.light .heroPhoto img{opacity:.44}
   </svg>
 </div>
 
-<!-- TIERS -->
-<section id="tiers">
-  <div class="wrap">
-    <div class="reveal" style="max-width:70ch">
-      <div class="eyebrow">Багцууд</div>
-      <h2>Нэг систем. Гурван хурд.</h2>
-      <p class="lead">Таг, программ, удирдлагын самбар бүх багцад ижил. Ялгаа нь зөвхөн та малаа хэр хурдан, хэр ойроос уншуулах вэ гэдэгт л байна.</p>
-    </div>
-
-    <div class="grid3 reveal" style="margin-top:38px">
-      <div class="card">
-        <span class="num">БАГЦ 01</span>
-        <h3>Үндсэн</h3>
-        <p style="margin-bottom:16px">Тагийн QR кодыг ямар ч утасны камераар уншина. Нэмэлт төхөөрөмж огт шаардлагагүй.</p>
-        <div style="display:flex;flex-direction:column;gap:7px;font-size:.83rem;color:#C6D1DE">
-          <span>· Хэдэн метрийн зайнаас</span>
-          <span>· Төхөөрөмж авах шаардлагагүй</span>
-          <span>· Бүрэн бүртгэл, түүх</span>
-        </div>
-        <div class="pill" style="margin-top:18px">Уншигч: 0 ₮</div>
-      </div>
-
-      <div class="card">
-        <span class="num">БАГЦ 02</span>
-        <h3>Стандарт</h3>
-        <p style="margin-bottom:16px">Утсаа тагт хүргэхэд шууд уншина. Хурдан, шороо тоос, харанхуйд ч найдвартай.</p>
-        <div style="display:flex;flex-direction:column;gap:7px;font-size:.83rem;color:#C6D1DE">
-          <span>· Утсанд суурилагдсан NFC</span>
-          <span>· Төхөөрөмж авах шаардлагагүй</span>
-          <span>· Хамгийн хурдан бүртгэл</span>
-        </div>
-        <div class="pill" style="margin-top:18px">Уншигч: 0 ₮</div>
-      </div>
-
-      <div class="card" style="border-color:rgba(95,158,98,.34);background:rgba(95,158,98,.06)">
-        <span class="num">БАГЦ 03</span>
-        <h3>Про</h3>
-        <p style="margin-bottom:16px">Малд ойртохгүйгээр, хэдэн толгойг зэрэг уншина. Том сүрэгт тоолол хийхэд.</p>
-        <div style="display:flex;flex-direction:column;gap:7px;font-size:.83rem;color:#C6D1DE">
-          <span>· 1–3 метрийн зайнаас</span>
-          <span>· Олон тагийг зэрэг</span>
-          <span>· Малчин бүрт нэг уншигч</span>
-        </div>
-        <div class="pill blue" style="margin-top:18px">Гадаад уншигч шаардлагатай</div>
-      </div>
-    </div>
-
-    <div class="disclaim reveal">
-      Багц солиход өгөгдөл шилжүүлэх шаардлагагүй. Бүртгэл, түүх, удирдлагын самбар бүгд ижил системд хадгалагдана. Про багцын уншилтын зай нь тагийн загвар, уншигчийн чадал, антений байрлал, малын байрлал болон цаг агаарын нөхцөлөөс шалтгаална.
-    </div>
-  </div>
-</section>
-
-<!-- PILOT -->
-<section id="pilot" style="background:#0B1729;border-block:1px solid var(--line)">
-  <div class="wrap">
-    <div class="reveal" style="max-width:70ch">
-      <div class="eyebrow">Нэвтрүүлэлт</div>
-      <h2>10 малаас эхэл. 12,000 хүртэл өргөж.</h2>
-      <p class="lead">Бид эхнээсээ бүх сүргийг хамруулахыг зөвлөдөггүй. Эхлээд жижиг туршилтаар системийг талбар дээр батал.</p>
-    </div>
-    <div class="phases reveal" style="margin-top:34px">
-      <div class="phase now">
-        <small>Үе шат 1 · Одоо энд байна</small><b>5</b>
-        <p>NFC таг бичигдэж, утсаар уншигдаж байна. Ферм #12 дээр туршиж байна.</p>
-      </div>
-      <div class="phase">
-        <small>Үе шат 2</small><b>100–500</b>
-        <p>Малчдын сургалт, офлайн синк, ажлын урсгал</p>
-      </div>
-      <div class="phase">
-        <small>Үе шат 3</small><b>1,000+</b>
-        <p>Олон ферм, тагийн багц хуваарилалт, тайлан</p>
-      </div>
-      <div class="phase">
-        <small>Үе шат 4</small><b>12,000+</b>
-        <p>Бүрэн нэвтрүүлэлт, мөшгөлтийн систем</p>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- SECURITY -->
 <section style="background:#0B1729;border-block:1px solid var(--line)">
   <div class="wrap grid2">
@@ -1115,7 +943,7 @@ body.light .heroPhoto img{opacity:.44}
     <h2 style="max-width:16ch;margin:0 auto">Сүргээ мэд.<br>Хаана ч байсан.</h2>
     <p class="lead" style="margin:20px auto 0;text-align:center">Мал бүрд цахим үнэмлэх, бүрэн түүх бий болгох ажлыг өнөөдөр эхлүүлээрэй.</p>
     <div class="herocta" style="justify-content:center;margin-top:32px">
-      <a href="#" class="btn pri">Туршилт хүсэх</a>
+      <a href="admin/" class="btn pri">Нэвтрэх</a>
       <a href="#" class="btn">Багтай холбогдох</a>
     </div>
   </div>
@@ -1130,15 +958,14 @@ body.light .heroPhoto img{opacity:.44}
       </div>
       <div>
         <h4>Систем</h4>
-        <a href="#how">Хэрхэн ажилладаг</a><a href="#tech">Технологи</a><a href="#platform">Удирдлагын самбар</a><a href="#data">Мэдээллийн загвар</a>
-      </div>
+        <a href="#how">Хэрхэн ажилладаг</a><a href="#tech">Технологи</a><a href="#platform">Удирдлагын самбар</a></div>
       <div>
         <h4>Компани</h4>
-        <a href="#demo">Амьд туршилт</a><a href="#pilot">Туршилтын хөтөлбөр</a><a href="mailto:magna.astra.mn@gmail.com">Холбоо барих</a>
+        <a href="mailto:magna.astra.mn@gmail.com">Холбоо барих</a>
       </div>
       <div>
         <h4>Нэвтрэх</h4>
-        <a href="admin/">Малчны нэвтрэлт</a><a href="admin/">Ферм админ</a><a href="admin/">Ерөнхий админ</a><a href="cow.html?tag=YT-008000">Жишээ малын хуудас</a>
+        <a href="admin/">Малчны нэвтрэлт</a><a href="admin/">Ферм админ</a><a href="admin/">Ерөнхий админ</a><a href="t.html?tag=YT-008000">Жишээ малын хуудас</a>
       </div>
     </div>
     <div class="fbot">
