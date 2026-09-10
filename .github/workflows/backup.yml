@@ -1,0 +1,51 @@
+name: Weekly database backup
+
+# The Supabase free tier has NO backups. This is your safety net.
+# Dumps the whole database weekly and commits it to this repo.
+#
+# ⚠️  THIS REPO MUST BE PRIVATE if you enable this workflow.
+#     A dump contains real farm and herder data.
+#
+# If you keep the site repo public, create a separate private repo
+# for backups and change the checkout/push target below.
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'     # Sundays 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        env:
+          PGCONN: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p backups
+          STAMP=$(date -u +%Y-%m-%d)
+          pg_dump "$PGCONN" \
+            --no-owner --no-privileges \
+            --schema=public \
+            | gzip > "backups/yaktag-$STAMP.sql.gz"
+          ls -lh backups/
+
+      - name: Keep only the last 12 backups
+        run: |
+          cd backups
+          ls -1t *.sql.gz | tail -n +13 | xargs -r rm --
+
+      - name: Commit
+        run: |
+          git config user.name  "yaktag-backup"
+          git config user.email "actions@github.com"
+          git add backups/
+          git diff --staged --quiet || git commit -m "Backup $(date -u +%Y-%m-%d)"
+          git push

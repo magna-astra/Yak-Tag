@@ -1,0 +1,25 @@
+name: Keep Supabase awake
+
+# Supabase free projects pause after 7 days with no API activity.
+# This pings the project every 3 days so it never sleeps.
+
+on:
+  schedule:
+    - cron: '0 6 */3 * *'   # every 3 days, 06:00 UTC
+  workflow_dispatch:         # lets you run it manually from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST endpoint
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/farms?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "HTTP $code"
+          if [ "$code" -ge 500 ] || [ "$code" -eq 000 ]; then
+            echo "Supabase did not respond properly."
+            exit 1
+          fi

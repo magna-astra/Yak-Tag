@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YAK-TAG — 3D тайз (Phase A+B)</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#0a1420;
+    font-family:'Inter',-apple-system,system-ui,sans-serif;color:#fff}
+  #scene{position:fixed;inset:0}
+  canvas{display:block}
+
+  /* --- overlay text: this is the REAL hero. 3D sits behind it. --- */
+  .hero{
+    position:fixed;inset:0;display:flex;align-items:center;
+    padding:0 clamp(24px,6vw,90px);pointer-events:none;z-index:5;
+  }
+  .hero h1{
+    font-size:clamp(2rem,5.4vw,4rem);line-height:1.05;letter-spacing:-.02em;
+    font-weight:800;max-width:14ch;text-shadow:0 2px 40px rgba(0,0,0,.45);
+  }
+  .hero p{
+    margin-top:16px;max-width:44ch;font-size:clamp(.95rem,1.6vw,1.1rem);
+    color:rgba(255,255,255,.88);text-shadow:0 2px 20px rgba(0,0,0,.5);
+  }
+
+  /* --- dev panel: for testing seasons + time. Hidden in production. --- */
+  .panel{
+    position:fixed;right:14px;bottom:14px;z-index:10;
+    background:rgba(8,15,28,.82);backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.14);border-radius:13px;
+    padding:14px 16px;width:250px;font-size:.78rem;
+  }
+  .panel h4{font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;
+    color:#8FA3BC;margin-bottom:12px;font-weight:500}
+  .row{margin-bottom:12px}
+  .row label{display:flex;justify-content:space-between;margin-bottom:5px;
+    font-family:ui-monospace,monospace;font-size:.68rem;color:#A9BACE}
+  .row label b{color:#fff;font-weight:500}
+  input[type=range]{width:100%;accent-color:#D4A94A;height:3px}
+  .seasons{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+  .seasons button{
+    padding:6px 0;font-size:.63rem;border-radius:6px;cursor:pointer;
+    border:1px solid rgba(255,255,255,.16);background:transparent;color:#A9BACE;
+  }
+  .seasons button.on{background:#D4A94A;border-color:#D4A94A;color:#0a1420;font-weight:600}
+  .live{
+    margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12);
+    font-family:ui-monospace,monospace;font-size:.62rem;color:#7E90A8;line-height:1.7;
+  }
+  .live span{color:#D4A94A}
+  .hide{position:absolute;top:9px;right:11px;background:none;border:0;
+    color:#6B7C93;cursor:pointer;font-size:.9rem}
+  .panel.min .row,.panel.min .seasons,.panel.min .live,.panel.min h4{display:none}
+  .panel.min{width:auto;padding:8px 12px}
+  @media(max-width:640px){.panel{display:none}}
+</style>
+</head>
+<body>
+
+<div id="scene"></div>
+
+<div class="hero">
+  <div>
+    <h1>Мал бүр цахим үнэмлэхтэй.</h1>
+    <p>Таг малыг таньна. Малчны гар утас байршлыг бүртгэнэ.</p>
+  </div>
+</div>
+
+<div class="panel" id="panel">
+  <button class="hide" id="hide">—</button>
+  <h4>Тайзны тохиргоо</h4>
+
+  <div class="row">
+    <label>Цаг <b id="tv">12:00</b></label>
+    <input type="range" id="time" min="0" max="1440" value="720" step="5">
+  </div>
+
+  <div class="row">
+    <label>Өдөр <b id="dv">—</b></label>
+    <input type="range" id="day" min="1" max="365" value="180" step="1">
+  </div>
+
+  <div class="seasons">
+    <button data-d="20">Өвөл</button>
+    <button data-d="110">Хавар</button>
+    <button data-d="200">Зун</button>
+    <button data-d="290">Намар</button>
+  </div>
+
+  <div class="live">
+    Нар: <span id="elev">—</span><br>
+    Улирал: <span id="seas">—</span><br>
+    FPS: <span id="fps">—</span>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ============================================================
+// YAK-TAG 3D hero — Phase A + B
+//   A: terrain, sky, camera, light rig
+//   B: real solar position + four-season system
+//
+// No image files. No model files. Everything generated in code.
+// ============================================================
+
+const UB_LAT = 47.92;              // Ulaanbaatar
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------- renderer ----------
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));   // cap for mobile GPUs
+renderer.setSize(innerWidth, innerHeight);
+document.getElementById('scene').appendChild(renderer.domElement);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(48, innerWidth/innerHeight, 0.5, 3000);
+camera.position.set(0, 9, 46);
+camera.lookAt(0, 6, -60);
+
+// ============================================================
+// SKY — gradient dome driven by sun elevation.
+// A shader, not a texture: costs nothing to download.
+// ============================================================
+const skyUniforms = {
+  uTop:     { value: new THREE.Color('#1B4FA8') },
+  uMid:     { value: new THREE.Color('#7FB2E8') },
+  uBottom:  { value: new THREE.Color('#DCE8F5') },
+  uSunDir:  { value: new THREE.Vector3(0,1,0) },
+  uSunTint: { value: new THREE.Color('#FFCF8A') },
+  uSunAmt:  { value: 0 }
+};
+
+const sky = new THREE.Mesh(
+  new THREE.SphereGeometry(1400, 32, 20),
+  new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, uniforms: skyUniforms,
+    vertexShader:`
+      varying vec3 vDir;
+      void main(){
+        vDir = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+      }`,
+    fragmentShader:`
+      uniform vec3 uTop,uMid,uBottom,uSunTint;
+      uniform vec3 uSunDir; uniform float uSunAmt;
+      varying vec3 vDir;
+      void main(){
+        float h = clamp(vDir.y*0.5+0.5, 0.0, 1.0);
+        vec3 col = h < 0.5
+          ? mix(uBottom, uMid, smoothstep(0.0,0.5,h))
+          : mix(uMid, uTop,    smoothstep(0.5,1.0,h));
+        // glow around the sun, strongest near the horizon
+        float d = max(dot(normalize(vDir), normalize(uSunDir)), 0.0);
+        col += uSunTint * pow(d, 9.0) * uSunAmt * 0.85;
+        col += uSunTint * pow(d, 2.2) * uSunAmt * 0.13;
+        gl_FragColor = vec4(col,1.0);
+      }`
+  })
+);
+scene.add(sky);
+
+// ============================================================
+// TERRAIN — displaced plane. Layered sine "noise", cheap and smooth.
+// ============================================================
+const SIZE = 900, SEG = 150;
+const groundGeo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
+groundGeo.rotateX(-Math.PI/2);
+
+const pos = groundGeo.attributes.position;
+for (let i=0; i<pos.count; i++){
+  const x = pos.getX(i), z = pos.getZ(i);
+  const d = Math.hypot(x, z);
+  // rolling hills, flattened near the camera so animals stand level
+  let h = Math.sin(x*0.0075)*Math.cos(z*0.0062)*11
+        + Math.sin(x*0.021 + 1.3)*Math.cos(z*0.017)*4.5
+        + Math.sin(x*0.048)*Math.sin(z*0.041)*1.6;
+  h *= THREE.MathUtils.smoothstep(d, 55, 320);
+  pos.setY(i, h);
+}
+groundGeo.computeVertexNormals();
+
+const groundMat = new THREE.MeshLambertMaterial({ color:'#7E8A4E' });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ============================================================
+// LIGHT RIG
+// ============================================================
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.castShadow = !REDUCED;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 600;
+sun.shadow.camera.left = -140; sun.shadow.camera.right = 140;
+sun.shadow.camera.top  =  140; sun.shadow.camera.bottom = -140;
+scene.add(sun, sun.target);
+
+const hemi = new THREE.HemisphereLight(0xbcd6f5, 0x6b6a45, 0.55);
+scene.add(hemi);
+
+// visible sun disc
+const sunDisc = new THREE.Mesh(
+  new THREE.SphereGeometry(22, 18, 14),
+  new THREE.MeshBasicMaterial({ color:0xfff2cc, transparent:true, opacity:.95 })
+);
+scene.add(sunDisc);
+
+// ============================================================
+// CLOUDS — low-poly puff clusters, drifting.
+// ============================================================
+const cloudMat = new THREE.MeshLambertMaterial({
+  color:0xffffff, transparent:true, opacity:.92, flatShading:true
+});
+const clouds = [];
+for (let i=0; i<16; i++){
+  const g = new THREE.Group();
+  const puffs = 3 + Math.floor(Math.random()*4);
+  for (let p=0; p<puffs; p++){
+    const r = 9 + Math.random()*13;
+    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), cloudMat);
+    m.position.set((Math.random()-.5)*40, (Math.random()-.5)*6, (Math.random()-.5)*18);
+    m.scale.y = .55 + Math.random()*.3;
+    g.add(m);
+  }
+  g.position.set(
+    (Math.random()-.5)*900,
+    72 + Math.random()*70,
+    -180 - Math.random()*520
+  );
+  g.userData.speed = .28 + Math.random()*.5;
+  clouds.push(g); scene.add(g);
+}
+
+// ============================================================
+// STARS — only visible at night, faded in by sun elevation.
+// ============================================================
+const starGeo = new THREE.BufferGeometry();
+const starPos = new Float32Array(1100*3);
+for (let i=0; i<1100; i++){
+  const t = Math.random()*Math.PI*2;
+  const p = Math.acos(Math.random()*0.92);      // upper hemisphere only
+  const r = 1150;
+  starPos[i*3]   = r*Math.sin(p)*Math.cos(t);
+  starPos[i*3+1] = r*Math.cos(p);
+  starPos[i*3+2] = r*Math.sin(p)*Math.sin(t);
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos,3));
+const starMat = new THREE.PointsMaterial({
+  color:0xffffff, size:2.6, transparent:true, opacity:0, sizeAttenuation:false
+});
+scene.add(new THREE.Points(starGeo, starMat));
+
+// ============================================================
+// PLACEHOLDER ANIMALS — Phase C replaces these with proper
+// low-poly cows and horses. Here only to judge scale and light.
+// ============================================================
+function blockAnimal(colour, scale){
+  const g = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({ color: colour, flatShading:true });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(5.2,3,2.4), mat);
+  body.position.y = 3; body.castShadow = !REDUCED;
+  const head = new THREE.Mesh(new THREE.BoxGeometry(2,1.7,1.5), mat);
+  head.position.set(3.4,3.7,0); head.castShadow = !REDUCED;
+  g.add(body, head);
+  for (const [x,z] of [[-1.8,-.9],[-1.8,.9],[1.8,-.9],[1.8,.9]]){
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(.65,3,.65), mat);
+    leg.position.set(x,1.5,z); leg.castShadow = !REDUCED;
+    g.add(leg);
+  }
+  g.scale.setScalar(scale);
+  return g;
+}
+
+const herd = [];
+for (let i=0; i<9; i++){                       // cows, front
+  const c = blockAnimal(0x4A3B33, .9 + Math.random()*.25);
+  c.position.set((Math.random()-.5)*95, 0, -30 - Math.random()*70);
+  c.rotation.y = (Math.random()-.5)*1.5;
+  herd.push(c); scene.add(c);
+}
+for (let i=0; i<6; i++){                       // horses, behind
+  const h = blockAnimal(0x6B4A32, .85 + Math.random()*.2);
+  h.position.set((Math.random()-.5)*260, 0, -180 - Math.random()*120);
+  h.rotation.y = (Math.random()-.5)*2;
+  herd.push(h); scene.add(h);
+}
+
+// ============================================================
+// SOLAR POSITION — real astronomy, not a guess.
+// Declination + hour angle for Ulaanbaatar's latitude.
+// ============================================================
+function solar(dayOfYear, minutes){
+  const decl = 23.44 * Math.sin(THREE.MathUtils.degToRad(360/365*(dayOfYear-81)));
+  const H    = 15 * (minutes/60 - 12);                    // hour angle, degrees
+  const lat = THREE.MathUtils.degToRad(UB_LAT);
+  const d   = THREE.MathUtils.degToRad(decl);
+  const h   = THREE.MathUtils.degToRad(H);
+
+  const sinEl = Math.sin(lat)*Math.sin(d) + Math.cos(lat)*Math.cos(d)*Math.cos(h);
+  const elev  = Math.asin(THREE.MathUtils.clamp(sinEl,-1,1));
+
+  let az = Math.atan2(
+    -Math.sin(h),
+    Math.tan(d)*Math.cos(lat) - Math.sin(lat)*Math.cos(h)
+  );
+  return { elev, az, elevDeg: THREE.MathUtils.radToDeg(elev) };
+}
+
+// ============================================================
+// SEASON — Mongolian steppe, not European pasture.
+// Long brown winter, brief green summer, gold autumn.
+// ============================================================
+const SEASONS = {
+  winter: { ground:'#C9CBD0', hemiGround:0x9aa0a8, name:'Өвөл' },
+  spring: { ground:'#8E9457', hemiGround:0x7d8352, name:'Хавар' },
+  summer: { ground:'#7E9A4A', hemiGround:0x6f8543, name:'Зун'  },
+  autumn: { ground:'#B99B52', hemiGround:0x9c854a, name:'Намар' }
+};
+
+function seasonAt(dayOfYear){
+  // blended so the transition is gradual, not a switch
+  const d = dayOfYear;
+  if (d < 60)  return blend('winter','spring', (d)/60 * .35);
+  if (d < 152) return blend('spring','summer', (d-60)/92);
+  if (d < 244) return blend('summer','autumn', (d-152)/92 * .55);
+  if (d < 305) return blend('autumn','winter', (d-244)/61);
+  return blend('winter','winter', 0);
+}
+function blend(a,b,t){
+  t = THREE.MathUtils.clamp(t,0,1);
+  const A = SEASONS[a], B = SEASONS[b];
+  return {
+    ground: new THREE.Color(A.ground).lerp(new THREE.Color(B.ground), t),
+    hemi:   new THREE.Color(A.hemiGround).lerp(new THREE.Color(B.hemiGround), t),
+    name:   t < .5 ? A.name : B.name
+  };
+}
+
+// ---------- sky palette by sun elevation ----------
+const PALETTE = [
+  // elevation °, top,      mid,       bottom,    sunTint
+  [-18, '#050B18', '#08101F', '#0C1526', '#1B2A44'],  // deep night
+  [ -6, '#0B1830', '#16274A', '#25344F', '#4A5A80'],  // twilight
+  [  0, '#243B66', '#7A5C7A', '#D98A5C', '#FF9E52'],  // horizon
+  [  6, '#2C5C9E', '#9E86A8', '#F0B173', '#FFC078'],  // low sun
+  [ 16, '#1E5FB4', '#87B3E0', '#E4DCC8', '#FFDCA0'],  // morning
+  [ 40, '#1B4FA8', '#7FB2E8', '#DCE8F5', '#FFF0CC'],  // full day
+  [ 70, '#12408F', '#6BA6E4', '#D5E4F4', '#FFF6DE']
+];
+function skyAt(elevDeg){
+  let i = 0;
+  while (i < PALETTE.length-1 && elevDeg > PALETTE[i+1][0]) i++;
+  const a = PALETTE[i], b = PALETTE[Math.min(i+1, PALETTE.length-1)];
+  const t = a===b ? 0 : THREE.MathUtils.clamp((elevDeg-a[0])/(b[0]-a[0]), 0, 1);
+  return {
+    top:    new THREE.Color(a[1]).lerp(new THREE.Color(b[1]), t),
+    mid:    new THREE.Color(a[2]).lerp(new THREE.Color(b[2]), t),
+    bottom: new THREE.Color(a[3]).lerp(new THREE.Color(b[3]), t),
+    tint:   new THREE.Color(a[4]).lerp(new THREE.Color(b[4]), t)
+  };
+}
+
+// ============================================================
+// APPLY
+// ============================================================
+let dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0)) / 864e5);
+let minutes   = new Date().getHours()*60 + new Date().getMinutes();
+let follow    = true;    // follow the real clock until the user drags a slider
+
+function apply(){
+  const s = solar(dayOfYear, minutes);
+  const e = s.elevDeg;
+
+  // --- sun placement ---
+  const R = 900;
+  const y = Math.sin(s.elev)*R;
+  const horiz = Math.cos(s.elev)*R;
+  const x = Math.sin(s.az)*horiz;
+  const z = -Math.cos(s.az)*horiz;
+
+  sun.position.set(x, Math.max(y, -180), z);
+  sun.target.position.set(0,0,0);
+  sunDisc.position.set(x*.92, y*.92, z*.92);
+  sunDisc.visible = e > -3;
+
+  // --- light strength ---
+  const day = THREE.MathUtils.clamp((e+4)/16, 0, 1);
+  sun.intensity  = 0.15 + day*1.75;
+  hemi.intensity = 0.16 + day*0.62;
+
+  // warm the sunlight near the horizon
+  const warm = new THREE.Color('#FFB166').lerp(new THREE.Color('#FFFDF5'),
+               THREE.MathUtils.clamp(e/26, 0, 1));
+  sun.color.copy(warm);
+
+  // --- sky ---
+  const sk = skyAt(e);
+  skyUniforms.uTop.value.copy(sk.top);
+  skyUniforms.uMid.value.copy(sk.mid);
+  skyUniforms.uBottom.value.copy(sk.bottom);
+  skyUniforms.uSunTint.value.copy(sk.tint);
+  skyUniforms.uSunDir.value.set(x,y,z).normalize();
+  skyUniforms.uSunAmt.value = THREE.MathUtils.clamp((e+6)/14, 0, 1);
+
+  // --- stars ---
+  starMat.opacity = THREE.MathUtils.clamp((-e-2)/12, 0, 1) * 0.9;
+
+  // --- season ---
+  const se = seasonAt(dayOfYear);
+  groundMat.color.copy(se.ground).multiplyScalar(0.35 + day*0.72);
+  hemi.groundColor.copy(se.hemi);
+  cloudMat.opacity = 0.55 + day*0.4;
+  cloudMat.color.setRGB(0.35 + day*0.65, 0.37 + day*0.63, 0.42 + day*0.58);
+
+  // --- readouts ---
+  const hh = String(Math.floor(minutes/60)).padStart(2,'0');
+  const mm = String(Math.floor(minutes%60)).padStart(2,'0');
+  tv.textContent   = `${hh}:${mm}`;
+  const dt = new Date(new Date().getFullYear(),0,dayOfYear);
+  dv.textContent   = dt.toLocaleDateString('mn-MN',{month:'short',day:'numeric'});
+  elev.textContent = e.toFixed(1)+'°';
+  seas.textContent = se.name;
+}
+
+// ============================================================
+// CONTROLS (dev panel)
+// ============================================================
+const tEl = document.getElementById('time');
+const dEl = document.getElementById('day');
+tEl.value = minutes; dEl.value = dayOfYear;
+
+tEl.addEventListener('input', e => { minutes  = +e.target.value; follow=false; apply(); });
+dEl.addEventListener('input', e => { dayOfYear= +e.target.value; follow=false; apply(); });
+
+document.querySelectorAll('.seasons button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.seasons button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    dayOfYear = +b.dataset.d; dEl.value = dayOfYear; follow=false; apply();
+  });
+});
+
+document.getElementById('hide').addEventListener('click', () =>
+  document.getElementById('panel').classList.toggle('min'));
+
+// ============================================================
+// LOOP
+// ============================================================
+let last = performance.now(), frames = 0, fpsTimer = 0;
+const clock = new THREE.Clock();
+
+function tick(){
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), .1);
+
+  // clouds drift
+  for (const c of clouds){
+    c.position.x += c.userData.speed * dt * 3.4;
+    if (c.position.x > 480) c.position.x = -480;
+  }
+
+  // gentle camera breathing — parallax without motion sickness
+  if (!REDUCED){
+    const t = clock.elapsedTime;
+    camera.position.x = Math.sin(t*0.06)*3.4;
+    camera.position.y = 9 + Math.sin(t*0.09)*0.5;
+    camera.lookAt(0, 6, -60);
+  }
+
+  // follow the real clock (1 real minute = 1 scene minute)
+  if (follow){
+    const now = new Date();
+    minutes = now.getHours()*60 + now.getMinutes() + now.getSeconds()/60;
+    tEl.value = minutes;
+    apply();
+  }
+
+  // fps
+  frames++; fpsTimer += dt;
+  if (fpsTimer > 1){ fps.textContent = frames; frames = 0; fpsTimer = 0; }
+
+  renderer.render(scene, camera);
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+apply();
+tick();
+</script>
+</body>
+</html>
