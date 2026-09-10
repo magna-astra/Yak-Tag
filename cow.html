@@ -116,6 +116,24 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
 .toast.bad{background:var(--alert)}
 
+.feed-btn{width:100%;margin-top:12px;padding:14px;background:var(--gold-light);color:var(--gold);
+  border:1.5px solid #EBD9B0;border-radius:12px;font-weight:700;font-size:.95rem}
+.feed-btn:disabled{opacity:.5}
+
+.milk-tabs{display:flex;gap:8px;margin-bottom:14px}
+.milk-tabs button{flex:1;padding:9px 6px;border:1.5px solid var(--line);background:#fff;
+  border-radius:9px;font-size:.84rem;font-weight:600;color:var(--ink-soft)}
+.milk-tabs button.on{border-color:var(--khukh);background:var(--khukh-light);color:var(--khukh)}
+.milk-chart{min-height:120px}
+.bars{display:flex;align-items:flex-end;gap:5px;height:120px;margin-bottom:8px}
+.bars div{flex:1;background:var(--khukh);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+.bars div.zero{background:#E8EBF0}
+.barlabels{display:flex;gap:5px;font-size:.65rem;color:var(--ink-soft);text-align:center}
+.barlabels span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.milk-total{display:flex;justify-content:space-between;padding-top:12px;margin-top:12px;
+  border-top:1px solid #F0F2F5;font-size:.9rem}
+.milk-total b{font-family:var(--mono)}
+
 .notfound{text-align:center;padding:60px 20px;color:var(--ink-soft)}
 .notfound h2{color:var(--ink);margin-bottom:8px}
 </style>
@@ -310,6 +328,24 @@ function renderCow() {
       </div>
     </div>
 
+    <!-- FEEDING -->
+    <div class="card">
+      <h2><span class="dot"></span>Тэжээл</h2>
+      <div class="kv"><span>Сүүлд тэжээсэн</span><span id="lastFedVal">${fmtDate(cow.last_fed_at)}</span></div>
+      <button class="feed-btn" id="feedBtn">Тэжээсэн гэж тэмдэглэх</button>
+    </div>
+
+    <!-- MILK HISTORY -->
+    <div class="card">
+      <h2><span class="dot"></span>Сүүний түүх</h2>
+      <div class="milk-tabs" id="milkTabs">
+        <button data-range="week" class="on">7 хоног</button>
+        <button data-range="month">Сар</button>
+        <button data-range="year">Жил</button>
+      </div>
+      <div id="milkChart" class="milk-chart"><p class="hint">Ачаалж байна…</p></div>
+    </div>
+
     <!-- PHOTO -->
     <div class="card">
       <h2><span class="dot"></span>Зураг авах</h2>
@@ -342,6 +378,15 @@ function renderCow() {
   `;
 
   document.getElementById('milkBtn').addEventListener('click', saveMilk);
+  document.getElementById('feedBtn').addEventListener('click', logFeeding);
+  document.querySelectorAll('#milkTabs button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#milkTabs button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      loadMilkHistory(b.dataset.range);
+    });
+  });
+  loadMilkHistory('week');
   document.getElementById('photoBtn').addEventListener('click', () => {
     document.getElementById('fileInput').click();
   });
@@ -395,36 +440,73 @@ document.getElementById('fileInput').addEventListener('change', async e => {
   btn.disabled = true;
   btn.textContent = 'Хадгалж байна…';
 
-  const { data: { user } } = await sb.auth.getUser();
-  const path = `farm-${cow.farm_id}/cow-${cow.id}/${photoKind}-${Date.now()}.jpg`;
+  try {
+    const { data: { user } } = await sb.auth.getUser();
 
-  // NOTE: file bytes are not uploaded yet — storage bucket comes next.
-  // The record + GPS + timestamp are captured now so the evidence trail
-  // starts from the first tap.
-  const { error } = await sb.from('cattle_photos').insert({
-    farm_id: cow.farm_id,
-    cattle_id: cow.id,
-    kind: photoKind,
-    storage_path: path,
-    bytes: file.size,
-    taken_lat: gps ? gps.lat : null,
-    taken_lng: gps ? gps.lng : null,
-    taken_at: new Date().toISOString()
-  });
+    // shrink before upload — herder phones on 3G in the countryside
+    const blob = await shrinkImage(file, 1600, 0.82);
+    const path = `farm-${cow.farm_id}/cow-${cow.id}/${photoKind}-${Date.now()}.jpg`;
 
-  btn.disabled = false;
-  btn.textContent = 'Камер нээх';
-  e.target.value = '';
+    // 1. upload the actual file
+    const { error: upErr } = await sb.storage
+      .from('cattle-photos')
+      .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+    if (upErr) throw upErr;
 
-  if (error) { toast('Зураг бүртгэж чадсангүй: ' + error.message, true); return; }
-  toast(gps ? 'Зураг байршилтай хадгалагдлаа' : 'Зураг хадгалагдлаа (байршилгүй)');
-  loadPhotos();
+    // 2. write the record, locked immediately
+    const { error: dbErr } = await sb.from('cattle_photos').insert({
+      farm_id: cow.farm_id,
+      cattle_id: cow.id,
+      kind: photoKind,
+      storage_path: path,
+      bytes: blob.size,
+      taken_lat: gps ? gps.lat : null,
+      taken_lng: gps ? gps.lng : null,
+      taken_at: new Date().toISOString(),
+      locked_at: new Date().toISOString(),
+      locked_by: user.id
+    });
+    if (dbErr) throw dbErr;
+
+    toast(gps ? 'Зураг байршилтай түгжигдлээ' : 'Зураг түгжигдлээ (байршилгүй)');
+    preview.style.display = 'none';
+    loadPhotos();
+  } catch (err) {
+    toast('Хадгалж чадсангүй: ' + (err.message || err), true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Камер нээх';
+    e.target.value = '';
+  }
 });
+
+// Resize on the phone before upload: a 12MP photo is ~4MB, which is
+// slow and expensive over rural mobile data. 1600px is plenty for
+// muzzle-print identification.
+function shrinkImage(file, maxSide, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      const scale = Math.min(1, maxSide / Math.max(width, height));
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('Зураг боловсруулж чадсангүй')),
+                    'image/jpeg', quality);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => reject(new Error('Зураг уншиж чадсангүй'));
+    img.src = URL.createObjectURL(file);
+  });
+}
 
 async function loadPhotos() {
   const { data } = await sb
     .from('cattle_photos')
-    .select('kind, taken_at, taken_lat')
+    .select('id, kind, taken_at, taken_lat, storage_path, locked_at')
     .eq('cattle_id', cow.id)
     .order('taken_at', { ascending: false })
     .limit(6);
@@ -435,12 +517,116 @@ async function loadPhotos() {
 
   const label = { muzzle:'Хамар', profile:'Бүтэн бие', marking:'Тэмдэг',
                   transfer:'Шилжүүлэг', health:'Эрүүл мэнд' };
-  grid.innerHTML = data.map(p => `
-    <figure>
-      <img src="assets/logo-256.png" alt="" style="object-fit:contain;padding:18%;opacity:.25">
-      <span class="lockicon">Түгжээтэй</span>
-      <figcaption>${label[p.kind] || p.kind}<br>${fmtDate(p.taken_at)}</figcaption>
-    </figure>`).join('');
+
+  // private bucket — need short-lived signed URLs to display
+  const paths = data.map(p => p.storage_path);
+  const { data: signed } = await sb.storage
+    .from('cattle-photos')
+    .createSignedUrls(paths, 3600);
+
+  const urlFor = {};
+  (signed || []).forEach(s => { if (s.signedUrl) urlFor[s.path] = s.signedUrl; });
+
+  grid.innerHTML = data.map(p => {
+    const url = urlFor[p.storage_path];
+    const img = url
+      ? `<img src="${url}" alt="${label[p.kind] || p.kind}" loading="lazy">`
+      : `<img src="assets/logo-256.png" alt="" style="object-fit:contain;padding:18%;opacity:.2">`;
+    const lock = p.locked_at ? '<span class="lockicon">Түгжээтэй</span>' : '';
+    const geo = p.taken_lat ? ' · GPS' : '';
+    return `<figure>${img}${lock}
+      <figcaption>${label[p.kind] || p.kind}<br>${fmtDate(p.taken_at)}${geo}</figcaption>
+    </figure>`;
+  }).join('');
+}
+
+// ---------- feeding ----------
+async function logFeeding() {
+  const btn = document.getElementById('feedBtn');
+  btn.disabled = true;
+  const { error } = await sb.rpc('log_feeding', {
+    p_cattle_id: cow.id,
+    p_title: 'Тэжээл',
+    p_detail: null
+  });
+  btn.disabled = false;
+  if (error) { toast('Бүртгэж чадсангүй: ' + error.message, true); return; }
+  toast('Тэжээсэн гэж тэмдэглэлээ');
+  document.getElementById('lastFedVal').textContent = fmtDate(new Date().toISOString());
+}
+
+// ---------- milk history ----------
+async function loadMilkHistory(range) {
+  const el = document.getElementById('milkChart');
+  if (!el) return;
+
+  const today = new Date();
+  let since, buckets, labelFor;
+
+  if (range === 'week') {
+    since = new Date(today); since.setDate(today.getDate() - 6);
+    buckets = 7;
+    labelFor = d => ['Ням','Дав','Мяг','Лха','Пүр','Баа','Бям'][d.getDay()];
+  } else if (range === 'month') {
+    since = new Date(today); since.setDate(today.getDate() - 29);
+    buckets = 30;
+    labelFor = d => d.getDate();
+  } else {
+    since = new Date(today); since.setMonth(today.getMonth() - 11);
+    buckets = 12;
+    labelFor = d => (d.getMonth() + 1) + 'сар';
+  }
+
+  const { data, error } = await sb
+    .from('milk_yield')
+    .select('liters, yield_date')
+    .eq('cattle_id', cow.id)
+    .gte('yield_date', since.toISOString().slice(0,10))
+    .order('yield_date');
+
+  if (error) { el.innerHTML = '<p class="hint">Ачаалж чадсангүй.</p>'; return; }
+
+  // build empty buckets then fill
+  const series = [];
+  for (let i = 0; i < buckets; i++) {
+    const d = new Date(since);
+    if (range === 'year') d.setMonth(since.getMonth() + i);
+    else d.setDate(since.getDate() + i);
+    series.push({ date: d, label: labelFor(d), liters: 0 });
+  }
+
+  (data || []).forEach(row => {
+    const rd = new Date(row.yield_date + 'T00:00:00');
+    let idx;
+    if (range === 'year') {
+      idx = (rd.getFullYear() - since.getFullYear()) * 12 + (rd.getMonth() - since.getMonth());
+    } else {
+      idx = Math.round((rd - new Date(since.toDateString())) / 86400000);
+    }
+    if (idx >= 0 && idx < buckets) series[idx].liters += Number(row.liters);
+  });
+
+  const max = Math.max(...series.map(s => s.liters), 1);
+  const total = series.reduce((s, x) => s + x.liters, 0);
+  const days = series.filter(s => s.liters > 0).length;
+  const avg = days ? total / days : 0;
+
+  // for month view, only label every 5th day so it stays readable
+  const showLabel = (i) => range === 'month' ? (i % 5 === 0) : true;
+
+  el.innerHTML = `
+    <div class="bars">
+      ${series.map(s => `<div class="${s.liters ? '' : 'zero'}"
+        style="height:${Math.max(2, (s.liters / max) * 100)}%"
+        title="${s.label}: ${s.liters.toFixed(1)} л"></div>`).join('')}
+    </div>
+    <div class="barlabels">
+      ${series.map((s,i) => `<span>${showLabel(i) ? s.label : ''}</span>`).join('')}
+    </div>
+    <div class="milk-total"><span>Нийт</span><b>${total.toFixed(1)} л</b></div>
+    <div class="milk-total" style="border-top:0;padding-top:0;margin-top:0">
+      <span>Дунджаар (бүртгэсэн өдөр)</span><b>${avg.toFixed(1)} л</b></div>
+  `;
 }
 
 // ---------- scan log ----------
