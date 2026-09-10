@@ -101,6 +101,9 @@ main{padding:22px 22px 60px;max-width:1560px;margin:0 auto}
   box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .maplegend div{display:flex;align-items:center;gap:7px;margin:3px 0}
 .legdot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+.gtestwarn{background:#B8892C;color:#fff;padding:6px 11px;border-radius:8px;
+  font-size:.75rem;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.25);max-width:230px;
+  line-height:1.35}
 .cowpin{background:var(--khukh);color:#fff;border-radius:14px;padding:3px 8px;font-family:var(--mono);
   font-size:.7rem;font-weight:700;white-space:nowrap;border:2px solid #fff;
   box-shadow:0 2px 6px rgba(0,0,0,.3);text-align:center}
@@ -861,17 +864,26 @@ let baseLayers = {}, layerControl = null;
 function initMap(){
   if(map){ map.invalidateSize(); return; }
 
+  // maxNativeZoom lets Leaflet keep zooming past the imagery's real
+  // resolution by upscaling the last available tile. You get closer,
+  // though no extra detail — the pixels are simply bigger. Useful for
+  // separating pins that sit close together.
   const sentinel = L.tileLayer(
     'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg',
-    { maxZoom:15, attribution:'Sentinel-2 cloudless by <a href="https://eox.at">EOX</a> (CC BY 4.0)' });
+    { maxNativeZoom:15, maxZoom:19,
+      attribution:'Sentinel-2 cloudless by <a href="https://eox.at">EOX</a> (CC BY 4.0)' });
 
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     { maxZoom:19, attribution:'© OpenStreetMap' });
 
   const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    { maxZoom:17, attribution:'© OpenTopoMap (CC-BY-SA)' });
+    { maxNativeZoom:17, maxZoom:19, attribution:'© OpenTopoMap (CC-BY-SA)' });
 
-  map = L.map('map',{ scrollWheelZoom:true, layers:[sentinel] }).setView([47.92,103.5],9);
+  const startLayer = (typeof USE_GOOGLE_TILES_TESTING !== 'undefined' && USE_GOOGLE_TILES_TESTING)
+    ? L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+        { maxZoom:21, subdomains:['mt0','mt1','mt2','mt3'], attribution:'© Google (тест)' })
+    : sentinel;
+  map = L.map('map',{ scrollWheelZoom:true, maxZoom:21, layers:[startLayer] }).setView([47.92,103.5],9);
 
   baseLayers = {
     'Хиймэл дагуул (үнэгүй)': sentinel,
@@ -879,11 +891,49 @@ function initMap(){
     'Зам, суурин': osm
   };
 
-  // Google only appears if a key is configured — no dead menu entry.
-  if(typeof GOOGLE_MAPS_KEY !== 'undefined' && GOOGLE_MAPS_KEY){
-    baseLayers['Google хиймэл дагуул'] = L.tileLayer(
-      'https://mt1.google.com/vt/lyrs=s\u0026x={x}\u0026y={y}\u0026z={z}',
-      { maxZoom:20, attribution:'© Google' });
+  // Optional high-resolution layer. Mapbox Satellite gives sub-meter
+  // imagery in many areas and 50,000 free map loads a month, with no
+  // card required to start and commercial use permitted.
+  //
+  // Deliberately NOT using Google's mt1.google.com tile URLs. They work
+  // and cost nothing, but Google's terms require tiles be served through
+  // the Maps API — an unlicensed dependency is a bad foundation for a
+  // product you intend to sell, and can be cut off without warning.
+  if(typeof MAPBOX_TOKEN !== 'undefined' && MAPBOX_TOKEN){
+    baseLayers['Нарийвчилсан хиймэл дагуул'] = L.tileLayer(
+      'https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=' + MAPBOX_TOKEN,
+      { maxZoom:20, tileSize:512, zoomOffset:-1,
+        attribution:'© Mapbox © OpenStreetMap' });
+  }
+
+  // ⚠️ TESTING ONLY — see the note in config.js. Unlicensed tile
+  // endpoint; remove before charging customers.
+  if(typeof USE_GOOGLE_TILES_TESTING !== 'undefined' && USE_GOOGLE_TILES_TESTING){
+    const gsat = L.tileLayer(
+      'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+      { maxZoom:21, subdomains:['mt0','mt1','mt2','mt3'], attribution:'© Google (тест)' });
+    const ghyb = L.tileLayer(
+      'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      { maxZoom:21, subdomains:['mt0','mt1','mt2','mt3'], attribution:'© Google (тест)' });
+
+    baseLayers['Google хиймэл дагуул (тест)'] = gsat;
+    baseLayers['Google + нэршил (тест)'] = ghyb;
+
+    // Visible reminder whenever a test layer is on screen, so this
+    // never gets demoed or shipped by accident.
+    const warn = L.control({position:'topleft'});
+    warn.onAdd = function(){
+      const d = L.DomUtil.create('div','gtestwarn');
+      d.innerHTML = '⚠ Google тест давхарга — арилжааны өмнө солино';
+      d.style.display = 'none';
+      return d;
+    };
+    warn.addTo(map);
+
+    map.on('baselayerchange', e=>{
+      const el = document.querySelector('.gtestwarn');
+      if(el) el.style.display = /тест/.test(e.name) ? 'block' : 'none';
+    });
   }
 
   layerControl = L.control.layers(baseLayers,{},{position:'topright'}).addTo(map);
@@ -939,7 +989,7 @@ function drawMap(){
     bounds.push([c.last_lat,c.last_lng]);
   });
 
-  if(bounds.length) map.fitBounds(bounds,{padding:[50,50],maxZoom:13});
+  if(bounds.length) map.fitBounds(bounds,{padding:[50,50],maxZoom:17});
 }
 
 // ---------- MILK MODAL ----------

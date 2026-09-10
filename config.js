@@ -34,6 +34,41 @@ const SUPABASE_KEY = 'sb_publishable_W3WMWLP28Czb2_5VTDQUlg_--3vfY71';
 // ============================================================
 const GOOGLE_MAPS_KEY = '';
 
+// ============================================================
+// OPTIONAL: Mapbox token for high-resolution satellite.
+//
+// Free tier: 50,000 map loads/month, no credit card to start,
+// commercial use allowed. Sign up at mapbox.com, copy the default
+// public token (starts pk.), paste it here. It adds a
+// "Нарийвчилсан хиймэл дагуул" option to the layer switcher with
+// sub-meter imagery in many areas.
+//
+// Leave empty and the map uses free Sentinel-2 only.
+// Restrict the token to your domain in the Mapbox dashboard.
+// ============================================================
+const MAPBOX_TOKEN = '';
+
+// ============================================================
+// ⚠️  TESTING ONLY — REMOVE BEFORE COMMERCIAL LAUNCH
+//
+// Loads Google's satellite tiles directly from mt1.google.com.
+// No key, no billing, unlimited zoom, best imagery available.
+//
+// THE CATCH: Google's Terms of Service require their tiles be
+// served through the Maps JavaScript API. Pulling them from the
+// tile endpoint is undocumented and unlicensed. It works today.
+// It can stop working any day, without notice, and using it in a
+// product you charge for is a licensing exposure.
+//
+// Acceptable while you are testing on a github.io domain with
+// five tags. Set this to false and configure MAPBOX_TOKEN above
+// before you take money from a customer.
+//
+// When the layer is active the map shows a visible warning badge,
+// so nobody demos this to an investor without noticing.
+// ============================================================
+const USE_GOOGLE_TILES_TESTING = true;
+
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ---------- shared helpers ----------
