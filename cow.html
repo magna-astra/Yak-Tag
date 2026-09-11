@@ -134,6 +134,19 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
   border-top:1px solid #F0F2F5;font-size:.9rem}
 .milk-total b{font-family:var(--mono)}
 
+.phone-entry{display:flex;gap:10px}
+.phone-entry input{flex:1;padding:14px;border:2px solid var(--line);border-radius:12px;
+  font-family:var(--mono);font-size:1.15rem;font-weight:600;text-align:center}
+.phone-entry input:focus{outline:none;border-color:var(--khukh)}
+.phone-entry button{padding:0 20px;background:var(--khukh);color:#fff;border:0;
+  border-radius:12px;font-weight:700;white-space:nowrap}
+.phone-entry button:disabled{opacity:.5}
+.phone-locked{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--steppe-light);color:var(--steppe);padding:15px;border-radius:12px;
+  font-weight:700}
+.phone-locked .num{font-family:var(--mono);font-size:1.1rem}
+.lockbtn{width:100%;margin-top:10px;padding:12px;background:#fff;color:var(--ink-soft);
+  border:1.5px solid var(--line);border-radius:11px;font-weight:600;font-size:.88rem}
 .notfound{text-align:center;padding:60px 20px;color:var(--ink-soft)}
 .notfound h2{color:var(--ink);margin-bottom:8px}
 </style>
@@ -346,6 +359,13 @@ function renderCow() {
       <div id="milkChart" class="milk-chart"><p class="hint">Ачаалж байна…</p></div>
     </div>
 
+    <!-- CONTACT PHONE -->
+    <div class="card">
+      <h2><span class="dot"></span>Холбоо барих утас</h2>
+      <p class="hint" style="margin-top:0;margin-bottom:12px">Таг уншуулсан хүн энэ дугаар руу залгана. Дугаар нь хуудсан дээр харагдахгүй — зөвхөн товч гарна.</p>
+      <div id="phoneZone"></div>
+    </div>
+
     <!-- PHOTO -->
     <div class="card">
       <h2><span class="dot"></span>Зураг авах</h2>
@@ -381,6 +401,7 @@ function renderCow() {
     </div>
   `;
 
+  renderPhone();
   document.getElementById('milkBtn').addEventListener('click', saveMilk);
   document.getElementById('feedBtn').addEventListener('click', logFeeding);
   document.querySelectorAll('#milkTabs button').forEach(b => {
@@ -402,6 +423,53 @@ function renderCow() {
     });
   });
   updateGpsNote();
+}
+
+
+// ---------- contact phone ----------
+function renderPhone(){
+  const z = document.getElementById('phoneZone');
+  if(!z) return;
+  const locked = !!cow.contact_locked_at;
+  const num = cow.contact_phone || '';
+
+  if(locked){
+    z.innerHTML = `
+      <div class="phone-locked">
+        <span class="num">${num}</span>
+        <span>🔒 Түгжээтэй</span>
+      </div>
+      <p class="hint">Энэ дугаарыг өөрчлөхийн тулд ферм админд хандана уу.</p>`;
+    return;
+  }
+
+  z.innerHTML = `
+    <div class="phone-entry">
+      <input type="tel" id="phoneInput" inputmode="tel" placeholder="99001122" value="${num}">
+      <button id="phoneSave">Хадгалах</button>
+    </div>
+    ${num ? '<button class="lockbtn" id="phoneLock">🔒 Дугаарыг түгжих</button>' : ''}
+    <p class="hint">Түгжсэний дараа зөвхөн ферм админ өөрчилнө.</p>`;
+
+  document.getElementById('phoneSave').addEventListener('click', ()=>savePhone(false));
+  const lk = document.getElementById('phoneLock');
+  if(lk) lk.addEventListener('click', ()=>{
+    if(confirm('Дугаарыг түгжих үү?\n\nҮүний дараа та өөрөө өөрчлөх боломжгүй болно. Зөвхөн ферм админ нээнэ.'))
+      savePhone(true);
+  });
+}
+
+async function savePhone(lock){
+  const input = document.getElementById('phoneInput');
+  const phone = input.value.trim();
+  if(!phone){ toast('Дугаараа оруулна уу.', true); return; }
+
+  const { error } = await sb.rpc('set_contact_phone', {
+    p_cattle_id: cow.id, p_phone: phone, p_lock: lock
+  });
+  if(error){ toast('Хадгалж чадсангүй: ' + error.message, true); return; }
+  toast(lock ? 'Дугаар түгжигдлээ' : 'Дугаар хадгалагдлаа');
+  await loadCow(cow.tag_code);
 }
 
 // ---------- milk ----------
