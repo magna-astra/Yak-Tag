@@ -194,7 +194,7 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 <script>
 let cow = null;
 let gps = null;
-let photoKind = 'muzzle';
+let photoKind = 'profile';
 
 // ---------- helpers ----------
 function toast(msg, bad=false) {
@@ -370,14 +370,15 @@ function renderCow() {
     <div class="card">
       <h2><span class="dot"></span>Зураг авах</h2>
       <div class="kind-pick" id="kindPick">
-        <button data-kind="muzzle" class="on">Хамар</button>
-        <button data-kind="profile">Бүтэн бие</button>
+        <button data-kind="profile" class="on">Бүтэн бие</button>
+        <button data-kind="muzzle">Хамар</button>
         <button data-kind="marking">Тэмдэг</button>
       </div>
       <button class="photo-btn" id="photoBtn">Камер нээх</button>
       <div class="gps-note" id="gpsNote">Байршил тогтоож байна…</div>
       <img id="preview" alt="">
-      <p class="hint">Зураг хадгалагдсаны дараа засах боломжгүй. Байршил, цаг автоматаар бүртгэгдэнэ.</p>
+      <p class="hint">Зураг хадгалагдсаны дараа засах боломжгүй. Байршил, цаг автоматаар бүртгэгдэнэ.<br>
+        <b>Бүтэн бие</b> зураг нь таг уншуулсан хүнд харагдана. Бусад зураг зөвхөн танд харагдана.</p>
       <div class="photo-grid" id="photoGrid"></div>
     </div>
 
@@ -525,7 +526,20 @@ document.getElementById('fileInput').addEventListener('change', async e => {
       .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
     if (upErr) throw upErr;
 
-    // 2. write the record, locked immediately
+    // 2. a "profile" shot also goes to the PUBLIC bucket, because the
+    //    tap page must show it to someone with no login. Muzzle prints
+    //    and everything else stay in the private bucket only.
+    if (photoKind === 'profile') {
+      const pubPath = `farm-${cow.farm_id}/cow-${cow.id}/profile.jpg`;
+      const { error: pubErr } = await sb.storage
+        .from('cattle-public')
+        .upload(pubPath, blob, { contentType: 'image/jpeg', upsert: true });
+      if (!pubErr) {
+        await sb.from('cattle').update({ public_photo_path: pubPath }).eq('id', cow.id);
+      }
+    }
+
+    // 3. write the record, locked immediately
     const { error: dbErr } = await sb.from('cattle_photos').insert({
       farm_id: cow.farm_id,
       cattle_id: cow.id,

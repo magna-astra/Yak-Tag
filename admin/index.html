@@ -972,8 +972,9 @@ function drawMap(){
   markers = [];
 
   const rows = mapRows();
-  document.getElementById('mapCount').textContent =
-    `${rows.length} мал зураг дээр · ${allCattle.length-rows.length} уншуулаагүй`;
+  document.getElementById('mapCount').textContent = rows.length
+    ? `${rows.length} мал зураг дээр · ${allCattle.length-rows.length} уншуулаагүй`
+    : 'Уншуулсан мал алга — таг уншуулмагц энд харагдана';
 
   const bounds = [];
   rows.forEach(c=>{
