@@ -530,12 +530,25 @@ document.getElementById('fileInput').addEventListener('change', async e => {
     //    tap page must show it to someone with no login. Muzzle prints
     //    and everything else stay in the private bucket only.
     if (photoKind === 'profile') {
-      const pubPath = `farm-${cow.farm_id}/cow-${cow.id}/profile.jpg`;
+      // Cache-busting filename: browsers and the CDN hold on to a
+      // public URL, so overwriting profile.jpg would keep serving the
+      // old picture for hours.
+      const pubPath = `farm-${cow.farm_id}/cow-${cow.id}/profile-${Date.now()}.jpg`;
       const { error: pubErr } = await sb.storage
         .from('cattle-public')
         .upload(pubPath, blob, { contentType: 'image/jpeg', upsert: true });
-      if (!pubErr) {
-        await sb.from('cattle').update({ public_photo_path: pubPath }).eq('id', cow.id);
+
+      if (pubErr) {
+        // Surface it rather than failing quietly — a photo the owner
+        // believes is public but isn't is worse than a visible error.
+        toast('Нийтийн зураг хадгалагдсангүй: ' + pubErr.message, true);
+      } else {
+        // Saved through a function: a direct UPDATE on cattle is
+        // rejected for herders by the row policy.
+        const { error: ptrErr } = await sb.rpc('set_public_photo', {
+          p_cattle_id: cow.id, p_path: pubPath
+        });
+        if (ptrErr) toast('Зураг холбогдсонгүй: ' + ptrErr.message, true);
       }
     }
 

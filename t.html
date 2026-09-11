@@ -129,8 +129,11 @@ function render(c){
     photoUrl = data && data.publicUrl;
   }
 
+  // If the pointer exists but the file fails to load, fall back visibly
+  // rather than showing a broken image icon.
   const photo = photoUrl
-    ? `<div class="photo"><img src="${photoUrl}" alt="${esc(c.tag_code)}"></div>`
+    ? `<div class="photo"><img src="${photoUrl}" alt="${esc(c.tag_code)}"
+         onerror="this.parentNode.innerHTML='<div class=&quot;none&quot;><img src=&quot;assets/logo-256.png&quot; alt=&quot;&quot;><span>Зураг ачаалагдсангүй</span></div>'"></div>`
     : `<div class="photo"><div class="none">
          <img src="assets/logo-256.png" alt=""><span>Зураг бүртгэгдээгүй</span></div></div>`;
 
