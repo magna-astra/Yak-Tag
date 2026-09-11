@@ -440,6 +440,8 @@ function renderCow() {
 async function autoPublish(photos) {
   if (!photos || !photos.length) return;
   if (cow.public_photo_path) return;              // already published
+  if (autoPublish.running) return;                // don't stack retries
+  autoPublish.running = true;
 
   const profile = photos.find(p => p.kind === 'profile');
   if (!profile) return;
@@ -467,8 +469,12 @@ async function autoPublish(photos) {
     if (note) note.innerHTML =
       '<span style="color:var(--steppe)">✓ Нийтийн зураг бэлэн — таг уншуулахад харагдана</span>';
   } catch (e) {
+    const msg = (e && e.message) || String(e);
     if (note) note.innerHTML =
-      `<span style="color:#B3341F">Нийтийн зураг бэлтгэж чадсангүй: ${e.message || e}</span>`;
+      `<span style="color:#B3341F">Нийтийн зураг бэлтгэж чадсангүй: ${msg}</span>`;
+    console.error('autoPublish failed:', e);
+  } finally {
+    autoPublish.running = false;
   }
 }
 
