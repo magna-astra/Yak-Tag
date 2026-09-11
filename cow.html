@@ -633,8 +633,10 @@ document.getElementById('fileInput').addEventListener('change', async e => {
       taken_lat: gps ? gps.lat : null,
       taken_lng: gps ? gps.lng : null,
       taken_at: new Date().toISOString(),
-      locked_at: new Date().toISOString(),
-      locked_by: user.id
+      // locked_at is NOT sent from the client. The photo-lock design
+      // freezes rows server-side; asking the browser to declare its own
+      // lock state was both redundant and part of what the insert
+      // policy rejected.
     });
     if (dbErr) throw dbErr;
 
