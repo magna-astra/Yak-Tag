@@ -147,6 +147,9 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 .phone-locked .num{font-family:var(--mono);font-size:1.1rem}
 .lockbtn{width:100%;margin-top:10px;padding:12px;background:#fff;color:var(--ink-soft);
   border:1.5px solid var(--line);border-radius:11px;font-weight:600;font-size:.88rem}
+.delphoto{width:100%;margin-top:4px;padding:4px;background:#fff;color:#B3341F;
+  border:1px solid #F0D4CE;border-radius:7px;font-size:.64rem;font-weight:700;cursor:pointer}
+.delphoto:hover{background:#FCEAE7}
 .pubtag,.privtag{display:block;margin-top:5px;padding:4px;border-radius:7px;
   font-size:.64rem;font-weight:700;text-align:center}
 .pubtag{background:var(--steppe-light);color:var(--steppe)}
@@ -198,6 +201,7 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 <script src="config.js"></script>
 <script>
 let cow = null;
+let isSuper = false;
 let gps = null;
 let photoKind = 'profile';
 
@@ -478,6 +482,21 @@ async function autoPublish(photos) {
   }
 }
 
+
+// Deleting a photo is destructive and logged. There is deliberately no
+// "replace" action: the super admin is not next to the animal, so the
+// honest workflow is delete, then the herder retakes it.
+async function deletePhoto(id, kindLabel) {
+  if (!confirm(`"${kindLabel}" зургийг бүрмөсөн устгах уу?\n\nЭнэ үйлдлийг буцаах боломжгүй. Устгасан нь бүртгэгдэнэ.`)) return;
+  const reason = prompt('Шалтгаан (бүртгэлд үлдэнэ):', 'Буруу зураг');
+  if (reason === null) return;
+
+  const { error } = await sb.rpc('delete_photo', { photo_id: id, reason: reason || '—' });
+  if (error) { toast('Устгаж чадсангүй: ' + error.message, true); return; }
+  toast('Зураг устлаа');
+  await loadCow(cow.tag_code);
+}
+
 // ---------- contact phone ----------
 function renderPhone(){
   const z = document.getElementById('phoneZone');
@@ -705,16 +724,22 @@ async function loadPhotos() {
     const pub = p.kind === 'profile'
       ? '<span class="pubtag">Нийтийн</span>'
       : '<span class="privtag">Хувийн</span>';
+    const del = isSuper
+      ? `<button class="delphoto" data-id="${p.id}" data-kind="${label[p.kind]||p.kind}">Устгах</button>`
+      : '';
     return `<figure>${img}${lock}
       <figcaption>${label[p.kind] || p.kind}<br>${fmtDate(p.taken_at)}${geo}
         ${kb ? `<br><span class="kbtag">${kb} KB</span>` : ''}</figcaption>
-      ${pub}
+      ${pub}${del}
     </figure>`;
   }).join('');
 
   // Any profile photo that is not yet public gets promoted on its own.
   // Asking the herder to press a button for this was a design mistake:
   // they cannot see the public page, so they cannot tell it is missing.
+  document.querySelectorAll('.delphoto').forEach(b =>
+    b.addEventListener('click', () => deletePhoto(b.dataset.id, b.dataset.kind)));
+
   autoPublish(data);
 
   // Tell the owner plainly whether a public photo exists, because the
