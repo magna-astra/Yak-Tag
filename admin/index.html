@@ -791,8 +791,9 @@ function render(){
       <td class="muted">${c.last_lat
         ? `<a href="${gmapsUrl(c.last_lat,c.last_lng)}" target="_blank" rel="noopener"
              style="color:#1B4FA8;text-decoration:none" title="Google Maps дээр нээх">
-             ${fmtDT(c.last_seen_at)} ↗</a>`
-        : fmtDT(c.last_seen_at)}</td>
+             ${fmtDT(c.last_seen_at)} ↗</a>${c.last_scan_source==='public'
+               ? ' <span class="badge warn" title="Гаднаас уншуулсан">гадны</span>' : ''}`
+        : '<span class="muted">—</span>'}</td>
       <td>${statusBadge(c.status)}</td>
       <td class="super-only">
         <button class="minibtn" onclick="openEdit('${c.id}')">Засах</button>
