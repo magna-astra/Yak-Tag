@@ -135,16 +135,29 @@ addEventListener('scroll',()=>{
       const {data,error}=await sb.rpc('public_tag_lookup',{p_tag_code:tag});
       if(error||!data||!data.length) throw 0;
       const c=data[0];
-      const sex=c.sex==='female'?'Эм':'Эр';
-      const age=c.birth_year?(new Date().getFullYear()-c.birth_year)+' нас':'';
-      document.getElementById('tapSub').textContent=[sex,age,c.breed].filter(Boolean).join(' · ');
+
+      let photoUrl=null;
+      if(c.photo_path){
+        const {data:pu}=sb.storage.from('cattle-public').getPublicUrl(c.photo_path);
+        photoUrl=pu&&pu.publicUrl;
+      }
+
+      document.getElementById('tapSub').textContent = c.is_lost ? 'Алга болсон' : '';
+
       document.getElementById('tapBody').innerHTML=`
-        <div class="taprow"><span class="tk">Ферм</span><span class="tv">${esc(c.farm_name)}</span></div>
-        <div class="taprow"><span class="tk">Байршил</span><span class="tv">${esc(c.farm_aimag||'')}${c.farm_soum?', '+esc(c.farm_soum):''}</span></div>
-        <div class="taprow"><span class="tk">Эзэмшигч</span><span class="tv">${esc(c.owner_name)}</span></div>
-        <div class="taprow"><span class="tk">Уншсан байршил</span><span class="tv ok"><span class="tick">✓</span>Бүртгэгдлээ</span></div>
-        ${c.owner_phone?`<a class="tapcall" href="tel:${esc(c.owner_phone).replace(/\s/g,'')}">Эзэмшигч рүү залгах</a>`:''}
-        <p style="font-size:.78rem;color:#5A6880;margin-top:12px;text-align:center">
+        ${photoUrl
+          ? `<img src="${photoUrl}" alt="${esc(c.tag_code)}"
+               style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;margin-bottom:14px">`
+          : `<div style="width:100%;aspect-ratio:4/3;background:#E4E8ED;border-radius:12px;
+               display:grid;place-items:center;margin-bottom:14px;color:#9AA6B8;font-size:.85rem">
+               Зураг бүртгэгдээгүй</div>`}
+        ${c.has_phone
+          ? `<a class="tapcall" href="tel:${esc(c.phone).replace(/\s/g,'')}">Эзэмшигч рүү залгах</a>`
+          : `<div class="tapcall" style="background:#DCE1E8;color:#8C99AB">Утас бүртгэгдээгүй</div>`}
+        <div class="taprow" style="margin-top:14px;border-bottom:0">
+          <span class="tk">Уншсан байршил</span>
+          <span class="tv ok"><span class="tick">✓</span>Бүртгэгдлээ</span></div>
+        <p style="font-size:.78rem;color:#5A6880;margin-top:6px;text-align:center">
           <a href="t.html?tag=${encodeURIComponent(tag)}" style="color:#1B4FA8;font-weight:600">Бүтэн хуудсыг нээх →</a></p>`;
     }catch(e){
       document.getElementById('tapSub').textContent='';
@@ -153,6 +166,7 @@ addEventListener('scroll',()=>{
          <a href="t.html?tag=${encodeURIComponent(tag)}" style="color:#1B4FA8;font-weight:600">Хуудсыг нээх →</a></div>`;
     }
   }
+
   document.querySelectorAll('.cowspot').forEach(b=>b.addEventListener('click',()=>{
     document.getElementById('tapId').textContent=b.dataset.tag;
     document.getElementById('tapSub').textContent='Ачаалж байна…';

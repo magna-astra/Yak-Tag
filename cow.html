@@ -147,6 +147,11 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 .phone-locked .num{font-family:var(--mono);font-size:1.1rem}
 .lockbtn{width:100%;margin-top:10px;padding:12px;background:#fff;color:var(--ink-soft);
   border:1.5px solid var(--line);border-radius:11px;font-weight:600;font-size:.88rem}
+.mkpub{width:100%;margin-top:5px;padding:5px 4px;background:#fff;color:var(--khukh);
+  border:1px solid var(--line);border-radius:7px;font-size:.66rem;font-weight:700;cursor:pointer}
+.mkpub:disabled{opacity:.5}
+.pubtag{display:block;margin-top:5px;padding:5px 4px;background:var(--steppe-light);
+  color:var(--steppe);border-radius:7px;font-size:.66rem;font-weight:700;text-align:center}
 .notfound{text-align:center;padding:60px 20px;color:var(--ink-soft)}
 .notfound h2{color:var(--ink);margin-bottom:8px}
 </style>
@@ -379,6 +384,7 @@ function renderCow() {
       <img id="preview" alt="">
       <p class="hint">Зураг хадгалагдсаны дараа засах боломжгүй. Байршил, цаг автоматаар бүртгэгдэнэ.<br>
         <b>Бүтэн бие</b> зураг нь таг уншуулсан хүнд харагдана. Бусад зураг зөвхөн танд харагдана.</p>
+      <p class="hint" id="pubNote" style="margin-top:12px"></p>
       <div class="photo-grid" id="photoGrid"></div>
     </div>
 
@@ -426,6 +432,286 @@ function renderCow() {
   updateGpsNote();
 }
 
+
+
+// Copy an existing photo into the public bucket.
+// The file is downloaded from the private bucket with the owner's own
+// session and re-uploaded, so no server-side copy is needed and the
+// private bucket stays closed to everyone else.
+async function makePublic(path, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Хуулж байна…';
+  try {
+    const { data: blob, error: dlErr } = await sb.storage
+      .from('cattle-photos').download(path);
+    if (dlErr) throw dlErr;
+
+    const pubPath = `farm-${cow.farm_id}/cow-${cow.id}/profile-${Date.now()}.jpg`;
+    const { error: upErr } = await sb.storage
+      .from('cattle-public')
+      .upload(pubPath, blob, { contentType: 'image/jpeg', upsert: true });
+    if (upErr) throw upErr;
+
+    const { error: ptrErr } = await sb.rpc('set_public_photo', {
+      p_cattle_id: cow.id, p_path: pubPath
+    });
+    if (ptrErr) throw ptrErr;
+
+    toast('Нийтийн зураг болголоо');
+    await loadCow(cow.tag_code);
+  } catch (e) {
+    toast('Чадсангүй: ' + (e.message || e), true);
+    btn.disabled = false;
+    btn.textContent = 'Нийтийн болгох';
+  }
+}
+
+// ---------- contact phone ----------
+function renderPhone(){
+  const z = document.getElementById('phoneZone');
+  if(!z) return;
+  const locked = !!cow.contact_locked_at;
+  const num = cow.contact_phone || '';
+
+  if(locked){
+    z.innerHTML = `
+      <div class="phone-locked">
+        <span class="num">${num}</span>
+        <span>🔒 Түгжээтэй</span>
+      </div>
+      <p class="hint">Энэ дугаарыг өөрчлөхийн тулд ферм админд хандана уу.</p>`;
+    return;
+  }
+
+  z.innerHTML = `
+    <div class="phone-entry">
+      <input type="tel" id="phoneInput" inputmode="tel" placeholder="99001122" value="${num}">
+      <button id="phoneSave">Хадгалах</button>
+    </div>
+    ${num ? '<button class="lockbtn" id="phoneLock">🔒 Дугаарыг түгжих</button>' : ''}
+    <p class="hint">Түгжсэний дараа зөвхөн ферм админ өөрчилнө.</p>`;
+
+  document.getElementById('phoneSave').addEventListener('click', ()=>savePhone(false));
+  const lk = document.getElementById('phoneLock');
+  if(lk) lk.addEventListener('click', ()=>{
+    if(confirm('Дугаарыг түгжих үү?\n\nҮүний дараа та өөрөө өөрчлөх боломжгүй болно. Зөвхөн ферм админ нээнэ.'))
+      savePhone(true);
+  });
+}
+
+async function savePhone(lock){
+  const input = document.getElementById('phoneInput');
+  const phone = input.value.trim();
+  if(!phone){ toast('Дугаараа оруулна уу.', true); return; }
+
+  const { error } = await sb.rpc('set_contact_phone', {
+    p_cattle_id: cow.id, p_phone: phone, p_lock: lock
+  });
+  if(error){ toast('Хадгалж чадсангүй: ' + error.message, true); return; }
+  toast(lock ? 'Дугаар түгжигдлээ' : 'Дугаар хадгалагдлаа');
+  await loadCow(cow.tag_code);
+}
+
+// ---------- milk ----------
+async function saveMilk() {
+  const input = document.getElementById('milkInput');
+  const btn = document.getElementById('milkBtn');
+  const liters = parseFloat(input.value);
+  if (isNaN(liters) || liters < 0) {
+    toast('Зөв тоо оруулна уу.', true);
+    return;
+  }
+  btn.disabled = true;
+  const { data: { user } } = await sb.auth.getUser();
+  const today = new Date().toISOString().slice(0,10);
+
+  const { error } = await sb.from('milk_yield').upsert({
+    farm_id: cow.farm_id,
+    cattle_id: cow.id,
+    recorded_by: user.id,
+    liters: liters,
+    yield_date: today
+  }, { onConflict: 'cattle_id,yield_date' });
+
+  btn.disabled = false;
+  if (error) { toast('Хадгалж чадсангүй: ' + error.message, true); return; }
+  toast(`${liters.toFixed(1)} литр хадгалагдлаа`);
+  await loadCow(cow.tag_code);
+}
+
+// ---------- photo ----------
+document.getElementById('fileInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const preview = document.getElementById('preview');
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = 'block';
+
+  const btn = document.getElementById('photoBtn');
+  btn.disabled = true;
+  btn.textContent = 'Хадгалж байна…';
+
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+
+    // shrink before upload — herder phones on 3G in the countryside
+    const blob = await shrinkImage(file, 1200, 0.75);
+    const path = `farm-${cow.farm_id}/cow-${cow.id}/${photoKind}-${Date.now()}.jpg`;
+
+    // 1. upload the actual file
+    const { error: upErr } = await sb.storage
+      .from('cattle-photos')
+      .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+    if (upErr) throw upErr;
+
+    // 2. a "profile" shot also goes to the PUBLIC bucket, because the
+    //    tap page must show it to someone with no login. Muzzle prints
+    //    and everything else stay in the private bucket only.
+    if (photoKind === 'profile') {
+      // Cache-busting filename: browsers and the CDN hold on to a
+      // public URL, so overwriting profile.jpg would keep serving the
+      // old picture for hours.
+      const pubPath = `farm-${cow.farm_id}/cow-${cow.id}/profile-${Date.now()}.jpg`;
+      const { error: pubErr } = await sb.storage
+        .from('cattle-public')
+        .upload(pubPath, blob, { contentType: 'image/jpeg', upsert: true });
+
+      if (pubErr) {
+        // Surface it rather than failing quietly — a photo the owner
+        // believes is public but isn't is worse than a visible error.
+        toast('Нийтийн зураг хадгалагдсангүй: ' + pubErr.message, true);
+      } else {
+        // Saved through a function: a direct UPDATE on cattle is
+        // rejected for herders by the row policy.
+        const { error: ptrErr } = await sb.rpc('set_public_photo', {
+          p_cattle_id: cow.id, p_path: pubPath
+        });
+        if (ptrErr) toast('Зураг холбогдсонгүй: ' + ptrErr.message, true);
+      }
+    }
+
+    // 3. write the record, locked immediately
+    const { error: dbErr } = await sb.from('cattle_photos').insert({
+      farm_id: cow.farm_id,
+      cattle_id: cow.id,
+      kind: photoKind,
+      storage_path: path,
+      bytes: blob.size,
+      taken_lat: gps ? gps.lat : null,
+      taken_lng: gps ? gps.lng : null,
+      taken_at: new Date().toISOString(),
+      locked_at: new Date().toISOString(),
+      locked_by: user.id
+    });
+    if (dbErr) throw dbErr;
+
+    const kb = Math.round(blob.size/1024);
+    toast(gps ? `Зураг хадгалагдлаа · ${kb}KB · GPS` : `Зураг хадгалагдлаа · ${kb}KB`);
+    preview.style.display = 'none';
+    loadPhotos();
+  } catch (err) {
+    toast('Хадгалж чадсангүй: ' + (err.message || err), true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Камер нээх';
+    e.target.value = '';
+  }
+});
+
+// Resize on the phone before upload. Two reasons:
+//  1. A 12MP phone photo is ~4MB — slow and expensive on rural mobile data.
+//  2. Storage adds up: at 1200px/0.75 a photo is ~190KB, so 1GB holds
+//     ~5,500 photos. At full size it would hold ~2,400.
+// 1200px still resolves muzzle-print detail clearly.
+function shrinkImage(file, maxSide, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      const scale = Math.min(1, maxSide / Math.max(width, height));
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('Зураг боловсруулж чадсангүй')),
+                    'image/jpeg', quality);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => reject(new Error('Зураг уншиж чадсангүй'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+async function loadPhotos() {
+  const grid = document.getElementById('photoGrid');
+  if (!grid) return;
+
+  const { data, error } = await sb
+    .from('cattle_photos')
+    .select('id, kind, taken_at, taken_lat, storage_path, locked_at')
+    .eq('cattle_id', cow.id)
+    .order('taken_at', { ascending: false })
+    .limit(6);
+
+  if (error) {
+    grid.innerHTML = `<p class="hint" style="grid-column:1/-1;color:#B3341F">
+      Зураг уншиж чадсангүй: ${error.message}</p>`;
+    return;
+  }
+  if (!data || !data.length) { grid.innerHTML = ''; return; }
+
+  const label = { muzzle:'Хамар', profile:'Бүтэн бие', marking:'Тэмдэг',
+                  transfer:'Шилжүүлэг', health:'Эрүүл мэнд' };
+
+  // Private bucket — thumbnails need short-lived signed URLs.
+  const paths = data.map(p => p.storage_path);
+  const { data: signed, error: sErr } = await sb.storage
+    .from('cattle-photos')
+    .createSignedUrls(paths, 3600);
+
+  if (sErr) {
+    grid.innerHTML = `<p class="hint" style="grid-column:1/-1;color:#B3341F">
+      Зургийн холбоос үүсгэж чадсангүй: ${sErr.message}</p>`;
+    return;
+  }
+
+  const urlFor = {};
+  (signed || []).forEach(x => { if (x.signedUrl) urlFor[x.path] = x.signedUrl; });
+
+  grid.innerHTML = data.map(p => {
+    const url = urlFor[p.storage_path];
+    const img = url
+      ? `<img src="${url}" alt="${label[p.kind] || p.kind}" loading="lazy">`
+      : `<img src="assets/logo-256.png" alt="" style="object-fit:contain;padding:18%;opacity:.2"
+           title="Файл олдсонгүй">`;
+    const lock = p.locked_at ? '<span class="lockicon">Түгжээтэй</span>' : '';
+    const geo = p.taken_lat ? ' · GPS' : '';
+    const isPublic = cow.public_photo_path === p.storage_path
+      || (cow.public_photo_path && cow.public_photo_path.includes(p.id));
+    const mkBtn = isPublic
+      ? '<span class="pubtag">Нийтийн</span>'
+      : `<button class="mkpub" data-path="${p.storage_path}">Нийтийн болгох</button>`;
+    return `<figure>${img}${lock}
+      <figcaption>${label[p.kind] || p.kind}<br>${fmtDate(p.taken_at)}${geo}</figcaption>
+      ${mkBtn}
+    </figure>`;
+  }).join('');
+
+  document.querySelectorAll('.mkpub').forEach(b =>
+    b.addEventListener('click', () => makePublic(b.dataset.path, b)));
+
+  // Tell the owner plainly whether a public photo exists, because the
+  // tap page is the one screen they cannot check for themselves.
+  const note = document.getElementById('pubNote');
+  if (note) {
+    note.innerHTML = cow.public_photo_path
+      ? `<span style="color:var(--steppe)">✓ Нийтийн зураг бүртгэгдсэн — таг уншуулахад харагдана</span>`
+      : `<span style="color:var(--gold)">Нийтийн зураг алга. "Бүтэн бие" сонгоод зураг авна уу —
+         зөвхөн тэр зураг таг уншуулсан хүнд харагдана.</span>`;
+  }
+}
 
 // ---------- contact phone ----------
 function renderPhone(){
