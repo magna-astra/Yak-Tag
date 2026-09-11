@@ -173,6 +173,6 @@ alter view demo_herd set (security_invoker = on);
 -- ============================================================
 -- CHECK YOUR WORK
 --   select * from demo_herd;
--- Expect 5 rows, all owned by Бат-Эрдэнэ on Хогно Хаан farm,
+-- Expect 5 rows, all owned by Бат-Эрдэнэ on Наран farm,
 -- with ~26 milk entries each on the females.
 -- ============================================================
