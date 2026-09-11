@@ -282,6 +282,11 @@ async function boot() {
   document.getElementById('loginView').style.display = 'none';
   document.getElementById('appView').style.display = 'block';
 
+  // Role decides whether destructive actions appear. The database
+  // enforces it independently — this only hides what would fail anyway.
+  const prof = await myProfile();
+  isSuper = !!(prof && prof.role === 'super_admin');
+
   const tag = getTagFromUrl();
   if (!tag) {
     document.getElementById('cowBody').innerHTML =
