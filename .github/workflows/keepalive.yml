@@ -1,12 +1,14 @@
 name: Keep Supabase awake
 
-# Supabase free projects pause after 7 days without activity.
+# v3 — no psql.
 #
-# v2 — the first version only failed on 5xx, so a 401 (bad key) passed
-# as green while doing nothing. This version:
-#   1. runs a real SQL query against the database (unambiguous activity)
-#   2. pings the REST API and FAILS on anything that is not 200
-#   3. runs every 2 days, not 3, for margin
+# Supabase's direct DB connection (db.xxx.supabase.co) is IPv6-only and
+# GitHub Actions runners are IPv4-only, so psql can never connect from here.
+# This version uses the REST API only, and performs a real WRITE to the
+# heartbeat table, which counts as genuine database activity.
+#
+# Requires: db/heartbeat.sql to have been run once.
+# Secrets:  SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
 
 on:
   schedule:
@@ -15,49 +17,58 @@ on:
 
 jobs:
   ping:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - name: Install postgresql-client
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
-
-      # --- 1. real database activity ---
-      - name: Query the database
-        env:
-          PGCONN: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          if [ -z "$PGCONN" ]; then
-            echo "::error::SUPABASE_DB_URL secret is not set."
-            exit 1
-          fi
-          psql "$PGCONN" -Atc "select now(), count(*) from farms;" \
-            || { echo "::error::Database query failed."; exit 1; }
-          echo "Database query OK"
-
-      # --- 2. REST ping, strict ---
-      - name: Ping REST endpoint
+      - name: Check secrets are present
         env:
           URL: ${{ secrets.SUPABASE_URL }}
-          KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SVC: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANON: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "$URL" ] || [ -z "$KEY" ]; then
-            echo "::error::SUPABASE_URL or SUPABASE_ANON_KEY is not set."
-            exit 1
-          fi
+          [ -n "$URL" ]  || { echo "::error::SUPABASE_URL not set"; exit 1; }
+          [ -n "$ANON" ] || { echo "::error::SUPABASE_ANON_KEY not set"; exit 1; }
+          [ -n "$SVC" ]  || { echo "::error::SUPABASE_SERVICE_KEY not set"; exit 1; }
+          echo "Secrets present."
 
-          code=$(curl -s -o /tmp/body -w "%{http_code}" \
-            "${URL}/rest/v1/farms?select=id&limit=1" \
-            -H "apikey: ${KEY}" \
-            -H "Authorization: Bearer ${KEY}")
+      # --- WRITE: real database activity ---
+      - name: Write heartbeat
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          SVC: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          STAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-          echo "HTTP $code"
-          echo "Response: $(head -c 300 /tmp/body)"
+          code=$(curl -s -o /tmp/w -w "%{http_code}" -X POST \
+            "${URL}/rest/v1/heartbeat" \
+            -H "apikey: ${SVC}" \
+            -H "Authorization: Bearer ${SVC}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=representation" \
+            -d "{\"id\":1,\"last_ping\":\"${STAMP}\",\"source\":\"github-actions\"}")
+
+          echo "Write HTTP $code"
+          echo "Response: $(head -c 300 /tmp/w)"
 
           case "$code" in
-            200) echo "REST ping OK" ;;
-            401|403) echo "::error::HTTP $code — anon key is wrong or expired."; exit 1 ;;
-            404)     echo "::error::HTTP 404 — table 'farms' not found. Has schema.sql been run?"; exit 1 ;;
-            000)     echo "::error::No response — check SUPABASE_URL."; exit 1 ;;
-            *)       echo "::error::Unexpected HTTP $code"; exit 1 ;;
+            200|201|204) echo "Heartbeat written." ;;
+            401|403) echo "::error::HTTP $code - service key wrong or expired."; exit 1 ;;
+            404) echo "::error::HTTP 404 - heartbeat table missing. Run db/heartbeat.sql."; exit 1 ;;
+            *) echo "::error::Unexpected HTTP $code on write"; exit 1 ;;
           esac
+
+      # --- READ: confirms the API path used by the app works too ---
+      - name: Read farms
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          ANON: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          code=$(curl -s -o /tmp/r -w "%{http_code}" \
+            "${URL}/rest/v1/farms?select=id,code&limit=5" \
+            -H "apikey: ${ANON}" \
+            -H "Authorization: Bearer ${ANON}")
+
+          echo "Read HTTP $code"
+          echo "Response: $(head -c 300 /tmp/r)"
+
+          [ "$code" = "200" ] || { echo "::error::Read failed with HTTP $code"; exit 1; }
+          echo "Read OK."
