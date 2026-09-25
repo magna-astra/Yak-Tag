@@ -1,13 +1,13 @@
 name: Weekly database backup
 
-# The Supabase free tier has NO backups. This is your safety net.
-# Dumps the whole database weekly and commits it to this repo.
+# v2 — REST API export, no pg_dump.
 #
-# ⚠️  THIS REPO MUST BE PRIVATE if you enable this workflow.
-#     A dump contains real farm and herder data.
+# Supabase's direct DB connection is IPv6-only; GitHub runners are IPv4-only,
+# so psql cannot connect from CI. This exports every table over REST instead.
 #
-# If you keep the site repo public, create a separate private repo
-# for backups and change the checkout/push target below.
+# ⚠️ THIS REPO MUST BE PRIVATE — exports contain real farm and herder data.
+#
+# Secrets required: SUPABASE_URL, SUPABASE_SERVICE_KEY
 
 on:
   schedule:
@@ -15,32 +15,28 @@ on:
   workflow_dispatch:
 
 jobs:
-  dump:
-    runs-on: ubuntu-latest
+  export:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install postgresql-client
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
-
-      - name: Dump database
+      - name: Export all tables
         env:
-          PGCONN: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
-          mkdir -p backups
           STAMP=$(date -u +%Y-%m-%d)
-          pg_dump "$PGCONN" \
-            --no-owner --no-privileges \
-            --schema=public \
-            | gzip > "backups/yaktag-$STAMP.sql.gz"
-          ls -lh backups/
+          python3 scripts/export_supabase.py "backups/$STAMP"
+          cp db/schema.sql "backups/$STAMP/schema.sql" || true
+          du -sh "backups/$STAMP"
 
       - name: Keep only the last 12 backups
         run: |
           cd backups
-          ls -1t *.sql.gz | tail -n +13 | xargs -r rm --
+          ls -1dt */ 2>/dev/null | tail -n +13 | xargs -r rm -rf --
+          ls -1d */ 2>/dev/null || true
 
       - name: Commit
         run: |
