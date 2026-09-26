@@ -93,6 +93,13 @@ async function myProfile() {
   return data;
 }
 
+// Calendar date in Mongolia as YYYY-MM-DD. toISOString() gives the UTC
+// date, which is still "yesterday" here until 08:00 — milk logged at
+// dawn landed on the wrong day. Pass a Date to convert that moment.
+function mnDate(d = new Date()) {
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ulaanbaatar' });
+}
+
 function fmtDate(ts) {
   if (!ts) return '—';
   const d = new Date(ts);

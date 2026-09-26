@@ -213,6 +213,13 @@ function toast(msg, bad=false) {
   setTimeout(() => t.className = 'toast', 2600);
 }
 
+// Anything typed by a user (names, breed, phone) or returned as an
+// error goes through this before it touches innerHTML.
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
 function getTagFromUrl() {
   const p = new URLSearchParams(location.search);
   return p.get('tag') || p.get('slug') || p.get('uid');
@@ -243,20 +250,25 @@ document.getElementById('signoutBtn').addEventListener('click', async () => {
 });
 
 // ---------- GPS ----------
+// Resolves once the phone has answered (fix or refusal), so the scan
+// can wait for a position instead of being logged without one.
 function requestGps() {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      gps = {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-        accuracy: pos.coords.accuracy
-      };
-      updateGpsNote();
-    },
-    () => updateGpsNote(),
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
-  );
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { updateGpsNote(); resolve(); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        gps = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy
+        };
+        updateGpsNote();
+        resolve();
+      },
+      () => { updateGpsNote(); resolve(); },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  });
 }
 
 function updateGpsNote() {
@@ -294,8 +306,15 @@ async function boot() {
        <p>NFC таг уншуулах эсвэл хаяганд ?tag=YT-008000 нэмнэ үү.</p></div>`;
     return;
   }
+  const gpsReady = requestGps();
   await loadCow(tag);
-  requestGps();
+  if (!cow) return;
+
+  // One scan per page open, logged after GPS answers. The timeout
+  // covers a permission prompt the herder never taps — without it
+  // the scan would never be recorded at all.
+  await Promise.race([gpsReady, new Promise(r => setTimeout(r, 20000))]);
+  logScan();
 }
 
 async function loadCow(tag) {
@@ -316,8 +335,8 @@ async function loadCow(tag) {
   cow = data;
   renderCow();
   loadPhotos();
-  // log this scan as an encounter
-  logScan();
+  // The scan itself is logged once, from boot(). loadCow() is also
+  // used to refresh after every save and must not add fake encounters.
 }
 
 function renderCow() {
@@ -400,10 +419,10 @@ function renderCow() {
     <!-- INFO -->
     <div class="card">
       <h2><span class="dot"></span>Мэдээлэл</h2>
-      <div class="kv"><span>Эзэмшигч</span><span>${cow.owner_name}</span></div>
+      <div class="kv"><span>Эзэмшигч</span><span>${esc(cow.owner_name)}</span></div>
       <div class="kv"><span>Хүйс</span><span>${sex}</span></div>
       <div class="kv"><span>Төрсөн он</span><span class="mono">${cow.birth_year || '—'}</span></div>
-      <div class="kv"><span>Үүлдэр</span><span>${cow.breed || '—'}</span></div>
+      <div class="kv"><span>Үүлдэр</span><span>${esc(cow.breed || '—')}</span></div>
       <div class="kv"><span>Жин</span><span class="mono">${cow.weight_kg ? cow.weight_kg + ' кг' : '—'}</span></div>
       <div class="kv"><span>Сүүлд тэжээсэн</span><span>${fmtDate(cow.last_fed_at)}</span></div>
       <div class="kv"><span>Дараагийн вакцин</span><span>${cow.next_vaccination_due ? fmtDate(cow.next_vaccination_due) : '—'}</span></div>
@@ -480,7 +499,7 @@ async function autoPublish(photos) {
   } catch (e) {
     const msg = (e && e.message) || String(e);
     if (note) note.innerHTML =
-      `<span style="color:#B3341F">Нийтийн зураг бэлтгэж чадсангүй: ${msg}</span>`;
+      `<span style="color:#B3341F">Нийтийн зураг бэлтгэж чадсангүй: ${esc(msg)}</span>`;
     console.error('autoPublish failed:', e);
   } finally {
     autoPublish.running = false;
@@ -512,7 +531,7 @@ function renderPhone(){
   if(locked){
     z.innerHTML = `
       <div class="phone-locked">
-        <span class="num">${num}</span>
+        <span class="num">${esc(num)}</span>
         <span>🔒 Түгжээтэй</span>
       </div>
       <p class="hint">Энэ дугаарыг өөрчлөхийн тулд ферм админд хандана уу.</p>`;
@@ -521,7 +540,7 @@ function renderPhone(){
 
   z.innerHTML = `
     <div class="phone-entry">
-      <input type="tel" id="phoneInput" inputmode="tel" placeholder="99001122" value="${num}">
+      <input type="tel" id="phoneInput" inputmode="tel" placeholder="99001122" value="${esc(num)}">
       <button id="phoneSave">Хадгалах</button>
     </div>
     ${num ? '<button class="lockbtn" id="phoneLock">🔒 Дугаарыг түгжих</button>' : ''}
@@ -539,6 +558,10 @@ async function savePhone(lock){
   const input = document.getElementById('phoneInput');
   const phone = input.value.trim();
   if(!phone){ toast('Дугаараа оруулна уу.', true); return; }
+  // Same rule the database enforces (schema_v21) — digits, +, space, -, ().
+  if(!/^\+?[0-9][0-9 ()-]{5,19}$/.test(phone)){
+    toast('Утасны дугаар буруу байна. Зөвхөн тоо оруулна уу.', true); return;
+  }
 
   const { error } = await sb.rpc('set_contact_phone', {
     p_cattle_id: cow.id, p_phone: phone, p_lock: lock
@@ -559,7 +582,7 @@ async function saveMilk() {
   }
   btn.disabled = true;
   const { data: { user } } = await sb.auth.getUser();
-  const today = new Date().toISOString().slice(0,10);
+  const today = mnDate();
 
   const { error } = await sb.from('milk_yield').upsert({
     farm_id: cow.farm_id,
@@ -696,7 +719,7 @@ async function loadPhotos() {
 
   if (error) {
     grid.innerHTML = `<p class="hint" style="grid-column:1/-1;color:#B3341F">
-      Зураг уншиж чадсангүй: ${error.message}</p>`;
+      Зураг уншиж чадсангүй: ${esc(error.message)}</p>`;
     return;
   }
   if (!data || !data.length) { grid.innerHTML = ''; return; }
@@ -712,7 +735,7 @@ async function loadPhotos() {
 
   if (sErr) {
     grid.innerHTML = `<p class="hint" style="grid-column:1/-1;color:#B3341F">
-      Зургийн холбоос үүсгэж чадсангүй: ${sErr.message}</p>`;
+      Зургийн холбоос үүсгэж чадсангүй: ${esc(sErr.message)}</p>`;
     return;
   }
 
@@ -800,7 +823,7 @@ async function loadMilkHistory(range) {
     .from('milk_yield')
     .select('liters, yield_date')
     .eq('cattle_id', cow.id)
-    .gte('yield_date', since.toISOString().slice(0,10))
+    .gte('yield_date', mnDate(since))
     .order('yield_date');
 
   if (error) { el.innerHTML = '<p class="hint">Ачаалж чадсангүй.</p>'; return; }

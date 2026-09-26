@@ -455,7 +455,7 @@ body.role-herder .col-owner{display:none}
 <script>
 let allCattle = [], farms = [], users = [], myRole = null, myId = null;
 let map = null, markers = [];
-let filterDate = new Date().toISOString().slice(0,10);
+let filterDate = mnDate();
 let fReg = '', fVacc = '', fFarm = '', mFarm = '', mAge = '';
 let milkByDate = {};
 
@@ -468,7 +468,7 @@ function toast(msg, bad=false){
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function closeModal(id){document.getElementById(id).classList.remove('on');}
-function isToday(d){return d === new Date().toISOString().slice(0,10);}
+function isToday(d){return d === mnDate();}
 function fmtD(ts){if(!ts)return '—';return new Date(ts).toLocaleDateString('mn-MN',{month:'short',day:'numeric'});}
 function fmtDT(ts){if(!ts)return '—';return new Date(ts).toLocaleString('mn-MN',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}
 function daysUntil(d){if(!d)return null;return Math.ceil((new Date(d)-new Date())/86400000);}
@@ -813,7 +813,7 @@ function updateDateLabel(){
   document.getElementById('dToday').classList.toggle('on', isToday(filterDate));
 }
 async function setDate(d){
-  const today = new Date().toISOString().slice(0,10);
+  const today = mnDate();
   if(d>today) return;                       // no logging the future
   filterDate = d;
   document.getElementById('dPick').value = d;
@@ -822,11 +822,11 @@ async function setDate(d){
   render();
 }
 document.getElementById('dPick').addEventListener('change',e=>setDate(e.target.value));
-document.getElementById('dToday').addEventListener('click',()=>setDate(new Date().toISOString().slice(0,10)));
+document.getElementById('dToday').addEventListener('click',()=>setDate(mnDate()));
 document.getElementById('dPrev').addEventListener('click',()=>{
-  const d=new Date(filterDate); d.setDate(d.getDate()-1); setDate(d.toISOString().slice(0,10));});
+  const d=new Date(filterDate); d.setUTCDate(d.getUTCDate()-1); setDate(d.toISOString().slice(0,10));});
 document.getElementById('dNext').addEventListener('click',()=>{
-  const d=new Date(filterDate); d.setDate(d.getDate()+1); setDate(d.toISOString().slice(0,10));});
+  const d=new Date(filterDate); d.setUTCDate(d.getUTCDate()+1); setDate(d.toISOString().slice(0,10));});
 
 // ---------- filter chips ----------
 document.querySelectorAll('[data-reg]').forEach(b=>b.addEventListener('click',()=>{
@@ -1040,9 +1040,9 @@ function openVacc(cattleId, tagCode){
   vaccTarget = cattleId;
   document.getElementById('vaccModalSub').textContent = tagCode;
   document.getElementById('vaccName').value = '';
-  document.getElementById('vaccGiven').value = new Date().toISOString().slice(0,10);
+  document.getElementById('vaccGiven').value = mnDate();
   const next = new Date(); next.setFullYear(next.getFullYear()+1);
-  document.getElementById('vaccNext').value = next.toISOString().slice(0,10);
+  document.getElementById('vaccNext').value = mnDate(next);
   document.getElementById('vaccModal').classList.add('on');
 }
 document.getElementById('vaccSave').addEventListener('click', async ()=>{
