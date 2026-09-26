@@ -1,13 +1,15 @@
 name: Weekly database backup
 
-# v2 — REST API export, no pg_dump.
+# v3 — exports over REST, pushes into a SEPARATE PRIVATE repo.
 #
-# Supabase's direct DB connection is IPv6-only; GitHub runners are IPv4-only,
-# so psql cannot connect from CI. This exports every table over REST instead.
+# The main Yak-Tag repo is public so GitHub Pages can serve the site.
+# Backups contain real farm and herder data, so they must not live there.
 #
-# ⚠️ THIS REPO MUST BE PRIVATE — exports contain real farm and herder data.
-#
-# Secrets required: SUPABASE_URL, SUPABASE_SERVICE_KEY
+# Requires:
+#   - a private repo:  magna-astra/Yak-Tag-backups
+#   - secret BACKUP_TOKEN: a fine-grained PAT with Contents: Read and write
+#     on that backup repo only
+#   - secrets SUPABASE_URL, SUPABASE_SERVICE_KEY
 
 on:
   schedule:
@@ -17,10 +19,20 @@ on:
 jobs:
   export:
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
     steps:
-      - uses: actions/checkout@v4
+      # the public repo — only to get the export script and schema
+      - name: Checkout Yak-Tag
+        uses: actions/checkout@v5
+        with:
+          path: src
+
+      # the private repo — where backups actually land
+      - name: Checkout backup repo
+        uses: actions/checkout@v5
+        with:
+          repository: magna-astra/Yak-Tag-backups
+          token: ${{ secrets.BACKUP_TOKEN }}
+          path: store
 
       - name: Export all tables
         env:
@@ -28,17 +40,19 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           STAMP=$(date -u +%Y-%m-%d)
-          python3 scripts/export_supabase.py "backups/$STAMP"
-          cp db/schema.sql "backups/$STAMP/schema.sql" || true
-          du -sh "backups/$STAMP"
+          python3 src/scripts/export_supabase.py "store/backups/$STAMP"
+          cp src/db/*.sql "store/backups/$STAMP/" 2>/dev/null || true
+          du -sh "store/backups/$STAMP"
 
       - name: Keep only the last 12 backups
+        working-directory: store
         run: |
-          cd backups
+          mkdir -p backups && cd backups
           ls -1dt */ 2>/dev/null | tail -n +13 | xargs -r rm -rf --
           ls -1d */ 2>/dev/null || true
 
-      - name: Commit
+      - name: Commit to the private repo
+        working-directory: store
         run: |
           git config user.name  "yaktag-backup"
           git config user.email "actions@github.com"
