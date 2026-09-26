@@ -142,6 +142,7 @@ tbody tr:hover{background:#FAFBFD}
 .stat.pink .sic{background:#FBEAF2;color:#B0457A}
 .duegroup td{background:#F5F6F9!important;font-weight:700;font-size:.8rem;padding:8px 14px!important}
 .duegroup.red td{color:var(--alert)} .duegroup.amber td{color:var(--gold-d)}
+.duegroup.green td{color:var(--steppe)} .duegroup.grey td{color:var(--ink-soft)}
 #herdTable td.num,#herdTable th.num{text-align:right}
 #herdTable .mono{font-family:var(--mono);font-size:12.5px}
 #herdTable td.menucell{overflow:visible}
@@ -407,8 +408,8 @@ body.role-herder .col-owner{display:none}
         <span class="count-note">Төллөх огноо = таамаг (үүлдэр, эцэг, малын болон фермийн өмнөх төллөлтөөр)</span>
       </div></div>
 
-      <h3 style="font-size:.95rem;margin:4px 0 4px"><svg class="ic c-heel"><use href="#i-calendar-heart"/></svg>Төллөх дөхсөн мал</h3>
-      <p class="mapnote" style="margin:0 0 10px">Хугацаа нь хэтэрсэн, ойрын 7 хоногт, 8–30 хоногт төллөх гэж бүлэглэв.</p>
+      <h3 style="font-size:.95rem;margin:4px 0 4px"><svg class="ic c-heel"><use href="#i-calendar-heart"/></svg>Хээлтэй мал</h3>
+      <p class="mapnote" style="margin:0 0 10px">Хээлтэй болон хээлтүүлсэн бүх эм мал, төллөх хугацаагаар нь бүлэглэв. Эр малд хамаарахгүй.</p>
       <div class="table-wrap" style="margin-bottom:22px"><table>
         <thead><tr><th>Дугаар</th><th class="col-owner">Эзэмшигч</th><th>Үүлдэр</th><th>Төлөв</th>
           <th>Төллөх огноо</th><th class="num">Үлдсэн</th><th>Тооцоо</th></tr></thead>
@@ -1033,17 +1034,14 @@ function calvingLists(){
   females.forEach(c=>{
     const r = reproById[c.id];
     const bred = r && (r.state==='bred' || r.state==='pregnant');
-    if(bred && r.expected_date){
-      const d = daysUntil(r.expected_date);
-      if(d <= 30) due.push({c, r, d});
-    }
+    if(bred) due.push({c, r, d: r.expected_date ? daysUntil(r.expected_date) : null});
     if(!bred){
       const age = c.birth_year ? yr - c.birth_year : null;
       const since = r && r.last_calving_date ? -daysUntil(r.last_calving_date) : null;
       if((age===null || age >= breedingAge(c)) && !(since!==null && since < 45)) open.push({c, r, age});
     }
   });
-  due.sort((a,b)=>a.d-b.d);
+  due.sort((a,b)=>(a.d===null)-(b.d===null) || a.d-b.d);   // no date last
   open.sort((a,b)=>(a.c.tag_code||'').localeCompare(b.c.tag_code||''));
   return {due, open, females};
 }
@@ -1051,7 +1049,7 @@ function calvingLists(){
 function updateCalvingBadge(){
   const btn = document.getElementById('calvTabBtn');
   if(!btn) return;
-  const n = calvingLists().due.filter(x=>x.d<=7).length;
+  const n = calvingLists().due.filter(x=>x.d!==null && x.d<=7).length;
   btn.innerHTML = n ? `Төллөлт <span class="badge late" style="margin-left:4px">${n}</span>` : 'Төллөлт';
 }
 
@@ -1060,17 +1058,19 @@ function renderCalving(){
   if(sel && sel.options.length<=1)
     sel.innerHTML = '<option value="">Бүх ферм</option>' + farms.map(f=>`<option value="${esc(f.id)}">${esc(f.code)} · ${esc(f.name)}</option>`).join('');
   const {due, open, females} = calvingLists();
-  const week = due.filter(x=>x.d<=7).length;
+  const week = due.filter(x=>x.d!==null && x.d<=7).length;
+  const month = due.filter(x=>x.d!==null && x.d<=30).length;
   const pregnant = females.filter(c=>{const r=reproById[c.id]; return r && (r.state==='pregnant'||r.state==='bred');}).length;
   document.getElementById('calvStats').innerHTML = `
     <div class="stat"><div class="lbl">7 хоногт төллөх</div><div class="val" style="color:${week?'var(--alert)':'inherit'}">${week}</div></div>
-    <div class="stat"><div class="lbl">30 хоногт төллөх</div><div class="val">${due.length}</div></div>
+    <div class="stat"><div class="lbl">30 хоногт төллөх</div><div class="val">${month}</div></div>
     <div class="stat"><div class="lbl">Хээлтэй / хээлтүүлсэн</div><div class="val">${pregnant}</div></div>
     <div class="stat"><div class="lbl">Хээлтүүлээгүй</div><div class="val">${open.length}</div></div>`;
 
   const link = c => `<a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${esc(c.tag_code)}</a>`;
-  const grp = d => d<0 ? 'over' : d<=7 ? 'week' : 'month';
-  const GRP = { over:['red','Хугацаа хэтэрсэн'], week:['red','Ойрын 7 хоногт'], month:['amber','8–30 хоногт'] };
+  const grp = d => d===null ? 'nodate' : d<0 ? 'over' : d<=7 ? 'week' : d<=30 ? 'month' : 'later';
+  const GRP = { over:['red','Хугацаа хэтэрсэн'], week:['red','Ойрын 7 хоногт'], month:['amber','8–30 хоногт'],
+                later:['green','30-аас дээш хоногт'], nodate:['grey','Төллөх огноо тодорхойгүй'] };
   let lastG = '';
   document.getElementById('dueBody').innerHTML = due.length ? due.map(({c,r,d})=>{
     const g = grp(d), head = g!==lastG
@@ -1081,10 +1081,10 @@ function renderCalving(){
       <td class="col-owner">${esc(c.owner_name||'')}</td>
       <td class="muted">${esc(c.breed||'—')}</td>
       <td>${r.state==='pregnant'?'<span class="badge ok">Хээлтэй</span>':'<span class="badge warn">Хээлтүүлсэн</span>'}</td>
-      <td>${fmtD(r.expected_date)}${r.spread?` <span class="muted">±${r.spread}</span>`:''}</td>
-      <td class="num"><span class="badge ${d<0?'late':d<=7?'late':'warn'}">${d<0?`${-d} хоног хэтэрсэн`:d===0?'өнөөдөр':`${d} хоног`}</span></td>
+      <td>${r.expected_date?fmtD(r.expected_date):'<span class="dash">—</span>'}${r.spread?` <span class="muted">±${r.spread}</span>`:''}</td>
+      <td class="num">${d===null?'<span class="dash">—</span>':`<span class="badge ${d<=7?'late':d<=30?'warn':'ok'}">${d<0?`${-d} хоног хэтэрсэн`:d===0?'өнөөдөр':`${d} хоног`}</span>`}</td>
       <td class="muted" style="white-space:normal;max-width:320px;font-size:.78rem">${esc(r.basis||'')}</td>
-    </tr>`;}).join('') : '<tr><td colspan="7" class="empty">Ойрын 30 хоногт төллөх мал алга.</td></tr>';
+    </tr>`;}).join('') : '<tr><td colspan="7" class="empty">Хээлтэй эсвэл хээлтүүлсэн мал бүртгэлгүй.</td></tr>';
 
   document.getElementById('openBody').innerHTML = open.length ? open.map(({c,r,age})=>`<tr>
       <td class="tag-code">${link(c)}</td>
@@ -1306,7 +1306,7 @@ function render(){
       <td><button class="vbtn" data-act="openVacc" data-id="${esc(c.id)}" title="${c.last_vaccination?esc((c.vaccine_name||'')+' · дарж харах'):'Вакцин бүртгэх'}">${c.last_vaccination
           ? `<span class="mono">${fmtS(c.last_vaccination)}</span>` : '<span class="add">+ вакцин</span>'}</button></td>
       <td><button class="vbtn" data-act="openVacc" data-id="${esc(c.id)}">${vaccCell(c.next_vaccination_due)}</button></td>
-      <td>${reproCell(c.id)}</td>
+      <td>${c.sex==='female' ? reproCell(c.id) : ''}</td>
       <td>${seenCell(c)}</td>
       <td>${alert ? `<span class="badge ${alert[0]}">${alert[1]}</span>` : '<span class="muted">Идэвхтэй</span>'}</td>
     </tr>`;
