@@ -4,4 +4,5 @@
 .DS_Store
 Thumbs.db
 node_modules/
-backups/*.sql
+__pycache__/
+backups/
