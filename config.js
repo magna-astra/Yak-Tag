@@ -1,5 +1,11 @@
 // ============================================================
 // YAK-TAG — shared Supabase config
+//
+// WHEN YOU CHANGE THIS FILE (or offline.js): bump the ?v= number in
+// the <script src="config.js?v=..."> tags of admin/index.html,
+// cow.html, t.html and index.html. Browsers keep the old file for a
+// while otherwise, and a new page with an old config.js shows old
+// behaviour (e.g. English month names).
 // Used by admin/index.html and cow.html
 //
 // This key is the PUBLISHABLE key. It is safe in public code:
@@ -138,8 +144,12 @@ function mnParts(ts) {
 function fmtDate(ts) {
   if (!ts) return '—';
   const p = mnParts(ts);
-  const year = p.y !== +mnDate().slice(0, 4) ? `${p.y} оны ` : '';
-  return `${year}${p.m}-р сарын ${p.d}`;
+  // This year: "5-р сарын 12". Other years: compact "2027.02.13",
+  // which fits the dashboard badges.
+  if (p.y !== +mnDate().slice(0, 4)) {
+    return `${p.y}.${String(p.m).padStart(2, '0')}.${String(p.d).padStart(2, '0')}`;
+  }
+  return `${p.m}-р сарын ${p.d}`;
 }
 
 function fmtDateTime(ts) {
