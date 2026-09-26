@@ -575,9 +575,6 @@ async function loadCattle(){
   }
   allCattle = data||[];
   await loadMilkForDate();
-  document.getElementById('eOwner').innerHTML =
-    [...new Map(allCattle.map(c=>[c.owner_id,c.owner_name])).entries()]
-      .map(([id,n])=>`<option value="${id}">${esc(n)}</option>`).join('');
   renderStats(); render();
 }
 
@@ -1046,8 +1043,7 @@ document.getElementById('milkModalSave').addEventListener('click', async ()=>{
   if(error){toast('Хадгалж чадсангүй: '+error.message,true);return;}
   closeModal('milkModal');
   toast(`${liters.toFixed(1)} литр хадгалагдлаа`);
-  await loadMilkForDate();
-  await loadCattle();
+  await loadCattle();                       // reloads milk for the date too
 });
 
 // ---------- VACCINE MODAL ----------
@@ -1083,6 +1079,7 @@ function openEdit(id){
   editTarget = id;
   document.getElementById('editSub').textContent = c.tag_code;
   document.getElementById('eFarm').value = c.farm_id;
+  fillOwners(c.farm_id, c);
   document.getElementById('eOwner').value = c.owner_id;
   document.getElementById('eBreed').value = c.breed||'';
   document.getElementById('eYear').value = c.birth_year||'';
@@ -1090,7 +1087,29 @@ function openEdit(id){
   document.getElementById('eStatus').value = c.status;
   document.getElementById('editModal').classList.add('on');
 }
+// Owner choices = active users of the chosen farm, so a new herder
+// with no animals yet can be assigned, and owners from other farms
+// don't appear. The current owner is always kept in the list, so
+// saving without touching the field never silently reassigns.
+function fillOwners(farmId, c){
+  let opts = users.filter(u=>u.farm_id===farmId && u.active && u.role!=='super_admin')
+                  .map(u=>[u.id,u.full_name]);
+  if(!users.length){   // users list failed to load — fall back to known owners
+    opts = [...new Map(allCattle.filter(x=>x.farm_id===farmId)
+                                .map(x=>[x.owner_id,x.owner_name])).entries()];
+  }
+  if(c && !opts.some(([id])=>id===c.owner_id)) opts.unshift([c.owner_id,c.owner_name]);
+  document.getElementById('eOwner').innerHTML = opts.length
+    ? opts.map(([id,n])=>`<option value="${esc(id)}">${esc(n)}</option>`).join('')
+    : '<option value="">— Энэ ферм хэрэглэгчгүй —</option>';
+}
+document.getElementById('eFarm').addEventListener('change',e=>{
+  const c = allCattle.find(x=>x.id===editTarget);
+  fillOwners(e.target.value, c && c.farm_id===e.target.value ? c : null);
+});
+
 document.getElementById('editSave').addEventListener('click', async ()=>{
+  if(!document.getElementById('eOwner').value){toast('Эзэмшигч сонгоно уу.',true);return;}
   const {error} = await sb.rpc('admin_update_cattle',{
     p_cattle_id: editTarget,
     p_farm_id:   document.getElementById('eFarm').value,

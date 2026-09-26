@@ -469,10 +469,12 @@ async function autoPublish(photos) {
   if (!photos || !photos.length) return;
   if (cow.public_photo_path) return;              // already published
   if (autoPublish.running) return;                // don't stack retries
-  autoPublish.running = true;
 
+  // Checked before taking the flag — returning after it left the flag
+  // stuck on, so auto-publish never ran again until a page reload.
   const profile = photos.find(p => p.kind === 'profile');
   if (!profile) return;
+  autoPublish.running = true;
 
   const note = document.getElementById('pubNote');
   if (note) note.innerHTML = '<span style="color:var(--ink-soft)">Нийтийн зураг бэлтгэж байна…</span>';
@@ -648,6 +650,9 @@ document.getElementById('fileInput').addEventListener('change', async e => {
           p_cattle_id: cow.id, p_path: pubPath
         });
         if (ptrErr) toast('Зураг холбогдсонгүй: ' + ptrErr.message, true);
+        // Record it locally too, or loadPhotos() → autoPublish() sees
+        // no public photo and uploads the same picture a second time.
+        else cow.public_photo_path = pubPath;
       }
     }
 
@@ -814,7 +819,9 @@ async function loadMilkHistory(range) {
     buckets = 30;
     labelFor = d => d.getDate();
   } else {
-    since = new Date(today); since.setMonth(today.getMonth() - 11);
+    // Start on the 1st so the oldest bar is a whole month, not a
+    // month cut off at today's day number.
+    since = new Date(today.getFullYear(), today.getMonth() - 11, 1);
     buckets = 12;
     labelFor = d => (d.getMonth() + 1) + 'сар';
   }
