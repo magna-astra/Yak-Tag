@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>YAK-TAG — Мал бүрт цахим үнэмлэх</title>
-<meta name="description" content="NFC таг малыг таниулна. Утсаа ойртуулахад л мал хэн бэ, хэний вэ, хаана байсан нь харагдана.">
+<meta name="description" content="NFC таг малыг таниулна. Утсаа ойртуулахад л ямар мал, хэний мал, хаана байсан нь харагдана.">
 <meta property="og:title" content="YAK-TAG — Мал бүрт цахим үнэмлэх">
-<meta property="og:description" content="NFC таг малыг таниулна. Утсаа ойртуулахад л мал хэн бэ, хэний вэ, хаана байсан нь харагдана.">
+<meta property="og:description" content="NFC таг малыг таниулна. Утсаа ойртуулахад л ямар мал, хэний мал, хаана байсан нь харагдана.">
 <meta property="og:image" content="https://magna-astra.github.io/Yak-Tag/assets/logo-512.png">
 <meta property="og:type" content="website">
 <link rel="icon" href="assets/favicon.ico">
@@ -54,7 +54,7 @@
   <div class="wrap herogrid">
     <div>
       <div class="eyebrow">Мал аж ахуйн цахим бүртгэл</div>
-      <h1>Үхэр бүр<br><em>цахим үнэмлэхтэй.</em></h1>
+      <h1>Мал бүр<br><em>цахим үнэмлэхтэй.</em></h1>
       <p class="lead">NFC таг малыг таниулна. Малчин утсаа ойртуулахад л мал тодорхойлогдож, байршил, огноо, цаг автоматаар бүртгэгдэнэ. Сүү, вакцин, хээлтүүлэг, төллөлтийг нэг дор хөтөлж, төллөх огноог урьдчилан хэлнэ. Апп суулгах шаардлагагүй.</p>
       <div class="herocta">
         <a href="order.html" class="btn pri">Захиалах</a>
@@ -154,9 +154,9 @@ addEventListener('scroll',()=>{
                Зураг бүртгэгдээгүй</div>`}
         ${c.has_phone
           ? `<a class="tapcall" href="tel:${esc(c.phone).replace(/\s/g,'')}">Эзэмшигч рүү залгах</a>`
-          : `<div class="tapcall" style="background:#DCE1E8;color:#8C99AB">Утас бүртгэгдээгүй</div>`}
+          : `<div class="tapcall" style="background:#DCE1E8;color:#8C99AB">Утасны дугаар бүртгэгдээгүй</div>`}
         <div class="taprow" style="margin-top:14px;border-bottom:0">
-          <span class="tk">Уншсан байршил</span>
+          <span class="tk">Уншуулсан байршил</span>
           <span class="tv ok"><span class="tick">✓</span>Бүртгэгдлээ</span></div>
         <p style="font-size:.78rem;color:#5A6880;margin-top:6px;text-align:center">
           <a href="t.html?tag=${encodeURIComponent(tag)}" style="color:#1B4FA8;font-weight:600">Бүтэн хуудсыг нээх →</a></p>`;
