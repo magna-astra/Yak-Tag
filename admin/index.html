@@ -532,9 +532,15 @@ body.role-herder .col-owner{display:none}
     <select id="eFarm"></select>
     <label>Эзэмшигч</label>
     <select id="eOwner"></select>
+    <label>Хүйс</label>
+    <select id="eSex"><option value="female">Эм</option><option value="male">Эр</option></select>
     <label>Төрөл / үүлдэр</label>
     <select id="eBreed"></select>
     <input type="text" id="eBreedOther" placeholder="Үүлдрийн нэр" style="margin-top:6px;display:none">
+    <label>Зүс</label>
+    <input type="text" id="eColour" placeholder="Хар, алаг…">
+    <label>Эхийн тагийн дугаар</label>
+    <input type="text" id="eMother" placeholder="YT-008000" style="text-transform:uppercase">
     <label>Төрсөн он</label>
     <input type="number" id="eYear" min="1990" max="2030">
     <label>Жин (кг)</label>
@@ -893,20 +899,48 @@ async function loadAdminFarms(){
         ${f.status==='active'
           ? `<button class="pwbtn" data-act="archFarm" data-id="${esc(f.id)}">Түр хаах</button>`
           : `<button class="pwbtn" data-act="restFarm" data-id="${esc(f.id)}">Сэргээх</button>`}
+        <button class="pwbtn" data-act="editFarm" data-id="${esc(f.id)}">Засах</button>
         <button class="pwbtn" style="color:#B3341F" data-act="delFarm" data-id="${esc(f.id)}">Устгах</button>
       </td>
     </tr>`).join('');
 }
 
+let farmEditId = null;
 document.getElementById('newFarmBtn').addEventListener('click',()=>{
+  farmEditId = null;
   ['nfCode','nfName','nfAimag','nfSoum','nfLat','nfLng'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('farmModalTitle').textContent = 'Шинэ ферм';
+  document.getElementById('farmSave').textContent = 'Үүсгэх';
   document.getElementById('farmModal').classList.add('on');
 });
+function editFarm(id){
+  const f = adminFarms.find(x=>x.id===id); if(!f) return;
+  const loc = farms.find(x=>x.id===id) || {};
+  farmEditId = id;
+  document.getElementById('nfCode').value = f.code||'';
+  document.getElementById('nfName').value = f.name||'';
+  document.getElementById('nfAimag').value = f.aimag||'';
+  document.getElementById('nfSoum').value = f.soum||'';
+  document.getElementById('nfLat').value = loc.center_lat ?? '';
+  document.getElementById('nfLng').value = loc.center_lng ?? '';
+  document.getElementById('farmModalTitle').textContent = 'Ферм засах';
+  document.getElementById('farmSave').textContent = 'Хадгалах';
+  document.getElementById('farmModal').classList.add('on');
+}
 
 document.getElementById('farmSave').addEventListener('click', async ()=>{
   const code = document.getElementById('nfCode').value.trim();
   const name = document.getElementById('nfName').value.trim();
   if(!code||!name){toast('Код болон нэрийг оруулна уу.',true);return;}
+  const lat = parseFloat(document.getElementById('nfLat').value), lng = parseFloat(document.getElementById('nfLng').value);
+  if(farmEditId){
+    const {error} = await sb.rpc('admin_update_farm',{p_farm_id:farmEditId, p_code:code, p_name:name,
+      p_aimag:document.getElementById('nfAimag').value.trim()||null, p_soum:document.getElementById('nfSoum').value.trim()||null,
+      p_lat:isNaN(lat)?null:lat, p_lng:isNaN(lng)?null:lng});
+    if(error){toast('Хадгалж чадсангүй: '+error.message,true);return;}
+    closeModal('farmModal'); toast('Ферм засагдлаа'); farmEditId = null;
+    loadFarms(); loadAdminFarms(); return;
+  }
   const {error} = await sb.rpc('create_farm',{
     p_code:code, p_name:name,
     p_aimag:document.getElementById('nfAimag').value.trim()||null,
@@ -986,10 +1020,11 @@ async function loadRepro(){
   // breed_code is read from cattle directly, so cattle_dashboard (which
   // the map uses) does not need to change.
   try {
-    const {data,error} = await fetchAll(()=>sb.from('cattle').select('id,breed_code,species').order('id'));
+    const {data,error} = await fetchAll(()=>sb.from('cattle').select('id,breed_code,species,colour,mother_tag').order('id'));
     if(!error && data){
       const m = Object.fromEntries(data.map(x=>[x.id,x]));
-      allCattle.forEach(c=>{ const x = m[c.id]; if(x){ c.breed_code = x.breed_code; c.species = x.species; } });
+      allCattle.forEach(c=>{ const x = m[c.id]; if(x){ c.breed_code = x.breed_code; c.species = x.species;
+                                                        c.colour = x.colour; c.mother_tag = x.mother_tag; } });
     }
   } catch(e){}
 }
@@ -1627,6 +1662,9 @@ function openEdit(id){
   document.getElementById('eFarm').value = c.farm_id;
   fillOwners(c.farm_id, c);
   document.getElementById('eOwner').value = c.owner_id;
+  document.getElementById('eSex').value = c.sex || 'female';
+  document.getElementById('eColour').value = c.colour || '';
+  document.getElementById('eMother').value = c.mother_tag || '';
   document.getElementById('eBreed').innerHTML = breedOptions(c.breed_code);
   document.getElementById('eBreedOther').value = (c.breed_code && breedByCode[c.breed_code]?.is_other) ? (c.breed||'') : '';
   document.getElementById('eBreedOther').placeholder = c.breed_code ? 'Үүлдрийн нэр' : (c.breed ? `Одоогийн: ${c.breed}` : 'Үүлдрийн нэр');
@@ -1670,10 +1708,16 @@ document.getElementById('editSave').addEventListener('click', async ()=>{
     p_breed:     null,                       // breed is saved by set_cattle_breed below
     p_birth_year:parseInt(document.getElementById('eYear').value)||null,
     p_weight:    parseFloat(document.getElementById('eWeight').value)||null,
-    p_sex:       null,
+    p_sex:       document.getElementById('eSex').value,
     p_status:    document.getElementById('eStatus').value
   });
   if(error){toast('Хадгалж чадсангүй: '+error.message,true);return;}
+  const cur0 = allCattle.find(x=>x.id===editTarget) || {};
+  const colour = document.getElementById('eColour').value.trim(), mother = document.getElementById('eMother').value.trim().toUpperCase();
+  if(colour !== (cur0.colour||'') || mother !== (cur0.mother_tag||'')){
+    const {error:e3} = await sb.rpc('admin_update_cattle_details',{p_cattle_id:editTarget, p_colour:colour||null, p_mother_tag:mother||null});
+    if(e3){toast('Зүс / эх хадгалагдсангүй: '+e3.message,true);return;}
+  }
   const code = document.getElementById('eBreed').value;
   const cur = allCattle.find(x=>x.id===editTarget);
   const other = document.getElementById('eBreedOther').value.trim();
@@ -1775,7 +1819,8 @@ function renderTags(){
         : esc(t.tag_code)}</td>
       <td class="muted">${esc(t.farm_code||'')} · ${esc(t.farm_name||'')}</td>
       <td><span class="badge ${cls}">${lbl}</span>${t.retire_reason?` <span class="muted" title="${esc(t.retire_reason)}">ⓘ</span>`:''}</td>
-      <td class="muted" style="font-family:var(--mono);font-size:.78rem">${esc(t.nfc_uid||'—')}</td>
+      <td class="muted" style="font-family:var(--mono);font-size:.78rem"><button class="vbtn" data-act="setTagUid" data-id="${esc(t.tag_code)}"
+          title="Чип UID бүртгэх / засах">${t.nfc_uid ? esc(t.nfc_uid) : '<span class="add">+ UID</span>'}</button></td>
       <td>${t.cattle_id ? esc(t.owner_name||'—') : '<span class="muted">—</span>'}</td>
       <td class="muted">${fmtD(t.written_at)}</td>
       <td class="muted">${esc(t.batch_code||'—')}</td>
@@ -1869,6 +1914,17 @@ document.getElementById('tagRestoreBtn').addEventListener('click',
 document.getElementById('tagRetireBtn').addEventListener('click',
   ()=>tagStatus('retired','БҮРМӨСӨН хасах уу? Буцаах боломжгүй.',true));
 
+// Chip UID after writing a tag with tools/nfc_tag.py (it prints the UID).
+async function setTagUid(code){
+  const t = allTags.find(x=>x.tag_code===code); if(!t) return;
+  const v = prompt(`${code} — чипийн UID (nfc_tag.py хэвлэсэн, жишээ 04B7A594C82A81).\nХоосон орхивол UID-г арилгана.`, t.nfc_uid||'');
+  if(v===null) return;
+  const {error} = await sb.rpc('admin_set_tag_uid',{p_tag_code:code, p_uid:v.trim()||null});
+  if(error){toast(error.message,true);return;}
+  toast(v.trim() ? 'UID бүртгэгдлээ' : 'UID арилгалаа');
+  loadTags();
+}
+
 // ---------- accounts (super admin) ----------
 // Creating a login and setting someone else's password need the
 // service_role key, which must never be in a page. Both go through the
@@ -1961,7 +2017,7 @@ document.getElementById('mpSave').addEventListener('click', async ()=>{
 const tagOf  = id => (allCattle.find(c=>c.id===id)||{}).tag_code || '';
 const farmOf = id => adminFarms.find(f=>f.id===id);
 const rowActions = {
-  openUser, resetPw, delUser, restFarm, openEdit,
+  openUser, resetPw, delUser, restFarm, openEdit, editFarm, setTagUid,
   archFarm:  id => { const f=farmOf(id); if(f) archFarm(id,f.name); },
   delFarm:   id => { const f=farmOf(id); if(f) delFarm(id,f.name,f.cattle_count,f.user_count); },
   openMilk:  id => openMilk(id, tagOf(id)),

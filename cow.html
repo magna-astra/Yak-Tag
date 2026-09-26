@@ -1062,13 +1062,27 @@ function renderPhone(){
   const locked = !!cow.contact_locked_at;
   const num = cow.contact_phone || '';
 
-  if(locked){
+  // A locked number can still be changed by an admin (set_contact_phone
+  // allows it); herders see it read-only.
+  const adminHere = myProf && (myProf.role === 'super_admin' ||
+                    (myProf.role === 'farm_admin' && myProf.farm_id === cow.farm_id));
+  if(locked && !adminHere){
     z.innerHTML = `
       <div class="phone-locked">
         <span class="num">${esc(num)}</span>
         <span>🔒 Түгжээтэй</span>
       </div>
       <p class="hint">Энэ дугаарыг өөрчлөхийн тулд ферм админд хандана уу.</p>`;
+    return;
+  }
+  if(locked && adminHere){
+    z.innerHTML = `
+      <div class="phone-entry">
+        <input type="tel" id="phoneInput" inputmode="tel" value="${esc(num)}">
+        <button id="phoneSave">Хадгалах</button>
+      </div>
+      <p class="hint">🔒 Түгжээтэй — та админ тул өөрчилж болно. Түгжээ хэвээр үлдэнэ.</p>`;
+    document.getElementById('phoneSave').addEventListener('click', ()=>savePhone(true));
     return;
   }
 

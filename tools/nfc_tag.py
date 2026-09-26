@@ -371,8 +371,8 @@ def cmd_write(tag_code, force=False):
     readback = parse_ndef_url(check)
     if readback == url:
         print(f"\nVerified OK. UID {s['uid']} now points to {tag_code}.")
-        print("\nRecord it in the database:")
-        print(f"  select record_tag_write('{tag_code}', '{s['uid']}', false);")
+        print("\nRecord the chip UID: dashboard -> Тагууд -> row " + tag_code + " -> '+ UID' ->")
+        print(f"  {s['uid']}")
     else:
         print(f"\nMISMATCH — read back: {readback}")
         print("Do NOT put this tag on an animal.")
