@@ -145,7 +145,11 @@ tbody tr:hover{background:#FAFBFD}
 #herdTable td.num,#herdTable th.num{text-align:right}
 #herdTable .mono{font-family:var(--mono);font-size:12.5px}
 #herdTable td.menucell{overflow:visible}
-.vplus{padding:0 6px;margin-left:4px;font-size:.75rem;line-height:18px}
+.editpen{background:none;border:0;color:var(--ink-soft);padding:0 4px;font-size:.85rem;cursor:pointer}
+.editpen:hover{color:var(--khukh)}
+.vbtn{background:none;border:0;padding:0;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.vbtn:hover .mono,.vbtn:hover .add{text-decoration:underline}
+.vbtn .add{color:var(--khukh);font-weight:600;font-size:.82rem}
 #herdTable tr.urgent td:first-child{box-shadow:inset 3px 0 0 var(--alert)}
 .animal .sub{font-size:.78rem;color:var(--ink-soft);margin-top:2px;white-space:normal}
 .animal .tag-code{font-size:.9rem}
@@ -154,7 +158,8 @@ tbody tr:hover{background:#FAFBFD}
 .milkv{background:none;border:0;padding:0;font-family:var(--mono);font-weight:700;color:var(--ink);font-size:.88rem}
 .milkv small{font-family:var(--body);font-weight:500;color:var(--ink-soft);font-size:.72rem;margin-left:2px}
 .dash{color:#AEB7C4}
-.seen-old{color:var(--gold-d)} .seen-lost{color:var(--alert);font-weight:600}
+.seen-old,.seen-lost{display:inline-block;padding:2px 8px;border-radius:7px;font-weight:600}
+.seen-old{background:var(--gold-l);color:var(--gold-d)!important} .seen-lost{background:var(--alert-l);color:var(--alert)!important}
 .globe{vertical-align:-2px;margin-left:4px;color:#8794A8}
 .rowmenu{position:relative;display:inline-block}
 .rowmenu summary{list-style:none;cursor:pointer;padding:2px 8px;border-radius:7px;color:var(--ink-soft);font-weight:800;letter-spacing:1px}
@@ -234,7 +239,7 @@ body.role-herder .col-owner{display:none}
 </head>
 <body>
 <!-- Icons: Tabler Icons (MIT) https://tabler.io/icons -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-tag" viewBox="0 0 24 24"><path d="M7.5 7.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M3 6v5.172a2 2 0 0 0 .586 1.414l7.71 7.71a2.41 2.41 0 0 0 3.408 0l5.592 -5.592a2.41 2.41 0 0 0 0 -3.408l-7.71 -7.71a2 2 0 0 0 -1.414 -.586h-5.172a3 3 0 0 0 -3 3z" /></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></symbol><symbol id="i-milk" viewBox="0 0 24 24"><path d="M8 6h8v-2a1 1 0 0 0 -1 -1h-6a1 1 0 0 0 -1 1v2z" /><path d="M16 6l1.094 1.759a6 6 0 0 1 .906 3.17v8.071a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-8.071a6 6 0 0 1 .906 -3.17l1.094 -1.759" /><path d="M12 16m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M10 10h4" /></symbol><symbol id="i-chart-bar" viewBox="0 0 24 24"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M4 20h14" /></symbol><symbol id="i-grain" viewBox="0 0 24 24"><path d="M4.5 9.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M9.5 4.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M9.5 14.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M4.5 19.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M14.5 9.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19.5 4.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M14.5 19.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19.5 14.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></symbol><symbol id="i-vaccine" viewBox="0 0 24 24"><path d="M17 3l4 4" /><path d="M19 5l-4.5 4.5" /><path d="M11.5 6.5l6 6" /><path d="M16.5 11.5l-6.5 6.5h-4v-4l6.5 -6.5" /><path d="M7.5 12.5l1.5 1.5" /><path d="M10.5 9.5l1.5 1.5" /><path d="M3 21l3 -3" /></symbol><symbol id="i-calendar-event" viewBox="0 0 24 24"><path d="M4 5m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" /><path d="M16 3l0 4" /><path d="M8 3l0 4" /><path d="M4 11l16 0" /><path d="M8 15h2v2h-2z" /></symbol><symbol id="i-baby-carriage" viewBox="0 0 24 24"><path d="M8 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M18 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M2 5h2.5l1.632 4.897a6 6 0 0 0 5.693 4.103h2.675a5.5 5.5 0 0 0 0 -11h-.5v6" /><path d="M6 9h14" /><path d="M9 17l1 -3" /><path d="M16 14l1 3" /></symbol><symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" /></symbol><symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06" /><path d="M15 19l2 2l4 -4" /></symbol><symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></symbol><symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" /><path d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87" /><path d="M3 3l18 18" /></symbol><symbol id="i-heart" viewBox="0 0 24 24"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-calendar-heart" viewBox="0 0 24 24"><path d="M11.5 21h-5.5a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M4 11h16" /><path d="M18 22l3.35 -3.284a2.143 2.143 0 0 0 .005 -3.071a2.242 2.242 0 0 0 -3.129 -.006l-.224 .22l-.223 -.22a2.242 2.242 0 0 0 -3.128 -.006a2.143 2.143 0 0 0 -.006 3.071l3.355 3.296z" /></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M7.5 7.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M3 6v5.172a2 2 0 0 0 .586 1.414l7.71 7.71a2.41 2.41 0 0 0 3.408 0l5.592 -5.592a2.41 2.41 0 0 0 0 -3.408l-7.71 -7.71a2 2 0 0 0 -1.414 -.586h-5.172a3 3 0 0 0 -3 3z" /></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></symbol><symbol id="i-milk" viewBox="0 0 24 24"><path d="M8 6h8v-2a1 1 0 0 0 -1 -1h-6a1 1 0 0 0 -1 1v2z" /><path d="M16 6l1.094 1.759a6 6 0 0 1 .906 3.17v8.071a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-8.071a6 6 0 0 1 .906 -3.17l1.094 -1.759" /><path d="M12 16m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M10 10h4" /></symbol><symbol id="i-chart-bar" viewBox="0 0 24 24"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M4 20h14" /></symbol><symbol id="i-grain" viewBox="0 0 24 24"><path d="M4.5 9.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M9.5 4.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M9.5 14.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M4.5 19.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M14.5 9.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19.5 4.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M14.5 19.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19.5 14.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></symbol><symbol id="i-vaccine" viewBox="0 0 24 24"><path d="M17 3l4 4" /><path d="M19 5l-4.5 4.5" /><path d="M11.5 6.5l6 6" /><path d="M16.5 11.5l-6.5 6.5h-4v-4l6.5 -6.5" /><path d="M7.5 12.5l1.5 1.5" /><path d="M10.5 9.5l1.5 1.5" /><path d="M3 21l3 -3" /></symbol><symbol id="i-calendar-event" viewBox="0 0 24 24"><path d="M4 5m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" /><path d="M16 3l0 4" /><path d="M8 3l0 4" /><path d="M4 11l16 0" /><path d="M8 15h2v2h-2z" /></symbol><symbol id="i-baby-carriage" viewBox="0 0 24 24"><path d="M8 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M18 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M2 5h2.5l1.632 4.897a6 6 0 0 0 5.693 4.103h2.675a5.5 5.5 0 0 0 0 -11h-.5v6" /><path d="M6 9h14" /><path d="M9 17l1 -3" /><path d="M16 14l1 3" /></symbol><symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" /></symbol><symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06" /><path d="M15 19l2 2l4 -4" /></symbol><symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></symbol><symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" /><path d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87" /><path d="M3 3l18 18" /></symbol><symbol id="i-heart" viewBox="0 0 24 24"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /></symbol></svg>
 
 <!-- ============ LOGIN ============ -->
 <div class="login-wrap" id="loginView">
@@ -336,14 +341,13 @@ body.role-herder .col-owner{display:none}
               <th><svg class="ic c-feed"><use href="#i-grain"/></svg>Тэжээсэн</th>
               <th><svg class="ic c-vacc"><use href="#i-vaccine"/></svg>Вакцин хийсэн</th>
               <th><svg class="ic c-vacc"><use href="#i-calendar-event"/></svg>Дараагийн вакцин</th>
-              <th><svg class="ic c-heel"><use href="#i-baby-carriage"/></svg>Хээл</th>
+              <th><svg class="ic c-heel"><use href="#i-calendar-heart"/></svg>Хээл</th>
               <th><svg class="ic c-seen"><use href="#i-map-pin"/></svg>Сүүлд харагдсан</th>
               <th><svg class="ic c-stat"><use href="#i-shield-check"/></svg>Төлөв</th>
-              <th class="w-menu"></th>
             </tr>
           </thead>
           <tbody id="tbody">
-            <tr><td colspan="11" class="loading">Ачаалж байна…</td></tr>
+            <tr><td colspan="10" class="loading">Ачаалж байна…</td></tr>
           </tbody>
         </table>
       </div>
@@ -403,7 +407,7 @@ body.role-herder .col-owner{display:none}
         <span class="count-note">Төллөх огноо = таамаг (үүлдэр, эцэг, малын болон фермийн өмнөх төллөлтөөр)</span>
       </div></div>
 
-      <h3 style="font-size:.95rem;margin:4px 0 4px"><svg class="ic c-heel"><use href="#i-baby-carriage"/></svg>Төллөх дөхсөн мал</h3>
+      <h3 style="font-size:.95rem;margin:4px 0 4px"><svg class="ic c-heel"><use href="#i-calendar-heart"/></svg>Төллөх дөхсөн мал</h3>
       <p class="mapnote" style="margin:0 0 10px">Хугацаа нь хэтэрсэн, ойрын 7 хоногт, 8–30 хоногт төллөх гэж бүлэглэв.</p>
       <div class="table-wrap" style="margin-bottom:22px"><table>
         <thead><tr><th>Дугаар</th><th class="col-owner">Эзэмшигч</th><th>Үүлдэр</th><th>Төлөв</th>
@@ -502,8 +506,9 @@ body.role-herder .col-owner{display:none}
 
 <div class="modal" id="vaccModal">
   <div class="modalbox">
-    <h3>Вакцин бүртгэх</h3>
+    <h3 id="vaccTitle">Вакцин бүртгэх</h3>
     <p class="msub" id="vaccModalSub"></p>
+    <div class="mnote" id="vaccNote" style="display:none;margin:0 0 6px"></div>
     <label>Вакцины нэр</label>
     <input type="text" id="vaccName" placeholder="Шүлхий, дал уяа…">
     <label>Хийсэн огноо</label>
@@ -511,6 +516,7 @@ body.role-herder .col-owner{display:none}
     <label>Дараагийн огноо</label>
     <input type="date" id="vaccNext">
     <div class="mactions">
+      <button class="mcancel" id="vaccNewDose" style="display:none">Шинэ тун нэмэх</button>
       <button class="mcancel" onclick="closeModal('vaccModal')">Болих</button>
       <button class="msave" id="vaccSave">Хадгалах</button>
     </div>
@@ -541,6 +547,7 @@ body.role-herder .col-owner{display:none}
       <option value="stolen">Хулгайлагдсан</option>
     </select>
     <div class="mactions">
+      <button class="mcancel" id="editDelete" style="color:var(--alert)">Устгах</button>
       <button class="mcancel" onclick="closeModal('editModal')">Болих</button>
       <button class="msave" id="editSave">Хадгалах</button>
     </div>
@@ -816,7 +823,7 @@ async function loadCattle(){
     n=>{ if(n>=1000) document.getElementById('countNote').textContent = `Ачаалж байна… ${n}`; });
   if(error){
     document.getElementById('tbody').innerHTML =
-      `<tr><td colspan="11" class="empty">Алдаа: ${esc(error.message)}</td></tr>`;
+      `<tr><td colspan="10" class="empty">Алдаа: ${esc(error.message)}</td></tr>`;
     return;
   }
   allCattle = data||[];
@@ -1233,7 +1240,7 @@ function isUrgent(c){
 // ---------- attention bar (chips filter the table) ----------
 let fAttn = '';
 const ATTN = {
-  calv7: { icon:'baby-carriage', cls:'red',   test:c=>{const r=reproById[c.id];return r&&(r.state==='bred'||r.state==='pregnant')&&r.expected_date&&daysUntil(r.expected_date)<=7;}, lbl:n=>`${n} төллөх 7 хоногт` },
+  calv7: { icon:'calendar-heart', cls:'red',   test:c=>{const r=reproById[c.id];return r&&(r.state==='bred'||r.state==='pregnant')&&r.expected_date&&daysUntil(r.expected_date)<=7;}, lbl:n=>`${n} төллөх 7 хоногт` },
   lost:  { icon:'alert-triangle', cls:'red',   test:c=>c.status==='lost'||c.status==='stolen', lbl:n=>`${n} алга болсон` },
   vacc:  { icon:'vaccine', cls:'amber', test:c=>{const d=daysUntil(c.next_vaccination_due);return d!==null&&d<=30;}, lbl:n=>`${n} вакцин дөхсөн / хэтэрсэн` },
   stale: { icon:'eye-off', cls:'amber', test:c=>c.status==='active'&&(!c.last_seen_at||daysSince(c.last_seen_at)>30), lbl:n=>`${n} 30+ хоног харагдаагүй` },
@@ -1275,7 +1282,7 @@ function render(){
 
   if(!rows.length){
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="11" class="empty">Тохирох мал олдсонгүй.</td></tr>';
+      '<tr><td colspan="10" class="empty">Тохирох мал олдсонгүй.</td></tr>';
     return;
   }
 
@@ -1289,18 +1296,19 @@ function render(){
     return `<tr class="${isUrgent(c)?'urgent':''}">
       <td class="animal" title="${esc(c.tag_code)} · ${sub}">
         <span class="tag-code"><a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${esc(c.tag_code)}</a></span>
+        <button class="editpen super-only" data-act="openEdit" data-id="${esc(c.id)}" title="Мэдээлэл засах" aria-label="Засах">✎</button>
         <div class="sub">${sub}</div>
       </td>
       <td class="col-owner" title="${esc(c.owner_name||'')}">${esc(c.owner_name||'')}<div class="sub super-only">${esc(c.farm_code||'')}</div></td>
       <td class="num">${milkCellNew(c)}</td>
       <td class="num mono">${month || '<span class="dash">—</span>'}</td>
       <td>${dateCell(c.last_fed_at, 'muted')}</td>
-      <td>${dateCell(c.last_vaccination, 'muted')}<button class="minibtn vplus" data-act="openVacc" data-id="${esc(c.id)}" title="Вакцин бүртгэх">+</button></td>
-      <td>${vaccCell(c.next_vaccination_due)}</td>
+      <td><button class="vbtn" data-act="openVacc" data-id="${esc(c.id)}" title="${c.last_vaccination?esc((c.vaccine_name||'')+' · дарж харах'):'Вакцин бүртгэх'}">${c.last_vaccination
+          ? `<span class="mono">${fmtS(c.last_vaccination)}</span>` : '<span class="add">+ вакцин</span>'}</button></td>
+      <td><button class="vbtn" data-act="openVacc" data-id="${esc(c.id)}">${vaccCell(c.next_vaccination_due)}</button></td>
       <td>${reproCell(c.id)}</td>
       <td>${seenCell(c)}</td>
       <td>${alert ? `<span class="badge ${alert[0]}">${alert[1]}</span>` : '<span class="muted">Идэвхтэй</span>'}</td>
-      <td class="menucell" style="text-align:right">${rowMenu(c, i >= rows.length-2 && rows.length>3)}</td>
     </tr>`;
   }).join('');
 }
@@ -1536,27 +1544,76 @@ document.getElementById('milkModalSave').addEventListener('click', async ()=>{
 });
 
 // ---------- VACCINE MODAL ----------
-let vaccTarget = null;
+// Click a vaccine date:
+//   no record yet            -> register it
+//   record + admin           -> correct it (admin_update_vaccination)
+//   record + herder          -> view only; a new dose only once the
+//                               next one is due (schema_v32 enforces this)
+let vaccTarget = null, vaccMode = 'new';
+const isAdminRole = () => myRole==='super_admin' || myRole==='farm_admin';
+function vaccFields(name, given, next, readOnly){
+  document.getElementById('vaccName').value = name;
+  document.getElementById('vaccGiven').value = given;
+  document.getElementById('vaccNext').value = next;
+  ['vaccName','vaccGiven','vaccNext'].forEach(id=>document.getElementById(id).disabled = readOnly);
+  document.getElementById('vaccSave').style.display = readOnly ? 'none' : '';
+}
+function vaccNewMode(c){
+  vaccMode = 'new';
+  document.getElementById('vaccTitle').textContent = 'Вакцин бүртгэх';
+  const next = new Date(); next.setFullYear(next.getFullYear()+1);
+  vaccFields(c && c.vaccine_name || '', mnDate(), mnDate(next), false);
+  document.getElementById('vaccNewDose').style.display = 'none';
+}
 function openVacc(cattleId, tagCode){
   vaccTarget = cattleId;
+  const c = allCattle.find(x=>x.id===cattleId) || {};
+  const note = document.getElementById('vaccNote');
   document.getElementById('vaccModalSub').textContent = tagCode;
-  document.getElementById('vaccName').value = '';
-  document.getElementById('vaccGiven').value = mnDate();
-  const next = new Date(); next.setFullYear(next.getFullYear()+1);
-  document.getElementById('vaccNext').value = mnDate(next);
+  note.style.display = 'none';
+
+  if(!c.last_vaccination){
+    vaccNewMode(null);
+  } else if(isAdminRole()){
+    vaccMode = 'edit';
+    document.getElementById('vaccTitle').textContent = 'Вакцин засах';
+    vaccFields(c.vaccine_name||'', c.last_vaccination, c.next_vaccination_due||'', false);
+    note.textContent = 'Сүүлийн вакцины бүртгэлийг засна. Шинэ тун бол "Шинэ тун нэмэх".';
+    note.style.display = 'block';
+    document.getElementById('vaccNewDose').style.display = '';
+  } else {
+    const d = daysUntil(c.next_vaccination_due);
+    const due = c.next_vaccination_due ? d<=30 : daysSince(c.last_vaccination) > 30;
+    if(due){
+      vaccNewMode(c);
+      note.textContent = `Өмнөх: ${c.vaccine_name||'вакцин'} · ${fmtDate(c.last_vaccination)}. Дараагийн тун бүртгэх үү?`;
+    } else {
+      vaccMode = 'view';
+      document.getElementById('vaccTitle').textContent = 'Вакцин';
+      vaccFields(c.vaccine_name||'', c.last_vaccination, c.next_vaccination_due||'', true);
+      document.getElementById('vaccNewDose').style.display = 'none';
+      note.textContent = 'Бүртгэгдсэн. Өөрчлөх бол админд хандана уу.';
+    }
+    note.style.display = 'block';
+  }
   document.getElementById('vaccModal').classList.add('on');
 }
+document.getElementById('vaccNewDose').addEventListener('click', ()=>{
+  vaccNewMode(allCattle.find(x=>x.id===vaccTarget));
+  const n = document.getElementById('vaccNote');
+  n.textContent = 'Шинэ тун — тусдаа бүртгэл болно.'; n.style.display = 'block';
+});
 document.getElementById('vaccSave').addEventListener('click', async ()=>{
   const name = document.getElementById('vaccName').value.trim();
   const given = document.getElementById('vaccGiven').value;
   const next = document.getElementById('vaccNext').value;
   if(!name||!given){toast('Нэр болон огноог оруулна уу.',true);return;}
-  const {error} = await sb.rpc('log_vaccination',{
-    p_cattle_id:vaccTarget, p_vaccine:name,
-    p_given_on:given, p_next_due:next||null, p_note:null});
+  const {error} = vaccMode==='edit'
+    ? await sb.rpc('admin_update_vaccination',{p_cattle_id:vaccTarget, p_vaccine:name, p_given_on:given, p_next_due:next||null})
+    : await sb.rpc('log_vaccination',{p_cattle_id:vaccTarget, p_vaccine:name, p_given_on:given, p_next_due:next||null, p_note:null});
   if(error){toast('Хадгалж чадсангүй: '+error.message,true);return;}
   closeModal('vaccModal');
-  toast('Вакцин бүртгэгдлээ');
+  toast(vaccMode==='edit' ? 'Вакцин засагдлаа' : 'Вакцин бүртгэгдлээ');
   loadCattle();
 });
 
@@ -1600,6 +1657,10 @@ document.getElementById('eFarm').addEventListener('change',e=>{
   fillOwners(e.target.value, c && c.farm_id===e.target.value ? c : null);
 });
 
+document.getElementById('editDelete').addEventListener('click', ()=>{
+  closeModal('editModal');
+  delCattle(editTarget, tagOf(editTarget));
+});
 document.getElementById('editSave').addEventListener('click', async ()=>{
   if(!document.getElementById('eOwner').value){toast('Эзэмшигч сонгоно уу.',true);return;}
   const {error} = await sb.rpc('admin_update_cattle',{
@@ -1888,6 +1949,30 @@ document.getElementById('mpSave').addEventListener('click', async ()=>{
   if(e2){toast('Сольж чадсангүй: '+e2.message,true);return;}
   closeModal('myPwModal');
   toast('Нууц үг солигдлоо');
+});
+
+// ---------- row buttons ----------
+// Rows carry only data-act + data-id. Names and tags are looked up
+// here, never pasted into an onclick string: esc() is HTML escaping,
+// and the browser undoes it before inline JS runs, so a quote in a
+// farm name used to break out of the handler.
+// (This block was removed by mistake in fccedbb, which silently broke
+// every row button; restored here.)
+const tagOf  = id => (allCattle.find(c=>c.id===id)||{}).tag_code || '';
+const farmOf = id => adminFarms.find(f=>f.id===id);
+const rowActions = {
+  openUser, resetPw, delUser, restFarm, openEdit,
+  archFarm:  id => { const f=farmOf(id); if(f) archFarm(id,f.name); },
+  delFarm:   id => { const f=farmOf(id); if(f) delFarm(id,f.name,f.cattle_count,f.user_count); },
+  openMilk:  id => openMilk(id, tagOf(id)),
+  openVacc:  id => openVacc(id, tagOf(id)),
+  delCattle: id => delCattle(id, tagOf(id)),
+};
+document.addEventListener('click', e=>{
+  const b = e.target.closest('[data-act]');
+  if(!b || b.disabled) return;
+  const fn = rowActions[b.dataset.act];
+  if(fn) fn(b.dataset.id);
 });
 
 document.querySelectorAll('.modal:not([data-sticky])').forEach(m=>{
