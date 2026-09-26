@@ -121,6 +121,17 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
   border:1.5px solid #EBD9B0;border-radius:12px;font-weight:700;font-size:.95rem}
 .feed-btn:disabled{opacity:.5}
 
+/* lost / stolen */
+.lostbar{background:var(--alert-light);color:var(--alert);border:1.5px solid var(--alert);
+  border-radius:14px;padding:15px 16px;margin-bottom:14px;font-size:.9rem}
+.lostbar b{display:block;font-size:1rem}
+.lostbar p{color:var(--ink);font-size:.82rem;margin-top:6px}
+.found-btn{width:100%;margin-top:12px;padding:13px;background:var(--steppe);color:#fff;border:0;
+  border-radius:12px;font-weight:700;font-size:.95rem}
+.lost-btn{width:100%;padding:13px;background:#fff;color:var(--alert);border:1.5px solid var(--alert);
+  border-radius:12px;font-weight:700;font-size:.95rem}
+.found-btn:disabled,.lost-btn:disabled{opacity:.5}
+
 .milk-tabs{display:flex;gap:8px;margin-bottom:14px}
 .milk-tabs button{flex:1;padding:9px 6px;border:1.5px solid var(--line);background:#fff;
   border-radius:9px;font-size:.84rem;font-weight:600;color:var(--ink-soft)}
@@ -913,6 +924,8 @@ function renderCow() {
   const milkLogged = cow.milk_today != null;
 
   document.getElementById('cowBody').innerHTML = `
+    <div id="lostTop"></div>
+
     <!-- MILK -->
     <div class="card">
       <h2><span class="dot"></span>Өнөөдрийн сүү</h2>
@@ -1014,9 +1027,18 @@ function renderCow() {
                ${Number(cow.last_lat).toFixed(4)}, ${Number(cow.last_lng).toFixed(4)} ↗</a>`
           : '—'}</span></div>
     </div>
+
+    <!-- LOST / STOLEN -->
+    <div class="card" id="lostCard" style="display:none">
+      <h2><span class="dot" style="background:var(--alert)"></span>Алга болсон уу?</h2>
+      <p class="hint" style="margin:0 0 12px">Мал алга болсон эсвэл хулгайд алдсан бол мэдэгдээрэй. Хэн нэгэн тагийг уншуулахад
+        "Алга болсон мал" гэсэн анхааруулга гарч, уншуулсан байршил танд ирнэ.</p>
+      <button class="lost-btn" id="lostBtn">Алга болсон гэж мэдэгдэх</button>
+    </div>
   `;
 
   renderPhone();
+  renderLost();
   loadCowExtras();
   document.getElementById('milkBtn').addEventListener('click', saveMilk);
   document.getElementById('feedBtn').addEventListener('click', logFeeding);
@@ -1105,6 +1127,73 @@ async function deletePhoto(id, kindLabel) {
 }
 
 // ---------- contact phone ----------
+// ---------- lost / stolen ----------
+// report_lost / report_found (null-safe since schema_v34): the owner, the
+// farm admin or the super admin. When lost, t.html shows a warning to
+// whoever taps the tag and the tap location reaches the dashboard.
+let lostInfo = null;
+function cowIsLost() {
+  return !!cow && (cow.status === 'lost' || cow.status === 'stolen' || !!(lostInfo && lostInfo.reported_lost_at));
+}
+async function renderLost() {
+  const top = document.getElementById('lostTop'), card = document.getElementById('lostCard');
+  if (!top || !card || !cow) return;
+  const can = canEditCow();
+  if (cowIsLost() && !lostInfo && !offlineMode && navigator.onLine) {
+    try {
+      const { data, error } = await sb.from('cattle').select('reported_lost_at, lost_note').eq('id', cow.id).maybeSingle();
+      if (!error) lostInfo = data || {};
+    } catch (e) {}
+  }
+  if (cowIsLost()) {
+    const li = lostInfo || {};
+    top.innerHTML = `<div class="lostbar">
+      <b>⚠ Алга болсон гэж мэдэгдсэн</b>${li.reported_lost_at ? `Мэдэгдсэн: ${fmtDateTime(li.reported_lost_at)}` : ''}
+      ${li.lost_note ? `<br>Тэмдэглэл: ${esc(li.lost_note)}` : ''}
+      <p>Тагийг уншуулсан хүн анхааруулга харж, байршил нь "Сүүлд харагдсан" болон самбарын газрын зурагт бүртгэгдэнэ.</p>
+      ${can ? '<button class="found-btn" id="foundBtn">Олдсон — буцаж ирсэн</button>' : ''}</div>`;
+    card.style.display = 'none';
+    const fb = document.getElementById('foundBtn');
+    if (fb) fb.addEventListener('click', markFound);
+  } else {
+    top.innerHTML = '';
+    card.style.display = can ? '' : 'none';
+    const lb = document.getElementById('lostBtn');
+    if (lb && !lb.dataset.wired) { lb.dataset.wired = '1'; lb.addEventListener('click', markLost); }
+  }
+}
+function lostSaved(status, info) {
+  cow.status = status;
+  lostInfo = info;
+  cacheSet('yt-cow:' + cow.tag_code, cow);
+  renderLost();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+async function markLost() {
+  if (!navigator.onLine || offlineMode) return toast('Сүлжээ шаардлагатай.', true);
+  if (!confirm(`${cow.tag_code} малыг алга болсон гэж мэдэгдэх үү?`)) return;
+  const note = prompt('Хаана, хэзээ алга болсон бэ? (заавал биш)', '');
+  if (note === null) return;
+  const btn = document.getElementById('lostBtn');
+  btn.disabled = true;
+  const { error } = await sb.rpc('report_lost', { p_cattle_id: cow.id, p_note: note.trim() || null });
+  btn.disabled = false;
+  if (error) return toast('Мэдэгдэж чадсангүй: ' + error.message, true);
+  toast('Алга болсон гэж бүртгэгдлээ');
+  lostSaved('lost', { reported_lost_at: new Date().toISOString(), lost_note: note.trim() || null });
+}
+async function markFound() {
+  if (!navigator.onLine || offlineMode) return toast('Сүлжээ шаардлагатай.', true);
+  if (!confirm(`${cow.tag_code} мал олдсон уу? Анхааруулга арилна.`)) return;
+  const btn = document.getElementById('foundBtn');
+  btn.disabled = true;
+  const { error } = await sb.rpc('report_found', { p_cattle_id: cow.id });
+  if (btn) btn.disabled = false;
+  if (error) return toast('Хадгалж чадсангүй: ' + error.message, true);
+  toast('Олдсон гэж тэмдэглэлээ');
+  lostSaved('active', { reported_lost_at: null, lost_note: null });
+}
+
 function renderPhone(){
   const z = document.getElementById('phoneZone');
   if(!z) return;

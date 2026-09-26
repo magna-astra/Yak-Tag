@@ -282,6 +282,7 @@ body.role-herder .col-owner{display:none}
       <button data-tab="users" class="super-only">Хэрэглэгчид</button>
       <button data-tab="farms" class="super-only">Фермүүд</button>
       <button data-tab="tags" class="super-only">Тагууд</button>
+      <button data-tab="audit" class="admin-only">Түүх</button>
     </div>
 
     <!-- ===== HERD ===== -->
@@ -465,6 +466,36 @@ body.role-herder .col-owner{display:none}
       </div>
       <p class="mapnote">Малчин зөвхөн өөрийн фермийн "Мал хүлээж буй" таг дээр мал бүртгэнэ.
         Тагийн фермийг энд зөвхөн ерөнхий админ сонгоно.</p>
+    </div>
+
+    <!-- ===== AUDIT LOG: who changed what (admins, read-only) ===== -->
+    <div class="tabpane" id="tab-audit">
+      <div class="filters">
+        <div class="frow">
+          <span class="flabel super-only">Ферм</span>
+          <select id="aFarm" class="super-only"><option value="">Бүх ферм</option></select>
+          <span class="flabel">Төрөл</span>
+          <select id="aKind">
+            <option value="">Бүгд</option>
+            <option value="cattle">Мал</option>
+            <option value="records">Бүртгэлийн засвар (вакцин, хээл, тэжээл)</option>
+            <option value="tags">Таг</option>
+            <option value="people">Хэрэглэгч, ферм</option>
+            <option value="deletes">Зөвхөн устгасан</option>
+          </select>
+          <span class="flabel">Эхлэх огноо</span>
+          <input type="date" id="aFrom">
+          <span class="count-note" id="auditCount"></span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Огноо, цаг</th><th>Хэн</th><th>Үйлдэл</th><th>Мал / таг</th><th>Дэлгэрэнгүй</th><th class="super-only">Ферм</th></tr></thead>
+          <tbody id="auditBody"><tr><td colspan="6" class="loading">Ачаалж байна…</td></tr></tbody>
+        </table>
+      </div>
+      <div style="text-align:center;margin:12px 0"><button class="minibtn" id="auditMore" style="display:none">Цааш үзэх</button></div>
+      <p class="mapnote">Мал, таг, хэрэглэгч, фермд хийсэн өөрчлөлт, устгалт энд автоматаар хадгалагдана. Түүхийг хэн ч засах, устгах боломжгүй.</p>
     </div>
 
     <!-- ===== USERS (super admin) ===== -->
@@ -811,6 +842,7 @@ document.querySelectorAll('.tabs button').forEach(b=>{
     if(b.dataset.tab==='farms'){ loadAdminFarms(); }
     if(b.dataset.tab==='tags'){ loadTags(); }
     if(b.dataset.tab==='calving'){ renderCalving(); }
+    if(b.dataset.tab==='audit'){ loadAudit(true); }
   });
 });
 
@@ -1918,6 +1950,129 @@ document.getElementById('tagAll').addEventListener('change',e=>{
   visibleTags().forEach(t=> e.target.checked ? tagSel.add(t.tag_code) : tagSel.delete(t.tag_code));
   renderTags();
 });
+
+// ---------- audit log ("Түүх"): read-only, newest first ----------
+// Rows are written only by the database functions; RLS lets the super
+// admin read all, a farm admin only their own farm.
+const AUDIT_PAGE = 200;
+const AUDIT_ACT = {
+  register_cattle:'Мал бүртгэв', admin_edit_cattle:'Малын мэдээлэл засав', cattle_delete:'Мал устгав',
+  report_lost:'Алга болсон гэж мэдэгдэв', report_found:'Олдсон гэж тэмдэглэв', tag_replace:'Таг солив',
+  set_contact_phone:'Утасны дугаар оруулав', unlock_contact_phone:'Утасны дугаарыг засахаар нээв',
+  set_public_photo:'Нийтэд харагдах зураг сонгов', photo_delete:'Зураг устгав', photo_unlock:'Зургийг засахаар нээв',
+  feeding_delete:'Тэжээлийн бүртгэл устгав', vaccination_edit:'Вакцины бүртгэл засав',
+  repro_edit:'Хээл, төлийн бүртгэл засав', repro_delete:'Хээл, төлийн бүртгэл устгав',
+  tags_create:'Таг үүсгэв', tags_assign_farm:'Тагийг фермд оноов', tag_write:'Таг бичив', tag_uid:'Чип UID бүртгэв',
+  tag_recycle:'Тагийг дахин ашиглахаар сэргээв', tag_retire:'Тагийг хасав', tag_delete:'Таг устгав',
+  admin_edit_profile:'Хэрэглэгчийн мэдээлэл засав', profile_delete:'Хэрэглэгч устгав',
+  farm_create:'Ферм үүсгэв', farm_archive:'Фермийг архивлав', farm_restore:'Фермийг сэргээв', farm_delete:'Ферм устгав'
+};
+const AUDIT_KIND = {
+  cattle: ['register_cattle','admin_edit_cattle','cattle_delete','report_lost','report_found','tag_replace',
+           'set_contact_phone','unlock_contact_phone','set_public_photo','photo_delete','photo_unlock'],
+  records:['feeding_delete','vaccination_edit','repro_edit','repro_delete'],
+  tags:   ['tags_create','tags_assign_farm','tag_write','tag_uid','tag_recycle','tag_retire','tag_delete'],
+  people: ['admin_edit_profile','profile_delete','farm_create','farm_archive','farm_restore','farm_delete'],
+  deletes:['cattle_delete','photo_delete','feeding_delete','repro_delete','tag_delete','profile_delete','farm_delete']
+};
+const REPRO_KIND_MN = {insemination:'хээлтүүлэг', pregnancy_check:'хээл шалгалт', calving:'төллөлт', abortion:'хээл хаялт'};
+let auditRows = [], auditDone = false, auditBusy = false, auditSeq = 0;
+
+function auditSummary(r){
+  const d = r.detail && typeof r.detail === 'object' ? r.detail : {};
+  const out = [];
+  const add = (lbl, v) => { if(v!==null && v!==undefined && v!=='' && typeof v!=='object') out.push(`${lbl}: ${esc(String(v))}`); };
+  if(d.old_tag || d.new_tag) out.push(`${esc(d.old_tag||'—')} → <b>${esc(d.new_tag||'—')}</b>`);
+  if(typeof d.kind==='string') add('Төрөл', REPRO_KIND_MN[d.kind] || d.kind);
+  if(d.old_date && d.new_date && d.old_date!==d.new_date) out.push(`${fmtD(d.old_date)} → ${fmtD(d.new_date)}`);
+  if(d.given_on) add('Хийсэн', fmtD(d.given_on));
+  if(d.next_due) add('Дараагийн', fmtD(d.next_due));
+  if(d.date && !d.given_on) add('Огноо', fmtD(d.date));
+  if(Array.isArray(d.codes)) add('Тоо', d.codes.length);
+  add('Нэр', d.name);
+  if(typeof d.role==='string') add('Эрх', roleLabel(d.role));
+  add('UID', d.nfc_uid);
+  add('Шилжүүлсэн', d.moved);
+  if(d.forced===true) out.push('албадан');
+  add('Шалтгаан', d.reason);
+  add('Тэмдэглэл', d.note);
+  return out.join(' · ') || '<span class="muted">—</span>';
+}
+
+function auditTag(r){
+  const d = r.detail || {};
+  let code = d.new_tag || d.tag_code || '';
+  const cid = r.entity==='cattle' ? r.entity_id : d.cattle_id;
+  if(!code && cid){ const c = allCattle.find(x=>x.id===cid); if(c) code = c.tag_code; }
+  if(!code || typeof code!=='string') return '<span class="muted">—</span>';
+  const live = allCattle.some(x=>x.tag_code===code);
+  return live ? `<a class="tag-code" href="../cow.html?tag=${encodeURIComponent(code)}">${esc(code)}</a>`
+              : `<span class="tag-code">${esc(code)}</span>`;
+}
+
+async function loadAudit(reset){
+  if(auditBusy && !reset) return;                 // "more" while loading: ignore
+  const seq = ++auditSeq;                         // a newer filter change wins
+  if(reset){
+    auditRows = []; auditDone = false;
+    const sel = document.getElementById('aFarm'), cur = sel.value;
+    sel.innerHTML = '<option value="">Бүх ферм</option>' +
+      farms.map(f=>`<option value="${esc(f.id)}">${esc(f.code)} · ${esc(f.name)}</option>`).join('');
+    sel.value = cur;
+    document.getElementById('auditBody').innerHTML = '<tr><td colspan="6" class="loading">Ачаалж байна…</td></tr>';
+  }
+  auditBusy = true;
+  const build = embed => {
+    let q = sb.from('audit_log')
+      .select('id,at,action,entity,entity_id,farm_id,actor_id,detail' + (embed ? ',actor:profiles(full_name)' : ''))
+      .order('at',{ascending:false}).order('id',{ascending:false})
+      .range(auditRows.length, auditRows.length + AUDIT_PAGE - 1);
+    const farm = document.getElementById('aFarm').value;
+    const kind = document.getElementById('aKind').value;
+    const from = document.getElementById('aFrom').value;
+    if(farm) q = q.eq('farm_id', farm);
+    if(kind && AUDIT_KIND[kind]) q = q.in('action', AUDIT_KIND[kind]);
+    if(from) q = q.gte('at', from + 'T00:00:00+08:00');
+    return q;
+  };
+  let res;
+  try {
+    res = await build(true);
+    if(res.error) res = await build(false);        // names are optional; never fail the list for them
+  } catch(e) { res = {error:{message:e.message||String(e)}}; }
+  if(seq !== auditSeq) return;                    // a newer request replaced this one
+  auditBusy = false;
+  if(res.error){
+    document.getElementById('auditBody').innerHTML =
+      `<tr><td colspan="6" class="empty">Алдаа: ${esc(mnError(res.error.message))}</td></tr>`;
+    return;
+  }
+  const data = res.data || [];
+  auditRows = auditRows.concat(data);
+  auditDone = data.length < AUDIT_PAGE;
+  renderAudit();
+}
+
+function renderAudit(){
+  const farmName = id => { const f = farms.find(x=>x.id===id); return f ? `${f.code} · ${f.name}` : ''; };
+  const who = r => (r.actor && r.actor.full_name)
+    || (users.find(u=>u.id===r.actor_id)||{}).full_name
+    || (r.actor_id ? 'Хэрэглэгч' : 'Систем');
+  document.getElementById('auditCount').textContent = auditRows.length + (auditDone ? '' : '+') + ' бичлэг';
+  document.getElementById('auditMore').style.display = auditDone ? 'none' : '';
+  document.getElementById('auditBody').innerHTML = auditRows.length ? auditRows.map(r=>`<tr>
+      <td class="muted" style="white-space:nowrap">${fmtDT(r.at)}</td>
+      <td>${esc(who(r))}</td>
+      <td title="${esc(r.action)}">${esc(AUDIT_ACT[r.action] || r.action)}</td>
+      <td>${auditTag(r)}</td>
+      <td style="font-size:.82rem">${auditSummary(r)}</td>
+      <td class="muted super-only">${esc(farmName(r.farm_id))}</td>
+    </tr>`).join('')
+    : '<tr><td colspan="6" class="empty">Энэ шүүлтүүрт тохирох өөрчлөлт алга.</td></tr>';
+}
+
+['aFarm','aKind','aFrom'].forEach(id=>document.getElementById(id).addEventListener('change',()=>loadAudit(true)));
+document.getElementById('auditMore').addEventListener('click',()=>loadAudit(false));
 
 function farmOptions(){
   return farms.map(f=>`<option value="${esc(f.id)}">${esc(f.code)} · ${esc(f.name)}</option>`).join('');
