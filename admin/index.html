@@ -294,7 +294,7 @@ body.role-herder .col-owner{display:none}
           <div class="datenav">
             <button id="dPrev" title="Өмнөх өдөр">‹</button>
             <input type="date" id="dPick">
-            <button id="dNext" title="Дараах өдөр">›</button>
+            <button id="dNext" title="Дараагийн өдөр">›</button>
           </div>
           <button class="chip on" id="dToday">Өнөөдөр</button>
           <span class="today-chip" id="dLabel"></span>
@@ -315,7 +315,7 @@ body.role-herder .col-owner{display:none}
         <div class="frow">
           <span class="flabel">Вакцин</span>
           <button class="chip on" data-vacc="">Бүгд</button>
-          <button class="chip" data-vacc="due">Хугацаа болсон</button>
+          <button class="chip" data-vacc="due">Хугацаа хэтэрсэн</button>
           <button class="chip" data-vacc="soon">30 хоногт</button>
           <input type="search" id="search" placeholder="Дугаар, эзэмшигчээр хайх…">
           <span class="count-note" id="countNote"></span>
@@ -405,7 +405,7 @@ body.role-herder .col-owner{display:none}
       <div class="filters"><div class="frow">
         <span class="flabel">Ферм</span>
         <select id="cvFarm" class="super-only"><option value="">Бүх ферм</option></select>
-        <span class="count-note">Төллөх огноо = таамаг (үүлдэр, эцэг, малын болон фермийн өмнөх төллөлтөөр)</span>
+        <span class="count-note">Төллөх огноог үүлдэр, эцэг, тухайн малын болон фермийн өмнөх төллөлтөөр таамагласан.</span>
       </div></div>
 
       <h3 style="font-size:.95rem;margin:4px 0 4px"><svg class="ic c-heel"><use href="#i-calendar-heart"/></svg>Хээлтэй мал</h3>
@@ -416,7 +416,7 @@ body.role-herder .col-owner{display:none}
         <tbody id="dueBody"></tbody></table></div>
 
       <h3 style="font-size:.95rem;margin:4px 0 4px">Хээлтүүлээгүй</h3>
-      <p class="mapnote" style="margin:0 0 10px">Хээлтүүлэх насанд хүрсэн (үхэр 2+, сарлаг ба адуу 3+ нас), хээлгүй эсвэл сувай,
+      <p class="mapnote" style="margin:0 0 10px">Хээлтүүлэх насанд хүрсэн (үхэр 2+, сарлаг ба адуу 3+ нас), хээлгүй (сувай),
         сүүлийн 45 хоногт төллөөгүй эм мал. Сарлагийн хээлтүүлгийн улирал ихэвчлэн 7–8-р сар.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Дугаар</th><th class="col-owner">Эзэмшигч</th><th>Үүлдэр</th><th>Нас</th>
@@ -657,7 +657,7 @@ body.role-herder .col-owner{display:none}
     <p class="msub">Малчин утасны дугаар, нууц үгээрээ нэвтэрнэ. Дараа нь нууц үгээ өөрөө сольж болно.</p>
     <label>Нэр</label><input type="text" id="nuName">
     <label>Утас (нэвтрэх нэр)</label><input type="tel" id="nuPhone" placeholder="99112233">
-    <label>И-мэйл (заавал биш — утасгүй бол)</label><input type="email" id="nuEmail">
+    <label>И-мэйл (утасгүй бол)</label><input type="email" id="nuEmail">
     <label>Эрх</label>
     <select id="nuRole">
       <option value="herder">Малчин</option>
@@ -666,7 +666,7 @@ body.role-herder .col-owner{display:none}
     </select>
     <label>Ферм</label><select id="nuFarm"></select>
     <label>Анхны нууц үг (8+ тэмдэгт)</label><input type="text" id="nuPw" autocomplete="off">
-    <div class="mnote">Нууц үгийг малчинд өөрөө хэлж өгнө. Систем мессеж илгээхгүй.</div>
+    <div class="mnote">Нууц үгийг малчинд та өөрөө хэлж өгнө үү. Систем мессеж илгээхгүй.</div>
     <div class="mactions">
       <button class="mcancel" onclick="closeModal('newUserModal')">Болих</button>
       <button class="msave" id="nuSave">Үүсгэх</button>
@@ -679,7 +679,7 @@ body.role-herder .col-owner{display:none}
     <h3>Нууц үг шинэчлэх</h3>
     <p class="msub" id="setPwSub"></p>
     <label>Шинэ нууц үг (8+ тэмдэгт)</label><input type="text" id="spNew" autocomplete="off">
-    <div class="mnote">Шинэ нууц үгийг хэрэглэгчид өөрөө хэлж өгнө.</div>
+    <div class="mnote">Шинэ нууц үгийг хэрэглэгчид та өөрөө хэлж өгнө үү.</div>
     <div class="mactions">
       <button class="mcancel" onclick="closeModal('setPwModal')">Болих</button>
       <button class="msave" id="spSave">Хадгалах</button>
@@ -703,7 +703,7 @@ body.role-herder .col-owner{display:none}
 
 <div class="toast" id="toast"></div>
 
-<script src="../config.js?v=20260927"></script>
+<script src="../config.js?v=20260928"></script>
 <script>
 let allCattle = [], farms = [], users = [], myRole = null, myId = null;
 let map = null, markers = [];
@@ -714,7 +714,7 @@ let milkByDate = {};
 // ---------- utils ----------
 function toast(msg, bad=false){
   const t = document.getElementById('toast');
-  t.textContent = msg;
+  t.textContent = mnError(msg);
   t.className = 'toast show' + (bad ? ' bad' : '');
   setTimeout(()=> t.className='toast', 2800);
 }
@@ -961,7 +961,7 @@ async function archFarm(id,name){
 async function restFarm(id){
   const {error} = await sb.rpc('restore_farm',{p_farm_id:id});
   if(error){toast(error.message,true);return;}
-  toast('Сэргээгдлээ'); loadAdminFarms();
+  toast('Ферм сэргээгдлээ'); loadAdminFarms();
 }
 
 // Deletes ask twice when real data is involved. The first attempt runs
@@ -971,34 +971,34 @@ async function delFarm(id,name,nCattle,nUsers){
   if(!confirm(`"${name}" фермийг УСТГАХ уу?`)) return;
   let {error} = await sb.rpc('delete_farm',{p_farm_id:id,p_force:false});
   if(error){
-    if(!confirm(`${error.message}\n\nБүгдийг УСТГАХ уу? Энэ үйлдлийг буцаах боломжгүй.`)) return;
+    if(!confirm(`${mnError(error.message)}\n\nБүгдийг УСТГАХ уу? Энэ үйлдлийг буцаах боломжгүй.`)) return;
     ({error} = await sb.rpc('delete_farm',{p_farm_id:id,p_force:true}));
     if(error){toast(error.message,true);return;}
   }
-  toast('Ферм устлаа'); loadFarms(); loadAdminFarms(); loadCattle();
+  toast('Ферм устгагдлаа'); loadFarms(); loadAdminFarms(); loadCattle();
 }
 
 async function delCattle(id,tag){
   if(!confirm(`${tag} малыг устгах уу?`)) return;
   let {error} = await sb.rpc('delete_cattle',{p_cattle_id:id,p_force:false});
   if(error){
-    if(!confirm(`${error.message}\n\nБүгдийг УСТГАХ уу?`)) return;
+    if(!confirm(`${mnError(error.message)}\n\nБүгдийг УСТГАХ уу? Энэ үйлдлийг буцаах боломжгүй.`)) return;
     ({error} = await sb.rpc('delete_cattle',{p_cattle_id:id,p_force:true}));
     if(error){toast(error.message,true);return;}
   }
-  toast('Устлаа'); loadCattle();
+  toast('Мал устгагдлаа'); loadCattle();
 }
 
 async function delUser(id){
   const u = users.find(x=>x.id===id);
-  if(!confirm(`${u.full_name}-г устгах уу?`)) return;
+  if(!confirm(`"${u.full_name}" хэрэглэгчийг устгах уу?`)) return;
   let {error} = await sb.rpc('delete_profile',{p_profile_id:id,p_force:false});
   if(error){
-    if(!confirm(`${error.message}\n\nБүгдийг УСТГАХ уу?`)) return;
+    if(!confirm(`${mnError(error.message)}\n\nБүгдийг УСТГАХ уу? Энэ үйлдлийг буцаах боломжгүй.`)) return;
     ({error} = await sb.rpc('delete_profile',{p_profile_id:id,p_force:true}));
     if(error){toast(error.message,true);return;}
   }
-  toast('Устлаа'); loadUsers();
+  toast('Хэрэглэгч устгагдлаа'); loadUsers();
 }
 
 // ---------- breeds + pregnancy (schema_v28) ----------
@@ -1128,7 +1128,7 @@ function renderCalving(){
       <td>${age===null?'—':age+' нас'}</td>
       <td>${r && r.state==='open' ? '<span class="badge none">Сувай</span>' : '<span class="badge none">Бүртгэлгүй</span>'}</td>
       <td class="muted">${r && r.last_calving_date ? fmtD(r.last_calving_date) : '—'}</td>
-    </tr>`).join('') : '<tr><td colspan="6" class="empty">Бүх эм мал хээлтүүлсэн эсвэл насанд хүрээгүй.</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="6" class="empty">Хээлтүүлэх шаардлагатай эм мал алга.</td></tr>';
 }
 document.getElementById('cvFarm').addEventListener('change', renderCalving);
 
@@ -1275,11 +1275,11 @@ function isUrgent(c){
 // ---------- attention bar (chips filter the table) ----------
 let fAttn = '';
 const ATTN = {
-  calv7: { icon:'calendar-heart', cls:'red',   test:c=>{const r=reproById[c.id];return r&&(r.state==='bred'||r.state==='pregnant')&&r.expected_date&&daysUntil(r.expected_date)<=7;}, lbl:n=>`${n} төллөх 7 хоногт` },
-  lost:  { icon:'alert-triangle', cls:'red',   test:c=>c.status==='lost'||c.status==='stolen', lbl:n=>`${n} алга болсон` },
-  vacc:  { icon:'vaccine', cls:'amber', test:c=>{const d=daysUntil(c.next_vaccination_due);return d!==null&&d<=30;}, lbl:n=>`${n} вакцин дөхсөн / хэтэрсэн` },
-  stale: { icon:'eye-off', cls:'amber', test:c=>c.status==='active'&&(!c.last_seen_at||daysSince(c.last_seen_at)>30), lbl:n=>`${n} 30+ хоног харагдаагүй` },
-  milk:  { icon:'milk', cls:'grey',  test:c=>c.sex==='female'&&c.status==='active'&&!milkByDate[c.id], lbl:(n,t)=>`${n} / ${t} сүү бүртгээгүй` }
+  calv7: { icon:'calendar-heart', cls:'red',   test:c=>{const r=reproById[c.id];return r&&(r.state==='bred'||r.state==='pregnant')&&r.expected_date&&daysUntil(r.expected_date)<=7;}, lbl:n=>`${n} мал 7 хоногт төллөнө` },
+  lost:  { icon:'alert-triangle', cls:'red',   test:c=>c.status==='lost'||c.status==='stolen', lbl:n=>`${n} мал алга болсон` },
+  vacc:  { icon:'vaccine', cls:'amber', test:c=>{const d=daysUntil(c.next_vaccination_due);return d!==null&&d<=30;}, lbl:n=>`${n} малын вакцин дөхсөн / хэтэрсэн` },
+  stale: { icon:'eye-off', cls:'amber', test:c=>c.status==='active'&&(!c.last_seen_at||daysSince(c.last_seen_at)>30), lbl:n=>`${n} мал 30+ хоног харагдаагүй` },
+  milk:  { icon:'milk', cls:'grey',  test:c=>c.sex==='female'&&c.status==='active'&&!milkByDate[c.id], lbl:(n,t)=>`${t} эм малаас ${n} нь сүү бүртгээгүй` }
 };
 function renderAttn(base){
   const females = base.filter(c=>c.sex==='female'&&c.status==='active').length;
@@ -1307,10 +1307,13 @@ document.addEventListener('click', e=>{
   else if(e.target.closest('.menu button')) e.target.closest('.rowmenu').open = false;
 });
 
+const HERD_PAGE = 500;
+let herdLimit = HERD_PAGE;
+function moreHerd(){ herdLimit += HERD_PAGE; render(); }
 function render(){
   const base = visible();
   renderAttn(base);
-  const rows = fAttn ? base.filter(ATTN[fAttn].test) : base;
+  let rows = fAttn ? base.filter(ATTN[fAttn].test) : base;
   document.getElementById('countNote').textContent = `${rows.length} / ${allCattle.length}`;
   document.getElementById('milkHead').textContent = isToday(filterDate) ? 'Сүү' : `Сүү ${fmtDate(filterDate)}`;
   renderStats();
@@ -1322,6 +1325,12 @@ function render(){
   }
 
   const yr = +mnDate().slice(0,4);
+  // Draw 500 rows at a time: 12,000 rows took ~4 s and froze the page.
+  // Counts, chips and filters always cover every animal.
+  const key = JSON.stringify([document.getElementById('search').value, fReg, fVacc, fFarm, fRepro, fAttn, filterDate]);
+  if(key !== render.key){ render.key = key; herdLimit = HERD_PAGE; }
+  const all = rows;
+  rows = rows.slice(0, herdLimit);
   document.getElementById('tbody').innerHTML = rows.map((c,i)=>{
     const age = c.birth_year ? (yr-c.birth_year)+' нас' : '';
     const sex = c.sex==='female' ? 'Эм' : 'Эр';
@@ -1346,6 +1355,12 @@ function render(){
       <td>${alert ? `<span class="badge ${alert[0]}">${alert[1]}</span>` : '<span class="muted">Идэвхтэй</span>'}</td>
     </tr>`;
   }).join('');
+  if(all.length > rows.length){
+    document.getElementById('tbody').insertAdjacentHTML('beforeend',
+      `<tr><td colspan="10" class="empty">${rows.length} / ${all.length} харуулж байна ·
+        <button class="ghostlink" onclick="moreHerd()">Дахин ${Math.min(HERD_PAGE, all.length-rows.length)} харуулах</button>
+        · эсвэл хайлт, шүүлтүүр ашиглана уу</td></tr>`);
+  }
 }
 
 // ---------- date nav ----------
@@ -1385,7 +1400,12 @@ document.querySelectorAll('[data-age]').forEach(b=>b.addEventListener('click',()
   b.classList.add('on'); mAge=b.dataset.age; drawMap();}));
 document.getElementById('fFarm').addEventListener('change',e=>{fFarm=e.target.value;render();});
 document.getElementById('mFarm').addEventListener('change',e=>{mFarm=e.target.value;drawMap();});
-document.getElementById('search').addEventListener('input',render);
+// Search waits for a short pause in typing: with thousands of animals a
+// redraw on every keystroke froze the page.
+let searchTimer = null;
+document.getElementById('search').addEventListener('input',()=>{
+  clearTimeout(searchTimer); searchTimer = setTimeout(render, 220);
+});
 
 // ---------- MAP ----------
 // Layer choice, in order of preference:
@@ -1688,7 +1708,7 @@ function fillOwners(farmId, c){
   if(c && !opts.some(([id])=>id===c.owner_id)) opts.unshift([c.owner_id,c.owner_name]);
   document.getElementById('eOwner').innerHTML = opts.length
     ? opts.map(([id,n])=>`<option value="${esc(id)}">${esc(n)}</option>`).join('')
-    : '<option value="">— Энэ ферм хэрэглэгчгүй —</option>';
+    : '<option value="">— Энэ фермд хэрэглэгч алга —</option>';
 }
 document.getElementById('eFarm').addEventListener('change',e=>{
   const c = allCattle.find(x=>x.id===editTarget);
@@ -1825,7 +1845,7 @@ function renderTags(){
       <td class="muted">${fmtD(t.written_at)}</td>
       <td class="muted">${esc(t.batch_code||'—')}</td>
     </tr>`;}).join('')
-    + (rows.length>1000 ? `<tr><td colspan="8" class="empty">Эхний 1000-г харуулав. Шүүлтүүрээр нарийсгана уу.</td></tr>` : '')
+    + (rows.length>1000 ? `<tr><td colspan="8" class="empty">Эхний 1000 тагийг харуулав. Шүүлтүүрээр нарийсгана уу.</td></tr>` : '')
     : '<tr><td colspan="8" class="empty">Тохирох таг алга.</td></tr>';
 }
 
@@ -1891,7 +1911,7 @@ document.getElementById('atSave').addEventListener('click', async ()=>{
     p_codes:[...tagSel], p_farm_id: document.getElementById('atFarm').value });
   if(error){toast(error.message,true);return;}
   closeModal('assignTagsModal');
-  toast(`${data.moved} таг шилжлээ${data.skipped?` · ${data.skipped} алгассан (малтай эсвэл аль хэдийн тэр ферм)`:''}`);
+  toast(`${data.moved} таг шилжлээ${data.skipped?` · ${data.skipped} алгассан (малтай, эсвэл аль хэдийн тэр фермд байгаа)`:''}`);
   tagSel.clear(); loadTags();
 });
 
@@ -1957,15 +1977,15 @@ document.getElementById('nuSave').addEventListener('click', async ()=>{
     farm_id:   document.getElementById('nuFarm').value || null,
     password:  document.getElementById('nuPw').value
   };
-  if(!body.full_name){toast('Нэрээ оруулна уу.',true);return;}
+  if(!body.full_name){toast('Нэр оруулна уу.',true);return;}
   if(!body.phone && !body.email){toast('Утас эсвэл и-мэйл оруулна уу.',true);return;}
-  if(body.password.length<8){toast('Нууц үг хамгийн багадаа 8 тэмдэгт.',true);return;}
+  if(body.password.length<8){toast('Нууц үг хамгийн багадаа 8 тэмдэгт байх ёстой.',true);return;}
   const btn = document.getElementById('nuSave'); btn.disabled = true;
   const {data,error} = await adminUsers(body);
   btn.disabled = false;
   if(error){toast(error,true);return;}
   closeModal('newUserModal');
-  toast(`Үүслээ. Нэвтрэх нэр: ${data.login}`);
+  toast(`Хэрэглэгч үүслээ. Нэвтрэх нэр: ${data.login}`);
   loadUsers();
 });
 
@@ -1980,7 +2000,7 @@ function resetPw(id){
 }
 document.getElementById('spSave').addEventListener('click', async e=>{
   const pw = document.getElementById('spNew').value;
-  if(pw.length<8){toast('Нууц үг хамгийн багадаа 8 тэмдэгт.',true);return;}
+  if(pw.length<8){toast('Нууц үг хамгийн багадаа 8 тэмдэгт байх ёстой.',true);return;}
   const {error} = await adminUsers({action:'set_password', user_id:e.target.dataset.id, password:pw});
   if(error){toast(error,true);return;}
   closeModal('setPwModal');
@@ -1995,7 +2015,7 @@ document.getElementById('myPwBtn').addEventListener('click',()=>{
 document.getElementById('mpSave').addEventListener('click', async ()=>{
   const oldPw = document.getElementById('mpOld').value;
   const p1 = document.getElementById('mpNew').value, p2 = document.getElementById('mpNew2').value;
-  if(p1.length<8){toast('Шинэ нууц үг хамгийн багадаа 8 тэмдэгт.',true);return;}
+  if(p1.length<8){toast('Шинэ нууц үг хамгийн багадаа 8 тэмдэгт байх ёстой.',true);return;}
   if(p1!==p2){toast('Шинэ нууц үг таарахгүй байна.',true);return;}
   const {data:{session}} = await sb.auth.getSession();
   if(!session){toast('Дахин нэвтэрнэ үү.',true);return;}
@@ -2064,7 +2084,7 @@ if(/error_code=/.test(location.hash)){
 document.getElementById('pwSave').addEventListener('click', async ()=>{
   const p1 = document.getElementById('pwNew').value;
   const p2 = document.getElementById('pwNew2').value;
-  if(p1.length<8){toast('Нууц үг хамгийн багадаа 8 тэмдэгт байна.',true);return;}
+  if(p1.length<8){toast('Нууц үг хамгийн багадаа 8 тэмдэгт байх ёстой.',true);return;}
   if(p1!==p2){toast('Нууц үг таарахгүй байна.',true);return;}
   const btn = document.getElementById('pwSave');
   btn.disabled = true;

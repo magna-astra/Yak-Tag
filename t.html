@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
 <style>
 :root{
-  --ink:#0B1729; --ink-soft:#5A6880; --line:#E3E7ED; --bg:#F5F6F9; --card:#fff;
+  --ink:#0E1929; --ink-soft:#5A6880; --line:#E3E7ED; --bg:#F5F6F9; --card:#fff;
   --khukh:#1B4FA8; --steppe:#2C7A45;
   --alert:#B3341F; --gold:#B8892C;
   --body:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
@@ -90,8 +90,8 @@ main{flex:1;max-width:460px;width:100%;margin:0 auto;padding:22px 18px 34px}
 <main id="main"><div class="skel">Ачаалж байна…</div></main>
 <div class="foot">Энэ мал YAK-TAG системд бүртгэлтэй.</div>
 
-<script src="config.js?v=20260927"></script>
-<script src="offline.js?v=20260927"></script>
+<script src="config.js?v=20260928"></script>
+<script src="offline.js?v=20260928"></script>
 <script>
 let scanId = null;
 
@@ -218,7 +218,7 @@ function render(c, offline){
     <div class="locrow" id="locRow">
       <span class="spin"></span><span class="pending">Байршил тогтоож байна…</span>
     </div>
-    <a class="login" href="cow.html?tag=${encodeURIComponent(c.tag_code)}">Эзэн бол нэвтрэх</a>
+    <a class="login" href="cow.html?tag=${encodeURIComponent(c.tag_code)}">Эзэмшигч бол нэвтрэх</a>
   `;
 }
 
@@ -231,14 +231,14 @@ function setLoc(state){
   if(state === 'ok'){
     el.innerHTML = `<span class="tick">✓</span><span class="verified">Байршил бүртгэгдлээ</span>`;
   }else if(state === 'denied'){
-    el.innerHTML = `<span class="failed">Байршил аваагүй</span>`;
+    el.innerHTML = `<span class="failed">Байршил тогтоогдсонгүй</span>`;
   }else if(state === 'received'){
     el.innerHTML = `<span class="pending">Уншуулалт хүлээн авлаа</span>`;
   }else if(state === 'queued'){
     // Saved on the phone, not yet on the server — say exactly that.
-    el.innerHTML = `<span class="queued">Сүлжээгүй — утсанд хадгалагдлаа, сүлжээ орохоор илгээнэ</span>`;
+    el.innerHTML = `<span class="queued">Сүлжээгүй — утсанд хадгалагдлаа, сүлжээ орохоор илгээгдэнэ</span>`;
   }else{
-    el.innerHTML = `<span class="pending">Байршил боломжгүй</span>`;
+    el.innerHTML = `<span class="pending">Байршил бүртгэх боломжгүй</span>`;
   }
 }
 

@@ -122,7 +122,8 @@ function loginEmail(input) {
 // date, which is still "yesterday" here until 08:00 — milk logged at
 // dawn landed on the wrong day. Pass a Date to convert that moment.
 function mnDate(d = new Date()) {
-  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ulaanbaatar' });
+  mnDate.fmt = mnDate.fmt || new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ulaanbaatar' });
+  return mnDate.fmt.format(d);
 }
 
 // Dates as YYYY/MM/DD (Ulaanbaatar time). The old
@@ -134,10 +135,13 @@ function mnParts(ts) {
     const [y, m, d] = ts.split('-').map(Number);
     return { y, m, d, h: null, mi: null };
   }
-  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+  // One formatter, built once: creating it per date was the slowest
+  // part of drawing a large herd table.
+  mnParts.fmt = mnParts.fmt || new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Ulaanbaatar', year: 'numeric', month: 'numeric', day: 'numeric',
     hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-  }).formatToParts(new Date(ts)).map(x => [x.type, x.value]));
+  });
+  const p = Object.fromEntries(mnParts.fmt.formatToParts(new Date(ts)).map(x => [x.type, x.value]));
   return { y: +p.year, m: +p.month, d: +p.day, h: p.hour, mi: p.minute };
 }
 
@@ -152,6 +156,37 @@ function fmtDateTime(ts) {
   if (!ts) return '—';
   const p = mnParts(ts);
   return p.h == null ? fmtDate(ts) : `${fmtDate(ts)} ${p.h}:${p.mi}`;
+}
+
+// Error text for people. Older database functions and the network
+// layer answer in English (and some mention developer options such as
+// "pass force"); every toast / confirmation passes through this.
+const MN_ERRORS = [
+  [/Farm has (\d+) animals and (\d+) users\. Archive it, or pass force\./, 'Энэ фермд $1 мал, $2 хэрэглэгч бүртгэлтэй. Устгахын оронд "Түр хаах" нь аюулгүй.'],
+  [/Animal has records \((\d+) milk, (\d+) photos, (\d+) public scans\)\. Archive it, or pass force\./,
+     'Энэ малд $1 сүүний, $2 зургийн, $3 уншуулалтын бүртгэл бий. Устгахын оронд төлөвийг "Зарагдсан" эсвэл "Үхсэн" болгох нь аюулгүй.'],
+  [/User owns (\d+) animals\. Reassign them first, or pass force\./, 'Энэ хэрэглэгч $1 малтай. Эхлээд малыг өөр эзэмшигчид шилжүүлнэ үү.'],
+  [/You cannot delete yourself/, 'Өөрийгөө устгах боломжгүй.'],
+  [/This number is locked\. Ask a farm admin to change it\./, 'Энэ дугаар түгжээтэй. Өөрчлөх бол ферм админд хандана уу.'],
+  [/Only the super admin can delete a photo/, 'Зургийг зөвхөн ерөнхий админ устгана.'],
+  [/Super admin only/, 'Зөвхөн ерөнхий админ.'],
+  [/Only a farm admin can \w+ (a )?tags?/i, 'Зөвхөн ферм админ.'],
+  [/Not allowed/, 'Энэ үйлдлийг хийх эрхгүй.'],
+  [/(Animal|Cattle) not found/, 'Мал олдсонгүй.'],
+  [/Farm not found/, 'Ферм олдсонгүй.'],
+  [/User not found/, 'Хэрэглэгч олдсонгүй.'],
+  [/Photo not found/, 'Зураг олдсонгүй.'],
+  [/Tag (\S+) not found/, 'Таг олдсонгүй: $1'],
+  [/Invalid phone number[^.]*\./, 'Утасны дугаар буруу. Зөвхөн тоо оруулна уу.'],
+  [/new row violates row-level security policy.*|permission denied.*/i, 'Энэ үйлдлийг хийх эрхгүй.'],
+  [/duplicate key value.*/i, 'Ийм бүртгэл аль хэдийн байна.'],
+  [/JWT expired|invalid JWT|Auth session missing!?/i, 'Нэвтрэх хугацаа дууссан. Дахин нэвтэрнэ үү.'],
+  [/TypeError: Failed to fetch|Failed to fetch|NetworkError.*|Load failed/i, 'Сүлжээ байхгүй байна. Дахин оролдоно уу.'],
+];
+function mnError(msg) {
+  let s = String((msg && msg.message) || msg || '');
+  for (const [re, mn] of MN_ERRORS) s = s.replace(re, mn);
+  return s;
 }
 
 function daysUntil(dateStr) {

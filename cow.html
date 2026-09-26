@@ -14,18 +14,19 @@
 <style>
 :root{
   --ink:#0E1929;
-  --ink-soft:#55627A;
-  --line:#E2E6EC;
-  --bg:#F7F8FA;
+  --ink-soft:#5A6880;
+  --line:#E3E7ED;
+  --bg:#F5F6F9;
   --card:#FFFFFF;
   --khukh:#1B4FA8;
   --khukh-light:#EAF0FB;
   --gold:#B8892C;
   --gold-light:#FBF3E2;
-  --steppe:#2F7A46;
-  --steppe-light:#E9F4ED;
+  --gold-d:#8A6519;
+  --steppe:#2C7A45;
+  --steppe-light:#E7F4EC;
   --alert:#B3341F;
-  --alert-light:#FBEBE8;
+  --alert-light:#FCEAE7;
   --body:'Inter',system-ui,sans-serif;
   --mono:'JetBrains Mono',monospace;
 }
@@ -224,8 +225,8 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 <div class="toast" id="toast"></div>
 <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
 
-<script src="config.js?v=20260927"></script>
-<script src="offline.js?v=20260927"></script>
+<script src="config.js?v=20260928"></script>
+<script src="offline.js?v=20260928"></script>
 <script>
 let cow = null;
 let myProf = null;          // role / farm of the signed-in user
@@ -236,7 +237,7 @@ let photoKind = 'profile';
 // ---------- helpers ----------
 function toast(msg, bad=false) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
+  t.textContent = mnError(msg);
   t.className = 'toast show' + (bad ? ' bad' : '');
   setTimeout(() => t.className = 'toast', 2600);
 }
@@ -288,7 +289,7 @@ document.getElementById('mpSave').addEventListener('click', async () => {
   const show = m => { err.textContent = m; err.style.display = 'block'; };
   const oldPw = document.getElementById('mpOld').value;
   const p1 = document.getElementById('mpNew').value, p2 = document.getElementById('mpNew2').value;
-  if (p1.length < 8) return show('Шинэ нууц үг хамгийн багадаа 8 тэмдэгт.');
+  if (p1.length < 8) return show('Шинэ нууц үг хамгийн багадаа 8 тэмдэгт байх ёстой.');
   if (p1 !== p2) return show('Шинэ нууц үг таарахгүй байна.');
   if (!navigator.onLine) return show('Сүлжээ шаардлагатай.');
   const { data: { session } } = await sb.auth.getSession();
@@ -452,7 +453,7 @@ async function loadCow(tag) {
     document.getElementById('cowMeta').textContent = 'Олдсонгүй';
     document.getElementById('cowBody').innerHTML =
       `<div class="notfound"><h2>Мал олдсонгүй</h2>
-       <p>Энэ таг таны ферм дээр бүртгэлгүй байна.</p></div>`;
+       <p>Энэ таг таны фермд бүртгэлгүй байна.</p></div>`;
     return;
   }
   cow = data;
@@ -564,7 +565,7 @@ async function saveRegistration(tag, getSex) {
     ({ error } = await sb.rpc('register_cattle', base));
   }
   btn.disabled = false; btn.textContent = 'Бүртгэх';
-  if (error) return showErr(error.message);
+  if (error) return showErr(mnError(error.message));
 
   toast('Мал бүртгэгдлээ — одоо бүтэн биеийн зураг аваарай');
   await loadCow(tag);
@@ -654,12 +655,12 @@ function renderBreedEdit() {
 
 // --- labels (Mongolian) for the ICAR ADE codes ---
 const R_KIND = { insemination: 'Хээлтүүлэг', pregnancy_check: 'Хээл шалгалт', calving: 'Төллөлт', abortion: 'Хээл хаялт' };
-const R_METHOD = { natural: 'Байгалийн', run_with_bull: 'Сүрэгт хамт', ai: 'Зохиомол хээлтүүлэг', embryo: 'Үр хөврөл шилжүүлэн суулгах' };
+const R_METHOD = { natural: 'Байгалийн', run_with_bull: 'Сүрэгт хамт (бух / азарга)', ai: 'Зохиомол хээлтүүлэг', embryo: 'Үр хөврөл шилжүүлэн суулгах' };
 const R_RESULT = { pregnant: 'Хээлтэй', empty: 'Сувай (хээлгүй)', unknown: 'Тодорхойгүй' };
 const R_CHECK = { palpation: 'Гараар (шулуун гэдсээр)', echography: 'Хэт авиа', blood: 'Цусны шинжилгээ',
                   milk: 'Сүүний шинжилгээ', visual: 'Нүдээр', other: 'Бусад' };
 const R_EASE = { 1: 'Хөнгөн, тусламжгүй', 2: 'Бага зэрэг тусалсан', 3: 'Хүндрэлтэй, их тусламж',
-                 4: 'Малын эмчийн тусламж', 5: 'Кесар / мэс засал' };
+                 4: 'Малын эмчийн тусламж', 5: 'Кесар хагалгаа / мэс засал' };
 const R_BIRTH = { alive: 'Амьд', stillborn: 'Үхсэн төрсөн', died_later: 'Төрөөд үхсэн' };
 const youngWord = () => cowExtra.species === 'horse' ? 'унага' : 'тугал';
 const opts = (m, sel) => Object.entries(m).map(([k, v]) => `<option value="${k}" ${String(k) === String(sel) ? 'selected' : ''}>${v}</option>`).join('');
@@ -739,7 +740,7 @@ async function loadRepro() {
     if (!confirm('Энэ бүртгэлийг устгах уу?')) return;
     const { error } = await sb.rpc('delete_repro_event', { p_event_id: b.dataset.del });
     if (error) { toast(error.message, true); return; }
-    toast('Устлаа'); loadRepro();
+    toast('Бүртгэл устгагдлаа'); loadRepro();
   }));
 }
 
@@ -844,13 +845,13 @@ async function saveReproEvent(kind) {
   // kept on the phone and sent later (client_uuid stops doubles).
   const r = await ytQueue.add('repro', args);
   btn.disabled = false;
-  if (!r.sent && !r.queued) return show(r.error ? String(r.error.message || r.error) : 'Хадгалж чадсангүй. Дахин оролдоно уу.');
+  if (!r.sent && !r.queued) return show(r.error ? mnError(r.error) : 'Хадгалж чадсангүй. Дахин оролдоно уу.');
   document.getElementById('reproForm').innerHTML = '';
   if (r.queued) {
     toast('Сүлжээгүй — утсанд хадгалагдлаа, сүлжээ орохоор илгээгдэнэ');
     return;
   }
-  toast(kind === 'calving' ? `Төллөлт бүртгэгдлээ. ${youngWord()}-д таг зүүгээд бүртгэхдээ эхийн тагийг оруулаарай.` : 'Хадгалагдлаа');
+  toast(kind === 'calving' ? `Төллөлт бүртгэгдлээ. ${cowExtra.species === 'horse' ? 'Унаганд' : 'Тугалд'} таг зүүгээд бүртгэхдээ эхийн тагийн дугаарыг оруулаарай.` : 'Хадгалагдлаа');
   loadRepro();
 }
 
@@ -1051,7 +1052,7 @@ async function deletePhoto(id, kindLabel) {
 
   const { error } = await sb.rpc('delete_photo', { photo_id: id, reason: reason || '—' });
   if (error) { toast('Устгаж чадсангүй: ' + error.message, true); return; }
-  toast('Зураг устлаа');
+  toast('Зураг устгагдлаа');
   await loadCow(cow.tag_code);
 }
 
