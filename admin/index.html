@@ -15,7 +15,7 @@
 :root{
   --ink:#0E1929; --ink-soft:#5A6880; --line:#E3E7ED; --bg:#F5F6F9; --card:#fff;
   --khukh:#1B4FA8; --khukh-l:#EAF0FB;
-  --gold:#B8892C; --gold-l:#FBF3E2;
+  --gold:#B8892C; --gold-l:#FBF3E2; --gold-d:#8A6519;
   --steppe:#2C7A45; --steppe-l:#E7F4EC;
   --alert:#B3341F; --alert-l:#FCEAE7;
   --body:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
@@ -119,6 +119,38 @@ thead th{text-align:left;padding:11px 14px;font-size:.75rem;font-weight:700;colo
 tbody td{padding:11px 14px;border-bottom:1px solid #F1F3F6;white-space:nowrap}
 tbody tr:last-child td{border-bottom:0}
 tbody tr:hover{background:#FAFBFD}
+
+/* ---------- herd table (palette A: colour only what needs action) ---------- */
+#herdTable{min-width:760px}
+#herdTable tbody td{padding:12px 14px;vertical-align:middle}
+#herdTable tr.urgent td:first-child{box-shadow:inset 3px 0 0 var(--alert)}
+.animal .sub{font-size:.78rem;color:var(--ink-soft);margin-top:2px;white-space:nowrap}
+.animal .tag-code{font-size:.9rem}
+.ghostlink{background:none;border:0;color:var(--khukh);font-weight:600;font-size:.82rem;padding:2px 0}
+.ghostlink:disabled{color:var(--ink-soft);cursor:default}
+.milkv{background:none;border:0;padding:0;font-family:var(--mono);font-weight:700;color:var(--ink);font-size:.88rem}
+.milkv small{font-family:var(--body);font-weight:500;color:var(--ink-soft);font-size:.72rem;margin-left:2px}
+.dash{color:#AEB7C4}
+.seen-old{color:var(--gold-d)} .seen-lost{color:var(--alert);font-weight:600}
+.globe{vertical-align:-2px;margin-left:4px;color:#8794A8}
+.rowmenu{position:relative;display:inline-block}
+.rowmenu summary{list-style:none;cursor:pointer;padding:2px 8px;border-radius:7px;color:var(--ink-soft);font-weight:800;letter-spacing:1px}
+.rowmenu summary::-webkit-details-marker{display:none}
+.rowmenu[open] summary,.rowmenu summary:hover{background:#F0F2F5}
+.rowmenu .menu{position:absolute;right:0;top:100%;z-index:20;background:#fff;border:1px solid var(--line);
+  border-radius:10px;box-shadow:0 8px 24px rgba(14,25,41,.12);padding:6px;min-width:190px}
+.rowmenu.up .menu{top:auto;bottom:100%}
+.rowmenu .menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 10px;
+  border-radius:7px;font-size:.84rem;color:var(--ink)}
+.rowmenu .menu button:hover{background:#F5F6F9}
+.rowmenu .menu .info{font-size:.75rem;color:var(--ink-soft);padding:6px 10px;border-bottom:1px solid #F0F2F5;margin-bottom:4px;line-height:1.5}
+.attn{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.attn button{border:1.5px solid transparent;border-radius:20px;padding:6px 13px;font-size:.82rem;font-weight:600}
+.attn .red{background:var(--alert-l);color:var(--alert)}
+.attn .amber{background:var(--gold-l);color:var(--gold-d)}
+.attn .grey{background:#EEF0F4;color:var(--ink-soft)}
+.attn button.on{border-color:currentColor}
+.attn .clear{background:none;color:var(--ink-soft);font-weight:500}
 .tag-code{font-family:var(--mono);font-weight:700;font-size:.85rem}
 .tag-code a{color:var(--khukh);text-decoration:none}
 .tag-code a:hover{text-decoration:underline}
@@ -126,7 +158,7 @@ tbody tr:hover{background:#FAFBFD}
 .num{font-family:var(--mono);text-align:right}
 .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.74rem;font-weight:700}
 .badge.ok{background:var(--steppe-l);color:var(--steppe)}
-.badge.warn{background:var(--gold-l);color:var(--gold)}
+.badge.warn{background:var(--gold-l);color:var(--gold-d)}
 .badge.late{background:var(--alert-l);color:var(--alert)}
 .badge.none{background:#F0F2F5;color:var(--ink-soft)}
 .loading,.empty{padding:46px;text-align:center;color:var(--ink-soft)}
@@ -267,26 +299,21 @@ body.role-herder .col-owner{display:none}
         </div>
       </div>
 
+      <div class="attn" id="attnBar"></div>
       <div class="table-wrap">
-        <table>
+        <table id="herdTable">
           <thead>
             <tr>
-              <th>Дугаар</th>
-              <th class="col-owner">Эзэмшигч</th>
-              <th class="super-only">Ферм</th>
-              <th>Хүйс / Нас</th>
-              <th class="num">Сүү</th>
-              <th class="num">Сарын нийт</th>
-              <th>Тэжээсэн</th>
-              <th>Вакцин хийсэн</th>
-              <th>Дараагийн вакцин</th>
+              <th>Мал</th>
+              <th class="num" id="milkHead">Сүү өнөөдөр</th>
+              <th>Хээл</th>
+              <th>Вакцин</th>
               <th>Сүүлд харагдсан</th>
-              <th>Төлөв</th>
-              <th class="super-only">Засах</th>
+              <th style="width:44px"></th>
             </tr>
           </thead>
           <tbody id="tbody">
-            <tr><td colspan="12" class="loading">Ачаалж байна…</td></tr>
+            <tr><td colspan="6" class="loading">Ачаалж байна…</td></tr>
           </tbody>
         </table>
       </div>
@@ -758,7 +785,7 @@ async function loadCattle(){
     n=>{ if(n>=1000) document.getElementById('countNote').textContent = `Ачаалж байна… ${n}`; });
   if(error){
     document.getElementById('tbody').innerHTML =
-      `<tr><td colspan="12" class="empty">Алдаа: ${esc(error.message)}</td></tr>`;
+      `<tr><td colspan="6" class="empty">Алдаа: ${esc(error.message)}</td></tr>`;
     return;
   }
   allCattle = data||[];
@@ -1084,58 +1111,150 @@ function statusBadge(s){
   return `<span class="badge ${cls}">${l}</span>`;
 }
 
+// ---------- herd table cells ----------
+// Colour only what needs action: red = act now, amber = soon, grey "—"
+// = nothing recorded. "Active" is normal and gets no badge.
+const STATUS_ALERT = { lost:['late','Алга болсон'], stolen:['late','Хулгайлагдсан'],
+  sold:['none','Зарагдсан'], dead:['none','Үхсэн'], slaughtered:['none','Нядалсан'] };
+
+function reproCell(id){
+  const r = reproById[id];
+  if(!r || !r.state) return '<span class="dash">—</span>';
+  if(r.state==='open') return '<span class="muted">Сувай</span>';
+  const d = r.expected_date ? daysUntil(r.expected_date) : null;
+  const tip = esc(`Төллөх: ${r.expected_date||'—'}${r.spread?` ±${r.spread}`:''}${r.basis?` — ${r.basis}`:''}`);
+  if(d!==null && d<0)   return `<span class="badge late" title="${tip}">Хэтэрсэн ${-d} хоног</span>`;
+  if(d!==null && d<=7)  return `<span class="badge late" title="${tip}">Төллөх ${d===0?'өнөөдөр':d+' хоног'}</span>`;
+  if(d!==null && d<=30) return `<span class="badge warn" title="${tip}">Төллөх ${d} хоног</span>`;
+  const lbl = r.state==='pregnant' ? 'Хээлтэй' : 'Хээлтүүлсэн';
+  return `<span title="${tip}">${lbl}</span>${r.expected_date?`<div class="sub muted" style="font-size:.76rem">${fmtD(r.expected_date)}</div>`:''}`;
+}
+
+function vaccCell(due){
+  const d = daysUntil(due);
+  if(d===null) return '<span class="dash">—</span>';
+  if(d<0)   return `<span class="badge late" title="Хугацаа хэтэрсэн">${fmtD(due)}</span>`;
+  if(d<=30) return `<span class="badge warn" title="${d} хоногийн дараа">${fmtD(due)}</span>`;
+  return `<span class="muted">${fmtD(due)}</span>`;
+}
+
+// "өнөөдөр 14:30", "өчигдөр", "7 хоногийн өмнө"; exact time on hover
+function relSeen(ts){
+  const today = mnDate(), day = mnDate(new Date(ts));
+  const days = Math.round((new Date(today) - new Date(day)) / 86400000);
+  if(days<=0) return `өнөөдөр ${fmtDateTime(ts).split(', ')[1]||''}`;
+  if(days===1) return 'өчигдөр';
+  if(days<45)  return `${days} хоногийн өмнө`;
+  return fmtD(ts);
+}
+function seenCell(c){
+  if(!c.last_lat) return '<span class="dash">—</span>';
+  const days = daysSince(c.last_seen_at);
+  const cls = days>30 ? 'seen-lost' : days>7 ? 'seen-old' : '';
+  const globe = c.last_scan_source==='public'
+    ? '<svg class="globe" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><title>Гаднаас уншуулсан</title><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>' : '';
+  return `<a href="${gmapsUrl(c.last_lat,c.last_lng)}" target="_blank" rel="noopener" class="${cls}"
+            style="text-decoration:none;${cls?'':'color:var(--ink)'}" title="${esc(fmtDT(c.last_seen_at))} — Google Maps дээр нээх">${relSeen(c.last_seen_at)}</a>${globe}`;
+}
+
+function milkCellNew(c){
+  const m = milkByDate[c.id];
+  const editsLeft = m ? Math.max(0, 3 - (m.edit_count||0)) : 3;
+  const canEdit = myRole!=='herder' || (isToday(filterDate) && editsLeft>0);
+  const month = c.milk_this_month ? `Сарын нийт ${Number(c.milk_this_month).toFixed(1)} л` : 'Энэ сард бүртгэлгүй';
+  if(m) return `<button class="milkv" ${canEdit?'':'disabled'} data-act="openMilk" data-id="${esc(c.id)}"
+      title="${month} · үлдсэн засвар ${editsLeft}/3">${Number(m.liters).toFixed(1)}<small>л</small></button>`;
+  if(c.sex!=='female') return '<span class="dash">—</span>';
+  return `<button class="ghostlink" ${canEdit?'':'disabled'} data-act="openMilk" data-id="${esc(c.id)}" title="${month}">+ сүү</button>`;
+}
+
+function rowMenu(c, up){
+  const admin = myRole==='super_admin';
+  return `<details class="rowmenu${up?' up':''}"><summary aria-label="Үйлдэл">⋯</summary><div class="menu">
+      <div class="info">Тэжээсэн: ${fmtD(c.last_fed_at)}<br>Сүүлд вакцин: ${c.last_vaccination?fmtD(c.last_vaccination):'—'}<br>
+        Сарын сүү: ${c.milk_this_month?Number(c.milk_this_month).toFixed(1)+' л':'—'}</div>
+      <button data-act="openVacc" data-id="${esc(c.id)}">Вакцин бүртгэх</button>
+      <button onclick="location.href='../cow.html?tag=${encodeURIComponent(c.tag_code)}'">Дэлгэрэнгүй хуудас</button>
+      ${admin?`<button data-act="openEdit" data-id="${esc(c.id)}">Мэдээлэл засах</button>
+      <button data-act="delCattle" data-id="${esc(c.id)}" style="color:var(--alert)">Устгах</button>`:''}
+    </div></details>`;
+}
+
+// A row is urgent (red edge) when something needs action today.
+function isUrgent(c){
+  if(c.status==='lost' || c.status==='stolen') return true;
+  const r = reproById[c.id];
+  if(r && (r.state==='bred'||r.state==='pregnant') && r.expected_date && daysUntil(r.expected_date)<=7) return true;
+  const v = daysUntil(c.next_vaccination_due);
+  return v!==null && v<0;
+}
+
+// ---------- attention bar (chips filter the table) ----------
+let fAttn = '';
+const ATTN = {
+  calv7: { cls:'red',   test:c=>{const r=reproById[c.id];return r&&(r.state==='bred'||r.state==='pregnant')&&r.expected_date&&daysUntil(r.expected_date)<=7;}, lbl:n=>`${n} төллөх 7 хоногт` },
+  lost:  { cls:'red',   test:c=>c.status==='lost'||c.status==='stolen', lbl:n=>`${n} алга болсон` },
+  vacc:  { cls:'amber', test:c=>{const d=daysUntil(c.next_vaccination_due);return d!==null&&d<=30;}, lbl:n=>`${n} вакцин дөхсөн / хэтэрсэн` },
+  stale: { cls:'amber', test:c=>c.status==='active'&&(!c.last_seen_at||daysSince(c.last_seen_at)>30), lbl:n=>`${n} 30+ хоног харагдаагүй` },
+  milk:  { cls:'grey',  test:c=>c.sex==='female'&&c.status==='active'&&!milkByDate[c.id], lbl:(n,t)=>`${n} / ${t} сүү бүртгээгүй` }
+};
+function renderAttn(base){
+  const females = base.filter(c=>c.sex==='female'&&c.status==='active').length;
+  const chips = Object.entries(ATTN).map(([k,a])=>{
+    const n = base.filter(a.test).length;
+    if(!n && fAttn!==k) return '';
+    return `<button class="${a.cls}${fAttn===k?' on':''}" data-attn="${k}">${a.lbl(n,females)}</button>`;
+  }).join('');
+  document.getElementById('attnBar').innerHTML = chips
+    ? chips + (fAttn ? '<button class="clear" data-attn="">✕ Бүгдийг харах</button>' : '')
+    : '<span class="muted" style="font-size:.84rem">✓ Анхаарах зүйл алга</span>';
+}
+document.getElementById('attnBar').addEventListener('click', e=>{
+  const b = e.target.closest('[data-attn]'); if(!b) return;
+  fAttn = (fAttn===b.dataset.attn) ? '' : b.dataset.attn;
+  render();
+});
+// one open row menu at a time
+document.addEventListener('toggle', e=>{
+  if(e.target.classList && e.target.classList.contains('rowmenu') && e.target.open)
+    document.querySelectorAll('.rowmenu[open]').forEach(d=>{ if(d!==e.target) d.open=false; });
+}, true);
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.rowmenu')) document.querySelectorAll('.rowmenu[open]').forEach(d=>d.open=false);
+  else if(e.target.closest('.menu button')) e.target.closest('.rowmenu').open = false;
+});
+
 function render(){
-  const rows = visible();
+  const base = visible();
+  renderAttn(base);
+  const rows = fAttn ? base.filter(ATTN[fAttn].test) : base;
   document.getElementById('countNote').textContent = `${rows.length} / ${allCattle.length}`;
+  document.getElementById('milkHead').textContent = isToday(filterDate) ? 'Сүү өнөөдөр' : `Сүү · ${fmtD(filterDate)}`;
   renderStats();
 
   if(!rows.length){
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="12" class="empty">Тохирох мал олдсонгүй.</td></tr>';
+      '<tr><td colspan="6" class="empty">Тохирох мал олдсонгүй.</td></tr>';
     return;
   }
 
-  document.getElementById('tbody').innerHTML = rows.map(c=>{
-    const age = c.birth_year ? (new Date().getFullYear()-c.birth_year)+' нас' : '—';
+  const yr = +mnDate().slice(0,4);
+  document.getElementById('tbody').innerHTML = rows.map((c,i)=>{
+    const age = c.birth_year ? (yr-c.birth_year)+' нас' : '';
     const sex = c.sex==='female' ? 'Эм' : 'Эр';
-    const m = milkByDate[c.id];
-    const editsLeft = m ? Math.max(0, 3 - (m.edit_count||0)) : 3;
-    const canEdit = myRole!=='herder' || (isToday(filterDate) && editsLeft>0);
-
-    const milkCell = m
-      ? `<div class="milkcell">
-           <span class="milkval">${Number(m.liters).toFixed(1)}</span>
-           <span class="editsleft ${editsLeft?'':'none'}" title="Үлдсэн засвар">${editsLeft}/3</span>
-           <button class="minibtn" ${canEdit?'':'disabled'}
-             data-act="openMilk" data-id="${esc(c.id)}">Засах</button>
-         </div>`
-      : `<div class="milkcell">
-           <span class="badge warn">—</span>
-           <button class="minibtn" data-act="openMilk" data-id="${esc(c.id)}">Оруулах</button>
-         </div>`;
-
-    return `<tr>
-      <td class="tag-code"><a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${esc(c.tag_code)}</a></td>
-      <td class="col-owner">${esc(c.owner_name)}</td>
-      <td class="super-only muted">${esc(c.farm_code)}</td>
-      <td>${sex} · ${age}${c.breed?`<br><span class="muted" style="font-size:.78rem">${esc(c.breed)}</span>`:''}</td>
-      <td class="num">${milkCell}</td>
-      <td class="num">${c.milk_this_month?Number(c.milk_this_month).toFixed(1):'0.0'}</td>
-      <td class="muted">${fmtD(c.last_fed_at)}</td>
-      <td class="muted">${c.last_vaccination?fmtD(c.last_vaccination):'—'}
-        <button class="minibtn" data-act="openVacc" data-id="${esc(c.id)}">+</button></td>
-      <td>${vaccBadge(c.next_vaccination_due)}</td>
-      <td class="muted">${c.last_lat
-        ? `<a href="${gmapsUrl(c.last_lat,c.last_lng)}" target="_blank" rel="noopener"
-             style="color:#1B4FA8;text-decoration:none" title="Google Maps дээр нээх">
-             ${fmtDT(c.last_seen_at)} ↗</a>${c.last_scan_source==='public'
-               ? ' <span class="badge warn" title="Гаднаас уншуулсан">гадны</span>' : ''}`
-        : '<span class="muted">—</span>'}</td>
-      <td>${statusBadge(c.status)}${reproBadge(c.id)}</td>
-      <td class="super-only">
-        <button class="minibtn" data-act="openEdit" data-id="${esc(c.id)}">Засах</button>
-        <button class="minibtn" style="color:#B3341F" data-act="delCattle" data-id="${esc(c.id)}">Устгах</button>
+    const alert = STATUS_ALERT[c.status];
+    const sub = [sex, age, c.breed && esc(c.breed)].filter(Boolean).join(' · ');
+    return `<tr class="${isUrgent(c)?'urgent':''}">
+      <td class="animal">
+        <span class="tag-code"><a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${esc(c.tag_code)}</a></span>
+        ${alert?` <span class="badge ${alert[0]}">${alert[1]}</span>`:''}
+        <div class="sub">${sub}<span class="col-owner"> · ${esc(c.owner_name||'')}</span><span class="super-only"> · ${esc(c.farm_code||'')}</span></div>
       </td>
+      <td class="num">${milkCellNew(c)}</td>
+      <td>${reproCell(c.id)}</td>
+      <td>${vaccCell(c.next_vaccination_due)}</td>
+      <td>${seenCell(c)}</td>
+      <td style="text-align:right">${rowMenu(c, i >= rows.length-2 && rows.length>3)}</td>
     </tr>`;
   }).join('');
 }
