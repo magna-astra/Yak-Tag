@@ -5,13 +5,36 @@
 # Tests YOUR OWN system. Do not point it at anything else.
 #
 # Requires: curl, jq
-# Usage:
-#   1. paste your publishable key below
-#   2. chmod +x stress_test.sh && ./stress_test.sh
+# Usage (from the repo root):
+#   ./tools/stress_test.sh                      # safe: read-only checks
+#   TEST_TAG=YT-TEST-01 ./tools/stress_test.sh  # also runs the scan flood
+#
+# SAFE BY DEFAULT. This runs against the LIVE database. Test 6 (scan
+# flood) writes real rows into public_scans, moves that animal's map
+# pin, and uses up its 20-scans/hour limit — so real finders' scans of
+# it are ignored for an hour. It only runs when TEST_TAG names a
+# dedicated test animal. Never point it at a real animal.
+#
+# Lookups (tests 4, 5, 9) are logged in lookup_attempts. Latency tests
+# use a fake code; clean up afterwards with:
+#   delete from lookup_attempts where tag_code like 'ZZ-STRESS%';
 # ============================================================
 
-URL="https://oxfbxqclqfglpzgzizhq.supabase.co"
-KEY="PASTE_YOUR_PUBLISHABLE_KEY"
+# URL and publishable key are read from config.js — nothing to paste.
+CONFIG="$(dirname "$0")/../config.js"
+URL=$(grep -o "SUPABASE_URL = '[^']*'" "$CONFIG" | cut -d"'" -f2)
+KEY=$(grep -o "SUPABASE_KEY = '[^']*'" "$CONFIG" | cut -d"'" -f2)
+if [ -z "$URL" ] || [ -z "$KEY" ]; then
+  echo "Could not read SUPABASE_URL / SUPABASE_KEY from $CONFIG"; exit 1
+fi
+# Without jq every "length" check comes back empty, and tests 1–3
+# then report PASS while having checked nothing.
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq is required (Windows: winget install jqlang.jq). Stopping —"
+  echo "without it the security checks would falsely PASS."; exit 1
+fi
+TEST_TAG="${TEST_TAG:-}"
+FAKE_TAG="ZZ-STRESS-TEST"
 
 pass(){ echo "  PASS  $1"; }
 fail(){ echo "  FAIL  $1"; }
@@ -66,17 +89,25 @@ echo "  Check afterwards:  select * from lookup_abuse;"
 
 # ---------- 6. scan flood ----------
 echo
-echo "6. Scan flood — 30 rapid scans against one tag…"
-ok=0; null=0
-for i in $(seq 1 30); do
-  r=$(curl -s -X POST "$URL/rest/v1/rpc/record_public_scan" \
-    -H "apikey: $KEY" -H "Content-Type: application/json" \
-    -d '{"p_tag_code":"YT-008000","p_lat":47.9,"p_lng":103.5}')
-  if [ "$r" == "null" ]; then null=$((null+1)); else ok=$((ok+1)); fi
-done
-echo "  accepted: $ok   throttled: $null"
-if [ "$null" -gt 0 ]; then pass "rate limit is working"
-else fail "no throttling — run schema_v20_security_hardening.sql"; fi
+if [ -z "$TEST_TAG" ]; then
+  echo "6. Scan flood — SKIPPED (writes real scans; set TEST_TAG to a"
+  echo "   dedicated test animal to run it, never a real one)"
+else
+  echo "6. Scan flood — 30 rapid scans against TEST animal $TEST_TAG…"
+  echo "   (no GPS sent, so the animal's map position is not changed)"
+  ok=0; null=0
+  for i in $(seq 1 30); do
+    r=$(curl -s -X POST "$URL/rest/v1/rpc/record_public_scan" \
+      -H "apikey: $KEY" -H "Content-Type: application/json" \
+      -d "{\"p_tag_code\":\"$TEST_TAG\",\"p_user_agent\":\"stress_test.sh\"}")
+    if [ "$r" == "null" ]; then null=$((null+1)); else ok=$((ok+1)); fi
+  done
+  echo "  accepted: $ok   throttled: $null"
+  if [ "$ok" -eq 0 ]; then fail "nothing accepted — does $TEST_TAG exist?"
+  elif [ "$null" -gt 0 ]; then pass "rate limit is working"
+  else fail "no throttling — run schema_v20_security_hardening.sql"; fi
+  echo "  Clean up: delete from public_scans where user_agent = 'stress_test.sh';"
+fi
 
 # ---------- 7. anonymous write attempts ----------
 echo
@@ -102,7 +133,7 @@ start=$(date +%s%N)
 for i in $(seq 1 20); do
   curl -s -o /dev/null -X POST "$URL/rest/v1/rpc/public_tag_lookup" \
     -H "apikey: $KEY" -H "Content-Type: application/json" \
-    -d '{"p_tag_code":"YT-008000"}'
+    -d "{\"p_tag_code\":\"$FAKE_TAG\"}"
 done
 end=$(date +%s%N)
 avg=$(( (end-start)/20000000 ))

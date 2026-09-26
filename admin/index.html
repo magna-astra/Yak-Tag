@@ -566,8 +566,29 @@ async function loadFarms(){
     farms.map(f=>`<option value="${f.id}">${esc(f.code)} · ${esc(f.name)}</option>`).join('');
 }
 
+// Supabase returns at most 1,000 rows per request (the project's API
+// "max rows" setting). One plain select silently stopped there, so a
+// herd over 1,000 animals showed only the first 1,000 everywhere.
+// This pages until the server returns nothing. It advances by what
+// actually came back, so it also works if max rows is set lower.
+// makeQuery must build a fresh query each time, with a stable order.
+async function fetchAll(makeQuery, onProgress){
+  const PAGE = 1000;
+  let rows = [];
+  for(let guard=0; guard<200; guard++){          // 200k-row safety stop
+    const {data,error} = await makeQuery().range(rows.length, rows.length+PAGE-1);
+    if(error) return {data:null, error};        // never show a partial herd as complete
+    if(!data || !data.length) break;
+    rows = rows.concat(data);
+    if(onProgress) onProgress(rows.length);
+  }
+  return {data:rows, error:null};
+}
+
 async function loadCattle(){
-  const {data,error} = await sb.from('cattle_dashboard').select('*').order('tag_code');
+  const {data,error} = await fetchAll(
+    ()=>sb.from('cattle_dashboard').select('*').order('tag_code').order('id'),
+    n=>{ if(n>=1000) document.getElementById('countNote').textContent = `Ачаалж байна… ${n}`; });
   if(error){
     document.getElementById('tbody').innerHTML =
       `<tr><td colspan="12" class="empty">Алдаа: ${esc(error.message)}</td></tr>`;
@@ -582,9 +603,10 @@ async function loadCattle(){
 // actually logged that day, not just today's numbers.
 async function loadMilkForDate(){
   milkByDate = {};
-  const {data} = await sb.from('milk_yield')
+  const {data} = await fetchAll(()=>sb.from('milk_yield')
     .select('id,cattle_id,liters,edit_count,locked')
-    .eq('yield_date', filterDate);
+    .eq('yield_date', filterDate)
+    .order('cattle_id'));
   (data||[]).forEach(m=>{ milkByDate[m.cattle_id] = m; });
 }
 
