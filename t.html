@@ -217,6 +217,8 @@ function setLoc(state){
     el.innerHTML = `<span class="tick">✓</span><span class="verified">Байршил бүртгэгдлээ</span>`;
   }else if(state === 'denied'){
     el.innerHTML = `<span class="failed">Байршил аваагүй</span>`;
+  }else if(state === 'received'){
+    el.innerHTML = `<span class="pending">Уншуулалт хүлээн авлаа</span>`;
   }else if(state === 'queued'){
     // Saved on the phone, not yet on the server — say exactly that.
     el.innerHTML = `<span class="queued">Сүлжээгүй — утсанд хадгалагдлаа, сүлжээ орохоор илгээнэ</span>`;
@@ -239,6 +241,9 @@ function logScan(tag){
     scanId = r.result;
     if(r.queued){ setLoc('queued'); return; }
     if(!r.sent){ setLoc('unavailable'); return; }
+    // No id back = the server's rate limit set it aside. Don't show a
+    // tick for a position that was not stored.
+    if(!r.result){ setLoc('received'); return; }
     setLoc(lat != null ? 'ok' : 'denied');
   };
   if(!navigator.geolocation){ setLoc('unavailable'); send(null,null,null); return; }
