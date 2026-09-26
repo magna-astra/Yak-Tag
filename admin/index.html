@@ -187,8 +187,8 @@ body.role-herder .col-owner{display:none}
     <p class="sub">Удирдлагын самбарт нэвтрэх</p>
     <div class="err" id="loginErr"></div>
     <div class="field">
-      <label for="email">И-мэйл</label>
-      <input type="email" id="email" autocomplete="username">
+      <label for="email">Утас эсвэл и-мэйл</label>
+      <input type="text" id="email" autocomplete="username" placeholder="99112233">
     </div>
     <div class="field">
       <label for="password">Нууц үг</label>
@@ -206,6 +206,7 @@ body.role-herder .col-owner{display:none}
     <div class="who">
       <span><b id="userName">—</b></span>
       <span class="role-chip" id="userRole">—</span>
+      <button class="signout" id="myPwBtn">Нууц үг солих</button>
       <button class="signout" id="signoutBtn">Гарах</button>
     </div>
   </header>
@@ -328,6 +329,12 @@ body.role-herder .col-owner{display:none}
 
     <!-- ===== USERS (super admin) ===== -->
     <div class="tabpane" id="tab-users">
+      <div class="filters">
+        <div class="frow">
+          <button class="chip on" id="newUserBtn">+ Шинэ хэрэглэгч</button>
+          <span class="count-note">Нууц үгээ мартсан бол "Нууц үг" товчоор шинийг өгнө.</span>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -465,6 +472,56 @@ body.role-herder .col-owner{display:none}
   </div>
 </div>
 
+<div class="modal" id="newUserModal">
+  <div class="modalbox">
+    <h3>Шинэ хэрэглэгч</h3>
+    <p class="msub">Малчин утасны дугаар, нууц үгээрээ нэвтэрнэ. Дараа нь нууц үгээ өөрөө сольж болно.</p>
+    <label>Нэр</label><input type="text" id="nuName">
+    <label>Утас (нэвтрэх нэр)</label><input type="tel" id="nuPhone" placeholder="99112233">
+    <label>И-мэйл (заавал биш — утасгүй бол)</label><input type="email" id="nuEmail">
+    <label>Эрх</label>
+    <select id="nuRole">
+      <option value="herder">Малчин</option>
+      <option value="farm_admin">Ферм админ</option>
+      <option value="super_admin">Ерөнхий админ</option>
+    </select>
+    <label>Ферм</label><select id="nuFarm"></select>
+    <label>Анхны нууц үг (8+ тэмдэгт)</label><input type="text" id="nuPw" autocomplete="off">
+    <div class="mnote">Нууц үгийг малчинд өөрөө хэлж өгнө. Систем мессеж илгээхгүй.</div>
+    <div class="mactions">
+      <button class="mcancel" onclick="closeModal('newUserModal')">Болих</button>
+      <button class="msave" id="nuSave">Үүсгэх</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="setPwModal">
+  <div class="modalbox">
+    <h3>Нууц үг шинэчлэх</h3>
+    <p class="msub" id="setPwSub"></p>
+    <label>Шинэ нууц үг (8+ тэмдэгт)</label><input type="text" id="spNew" autocomplete="off">
+    <div class="mnote">Шинэ нууц үгийг хэрэглэгчид өөрөө хэлж өгнө.</div>
+    <div class="mactions">
+      <button class="mcancel" onclick="closeModal('setPwModal')">Болих</button>
+      <button class="msave" id="spSave">Хадгалах</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="myPwModal">
+  <div class="modalbox">
+    <h3>Нууц үг солих</h3>
+    <p class="msub">Одоогийн нууц үгээ мартсан бол админд хандана уу.</p>
+    <label>Одоогийн нууц үг</label><input type="password" id="mpOld" autocomplete="current-password">
+    <label>Шинэ нууц үг (8+ тэмдэгт)</label><input type="password" id="mpNew" autocomplete="new-password">
+    <label>Дахин оруулах</label><input type="password" id="mpNew2" autocomplete="new-password">
+    <div class="mactions">
+      <button class="mcancel" onclick="closeModal('myPwModal')">Болих</button>
+      <button class="msave" id="mpSave">Солих</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="../config.js"></script>
@@ -501,11 +558,11 @@ const loginBtn = document.getElementById('loginBtn');
 async function doLogin(){
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
-  if(!email||!password){showErr('И-мэйл болон нууц үгээ оруулна уу.');return;}
+  if(!email||!password){showErr('Утас/и-мэйл болон нууц үгээ оруулна уу.');return;}
   loginBtn.disabled=true; loginBtn.textContent='Нэвтэрч байна…';
-  const {error} = await sb.auth.signInWithPassword({email,password});
+  const {error} = await sb.auth.signInWithPassword({email: loginEmail(email), password});
   loginBtn.disabled=false; loginBtn.textContent='Нэвтрэх';
-  if(error){showErr('И-мэйл эсвэл нууц үг буруу байна.');return;}
+  if(error){showErr('Утас/и-мэйл эсвэл нууц үг буруу байна.');return;}
   boot();
 }
 function showErr(m){const e=document.getElementById('loginErr');e.textContent=m;e.style.display='block';}
@@ -1177,41 +1234,86 @@ document.getElementById('userSave').addEventListener('click', async ()=>{
   loadUsers();
 });
 
-// Password reset goes out as an email link. Setting a password directly
-// requires Supabase's service_role key, which must never be exposed in
-// a public web page — anyone viewing source would gain full database
-// access. The email link is the safe path from the browser.
-async function resetPw(id){
-  const u = users.find(x=>x.id===id);
-  if(!u) return;
-  const email = prompt(`${u.full_name}-ийн и-мэйл хаягийг оруулна уу\n(нууц үг сэргээх холбоос илгээнэ):`);
-  if(!email) return;
-  const {error} = await sb.auth.resetPasswordForEmail(email.trim(),
-    {redirectTo: location.origin + location.pathname});
-  if(error){toast('Илгээж чадсангүй: '+error.message,true);return;}
-  toast('Нууц үг сэргээх холбоос илгээгдлээ');
+// ---------- accounts (super admin) ----------
+// Creating a login and setting someone else's password need the
+// service_role key, which must never be in a page. Both go through the
+// admin-users Edge Function, which re-checks that the caller is an
+// active super admin.
+async function adminUsers(body){
+  const {data,error} = await sb.functions.invoke('admin-users',{body});
+  if(!error) return {data, error:null};
+  let msg = error.message;
+  try { const j = await error.context.json(); if(j && j.error) msg = j.error; } catch(e){}
+  if(/Failed to send|not found|404/i.test(msg))
+    msg = 'admin-users функц суулгаагүй байна (supabase/functions/admin-users).';
+  return {data:null, error:msg};
 }
 
-// ---------- row buttons ----------
-// Rows carry only data-act + data-id. Names and tags are looked up
-// here, never pasted into an onclick string: esc() is HTML escaping,
-// and the browser undoes it before inline JS runs, so a quote in a
-// farm name used to break out of the handler.
-const tagOf  = id => (allCattle.find(c=>c.id===id)||{}).tag_code || '';
-const farmOf = id => adminFarms.find(f=>f.id===id);
-const rowActions = {
-  openUser, resetPw, delUser, restFarm, openEdit,
-  archFarm:  id => { const f=farmOf(id); if(f) archFarm(id,f.name); },
-  delFarm:   id => { const f=farmOf(id); if(f) delFarm(id,f.name,f.cattle_count,f.user_count); },
-  openMilk:  id => openMilk(id, tagOf(id)),
-  openVacc:  id => openVacc(id, tagOf(id)),
-  delCattle: id => delCattle(id, tagOf(id)),
-};
-document.addEventListener('click', e=>{
-  const b = e.target.closest('[data-act]');
-  if(!b || b.disabled) return;
-  const fn = rowActions[b.dataset.act];
-  if(fn) fn(b.dataset.id);
+document.getElementById('newUserBtn').addEventListener('click',()=>{
+  ['nuName','nuPhone','nuEmail','nuPw'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nuRole').value='herder';
+  document.getElementById('nuFarm').innerHTML =
+    farms.map(f=>`<option value="${esc(f.id)}">${esc(f.code)} · ${esc(f.name)}</option>`).join('');
+  document.getElementById('newUserModal').classList.add('on');
+});
+document.getElementById('nuSave').addEventListener('click', async ()=>{
+  const body = {
+    action:'create',
+    full_name: document.getElementById('nuName').value.trim(),
+    phone:     document.getElementById('nuPhone').value.trim(),
+    email:     document.getElementById('nuEmail').value.trim(),
+    role:      document.getElementById('nuRole').value,
+    farm_id:   document.getElementById('nuFarm').value || null,
+    password:  document.getElementById('nuPw').value
+  };
+  if(!body.full_name){toast('Нэрээ оруулна уу.',true);return;}
+  if(!body.phone && !body.email){toast('Утас эсвэл и-мэйл оруулна уу.',true);return;}
+  if(body.password.length<8){toast('Нууц үг хамгийн багадаа 8 тэмдэгт.',true);return;}
+  const btn = document.getElementById('nuSave'); btn.disabled = true;
+  const {data,error} = await adminUsers(body);
+  btn.disabled = false;
+  if(error){toast(error,true);return;}
+  closeModal('newUserModal');
+  toast(`Үүслээ. Нэвтрэх нэр: ${data.login}`);
+  loadUsers();
+});
+
+// A forgotten password: the admin sets a new one and tells the user.
+function resetPw(id){
+  const u = users.find(x=>x.id===id);
+  if(!u) return;
+  document.getElementById('setPwSub').textContent = `${u.full_name}${u.phone?' · '+u.phone:''}`;
+  document.getElementById('spNew').value = '';
+  document.getElementById('spSave').dataset.id = id;
+  document.getElementById('setPwModal').classList.add('on');
+}
+document.getElementById('spSave').addEventListener('click', async e=>{
+  const pw = document.getElementById('spNew').value;
+  if(pw.length<8){toast('Нууц үг хамгийн багадаа 8 тэмдэгт.',true);return;}
+  const {error} = await adminUsers({action:'set_password', user_id:e.target.dataset.id, password:pw});
+  if(error){toast(error,true);return;}
+  closeModal('setPwModal');
+  toast('Нууц үг шинэчлэгдлээ');
+});
+
+// Anyone signed in: change own password, proving the current one first.
+document.getElementById('myPwBtn').addEventListener('click',()=>{
+  ['mpOld','mpNew','mpNew2'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('myPwModal').classList.add('on');
+});
+document.getElementById('mpSave').addEventListener('click', async ()=>{
+  const oldPw = document.getElementById('mpOld').value;
+  const p1 = document.getElementById('mpNew').value, p2 = document.getElementById('mpNew2').value;
+  if(p1.length<8){toast('Шинэ нууц үг хамгийн багадаа 8 тэмдэгт.',true);return;}
+  if(p1!==p2){toast('Шинэ нууц үг таарахгүй байна.',true);return;}
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){toast('Дахин нэвтэрнэ үү.',true);return;}
+  const {error:e1} = await sb.auth.signInWithPassword({email:session.user.email, password:oldPw});
+  if(e1){toast('Одоогийн нууц үг буруу байна.',true);return;}
+  const {error:e2} = await sb.auth.updateUser({password:p1});
+  if(e2){toast('Сольж чадсангүй: '+e2.message,true);return;}
+  closeModal('myPwModal');
+  toast('Нууц үг солигдлоо');
 });
 
 document.querySelectorAll('.modal:not([data-sticky])').forEach(m=>{

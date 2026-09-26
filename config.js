@@ -93,6 +93,25 @@ async function myProfile() {
   return data;
 }
 
+// ---------- login by phone ----------
+// Herders may have no email. The super admin creates them with a phone
+// number (supabase/functions/admin-users), stored as the internal login
+// <digits>@yaktag.invalid — a reserved domain that never receives mail.
+// Anything typed with an @ is used as a normal email, so existing
+// email logins keep working. MUST match the Edge Function exactly.
+const HERDER_EMAIL_DOMAIN = 'yaktag.invalid';
+
+function normPhone(s) {
+  let d = String(s || '').replace(/\D/g, '');
+  if (d.length === 11 && d.startsWith('976')) d = d.slice(3);   // +976 prefix
+  return d;
+}
+
+function loginEmail(input) {
+  const v = String(input || '').trim();
+  return v.includes('@') ? v.toLowerCase() : `${normPhone(v)}@${HERDER_EMAIL_DOMAIN}`;
+}
+
 // Calendar date in Mongolia as YYYY-MM-DD. toISOString() gives the UTC
 // date, which is still "yesterday" here until 08:00 — milk logged at
 // dawn landed on the wrong day. Pass a Date to convert that moment.
