@@ -687,7 +687,9 @@ async function loadRepro() {
     html = `<b style="color:var(--steppe)">${lbl}</b>` + (status.expected_date
       ? ` · төллөх ~ <b>${status.expected_date}</b> ` +
         (d >= 0 ? `(${d} хоног үлдсэн)` : `<span style="color:var(--alert)">(${-d} хоног хэтэрсэн)</span>`)
-      : (cowExtra.species ? '' : ' · <span style="color:var(--gold)">үүлдэр сонговол төллөх огноо гарна</span>'));
+      : ` · <span style="color:var(--gold)">${cowExtra.breed_code
+          ? 'төллөх огноо тодорхойгүй — хээлтүүлсэн огноо, хээлийн нас эсвэл төллөх огноог оруулна уу'
+          : 'үүлдэр сонгоогүй тул төллөх огноо гараагүй — доорх "Үүлдэр сонгох"-ыг дарна уу'}</span>`);
   }
   if (status && status.calvings) html += `<br>Нийт төллөсөн: ${status.calvings} удаа`;
   stateEl.innerHTML = html;
@@ -728,6 +730,9 @@ function openReproForm(kind) {
   const today = mnDate();
   let body = `<label class="hint" style="display:block;margin-top:12px">Огноо</label>
     <input type="date" id="rfDate" value="${today}" max="${today}" style="${inp}">`;
+  if ((kind === 'insemination' || kind === 'pregnancy_check') && !cowExtra.breed_code) body += `
+    <div class="gps-note bad" style="margin-top:12px">Үүлдэр сонгоогүй байна — төллөх огноо автоматаар гарахгүй.
+      <button type="button" class="lockbtn" id="rfPickBreed" style="margin-top:8px">Үүлдэр сонгох</button></div>`;
   if (kind === 'insemination') body += `
     <label class="hint" style="display:block;margin-top:10px">Арга</label>
     <select id="rfMethod" style="${inp}">${opts(R_METHOD, 'natural')}</select>
@@ -742,6 +747,9 @@ function openReproForm(kind) {
     <select id="rfCheck" style="${inp}">${opts(R_CHECK, 'palpation')}</select>
     <label class="hint" style="display:block;margin-top:10px">Хээлийн нас, хоног (мэдвэл — огноог нарийвчилна)</label>
     <input type="number" id="rfAge" min="0" max="450" inputmode="numeric" style="${inp}">`;
+  if (kind === 'insemination' || kind === 'pregnancy_check') body += `
+    <label class="hint" style="display:block;margin-top:10px">Төллөх огноо (мэдвэл — хоосон бол автоматаар тооцно)</label>
+    <input type="date" id="rfExpected" style="${inp}">`;
   if (kind === 'calving') body += `
     <label class="hint" style="display:block;margin-top:10px">Төллөлтийн хүндрэл</label>
     <select id="rfEase" style="${inp}"><option value="">—</option>${opts(R_EASE, '')}</select>
@@ -777,6 +785,11 @@ function openReproForm(kind) {
   }
 
   document.getElementById('rfCancel').addEventListener('click', () => { f.innerHTML = ''; });
+  const pick = document.getElementById('rfPickBreed');
+  if (pick) pick.addEventListener('click', () => {
+    const b = document.getElementById('breedEditBtn');
+    if (b) { b.click(); document.getElementById('breedEdit').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  });
   document.getElementById('rfSave').addEventListener('click', () => saveReproEvent(kind));
   f.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -786,8 +799,10 @@ async function saveReproEvent(kind) {
   const show = m => { err.textContent = m; err.style.display = 'block'; };
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   if (!navigator.onLine) return show('Хадгалахад сүлжээ шаардлагатай.');
-  const args = { p_cattle_id: cow.id, p_kind: kind, p_date: val('rfDate'), p_note: val('rfNote') || null };
+  const args = { p_cattle_id: cow.id, p_kind: kind, p_date: val('rfDate'), p_note: val('rfNote') || null,
+                 p_expected_date: val('rfExpected') || null };
   if (!args.p_date) return show('Огноо оруулна уу.');
+  if (args.p_expected_date && args.p_expected_date <= args.p_date) return show('Төллөх огноо үйл явдлын огнооноос хойш байх ёстой.');
   if (kind === 'insemination') {
     args.p_method = val('rfMethod');
     args.p_sire_tag = val('rfSireTag').toUpperCase() || null;
