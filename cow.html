@@ -379,6 +379,17 @@ async function loadCow(tag) {
     return;
   }
 
+  // No animal on this tag (or none this user may see). If it is a new
+  // tag of the user's farm, offer registration instead of "not found".
+  if (!error && !data) {
+    let info = null;
+    try {
+      const r = await sb.rpc('tag_registration_info', { p_tag_code: tag });
+      if (!r.error && r.data && r.data.length) info = r.data[0];
+    } catch (e) {}                             // before schema_v25: old message
+    if (info) { renderRegistration(tag, info); return; }
+  }
+
   if (error || !data) {
     document.getElementById('tagBig').textContent = tag;
     document.getElementById('cowMeta').textContent = 'Олдсонгүй';
@@ -393,6 +404,95 @@ async function loadCow(tag) {
   loadPhotos();
   // The scan itself is logged once, from boot(). loadCow() is also
   // used to refresh after every save and must not add fake encounters.
+}
+
+// ---------- registration of a new tag ----------
+// The farm is shown but never chosen here: it is the tag's farm, set
+// by the admin. The database (register_cattle) enforces every rule;
+// this form only collects the herder's answers.
+const REG_REASONS = {
+  assigned:    'Энэ таг дээр мал аль хэдийн бүртгэгдсэн байна.',
+  unavailable: 'Энэ таг ашиглах боломжгүй байна (алдагдсан эсвэл хасагдсан). Админд хандана уу.',
+  other_farm:  'Энэ таг өөр фермийнх тул та бүртгэх боломжгүй. Админд хандана уу.',
+  no_profile:  'Таны эрх идэвхгүй байна. Админд хандана уу.',
+  not_found:   'Ийм таг системд алга.'
+};
+
+function renderRegistration(tag, info) {
+  document.getElementById('tagBig').textContent = tag;
+  const farm = info.farm_name ? `${info.farm_code || ''} · ${info.farm_name}` : '—';
+
+  if (!info.can_register) {
+    document.getElementById('cowMeta').textContent = 'Бүртгэх боломжгүй';
+    document.getElementById('cowBody').innerHTML =
+      `<div class="notfound"><h2>Бүртгэх боломжгүй</h2>
+       <p>${esc(REG_REASONS[info.reason] || 'Бүртгэх боломжгүй.')}</p>
+       ${info.farm_name ? `<p class="hint">Тагийн ферм: ${esc(farm)}</p>` : ''}</div>`;
+    return;
+  }
+
+  document.getElementById('cowMeta').textContent = 'Шинэ таг · мал бүртгэх';
+  const thisYear = new Date().getFullYear();
+  document.getElementById('cowBody').innerHTML = `
+    <div class="card">
+      <h2><span class="dot"></span>Мал бүртгэх</h2>
+      <div class="kv"><span>Таг</span><span class="mono">${esc(tag)}</span></div>
+      <div class="kv"><span>Ферм</span><span>${esc(farm)}</span></div>
+      <p class="hint" style="margin-bottom:16px">Фермийг админ тохируулна. Буруу бол админд хандана уу.</p>
+
+      <div class="field"><label>Хүйс *</label>
+        <div class="kind-pick" id="regSex">
+          <button type="button" data-sex="female">Эм</button>
+          <button type="button" data-sex="male">Эр</button>
+        </div></div>
+      <div class="field"><label for="regYear">Төрсөн он *</label>
+        <input type="number" id="regYear" inputmode="numeric" min="1990" max="${thisYear}"
+               placeholder="${thisYear - 3}"></div>
+      <div class="field"><label for="regBreed">Үүлдэр</label>
+        <input type="text" id="regBreed" maxlength="60" placeholder="Монгол, Хайнаг…"></div>
+      <div class="field"><label for="regColour">Зүс</label>
+        <input type="text" id="regColour" maxlength="60" placeholder="Хар, алаг…"></div>
+
+      <div class="gps-note" id="gpsNote">Байршил тогтоож байна…</div>
+      <div class="err" id="regErr"></div>
+      <button class="btn-primary" id="regSave" style="margin-top:14px">Бүртгэх</button>
+      <p class="hint">Бүртгэсний дараа зураг, утасны дугаар нэмнэ.</p>
+    </div>`;
+
+  let sex = null;
+  document.querySelectorAll('#regSex button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#regSex button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); sex = b.dataset.sex;
+  }));
+  updateGpsNote();
+  document.getElementById('regSave').addEventListener('click', () => saveRegistration(tag, () => sex));
+}
+
+async function saveRegistration(tag, getSex) {
+  const err = document.getElementById('regErr');
+  const btn = document.getElementById('regSave');
+  const showErr = m => { err.textContent = m; err.style.display = 'block'; };
+  err.style.display = 'none';
+
+  const sex = getSex();
+  const year = parseInt(document.getElementById('regYear').value, 10);
+  if (!sex) return showErr('Хүйсээ сонгоно уу.');
+  if (!year || year < 1990 || year > new Date().getFullYear()) return showErr('Төрсөн оноо зөв оруулна уу.');
+  if (!navigator.onLine) return showErr('Бүртгэхэд сүлжээ шаардлагатай.');
+
+  btn.disabled = true; btn.textContent = 'Бүртгэж байна…';
+  const { error } = await sb.rpc('register_cattle', {
+    p_tag_code: tag, p_sex: sex, p_birth_year: year,
+    p_breed: document.getElementById('regBreed').value.trim() || null,
+    p_colour: document.getElementById('regColour').value.trim() || null,
+    p_lat: gps ? gps.lat : null, p_lng: gps ? gps.lng : null
+  });
+  btn.disabled = false; btn.textContent = 'Бүртгэх';
+  if (error) return showErr(error.message);
+
+  toast('Мал бүртгэгдлээ — одоо бүтэн биеийн зураг аваарай');
+  await loadCow(tag);
+  if (cow) logScan();            // registering is also an encounter
 }
 
 function renderCow() {

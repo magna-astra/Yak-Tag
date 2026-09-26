@@ -136,6 +136,21 @@ async function boot(){
   // !tag_code: older versions of public_tag_lookup returned an all-null
   // row for unknown tags (fixed in schema_v22) — treat it as not found.
   if(error || !data || !data.length || !data[0].tag_code){
+    // A produced tag with no animal yet: offer registration. The herder
+    // must sign in on the next page; the farm comes from the tag.
+    let state = null;
+    if(!error){
+      try { ({ data: state } = await sb.rpc('public_tag_state', { p_tag_code: tag })); }
+      catch (e) {}                       // before schema_v25: just "not found"
+    }
+    if(state === 'new'){
+      document.getElementById('main').innerHTML =
+        `<div class="notfound"><h2>Шинэ таг</h2>
+         <p>Таг <b>${esc(tag)}</b> дээр мал бүртгэгдээгүй байна.<br>
+         Малчин нэвтэрч бүртгэнэ.</p></div>
+         <a class="call" href="cow.html?tag=${encodeURIComponent(tag)}">Мал бүртгэх</a>`;
+      return;
+    }
     document.getElementById('main').innerHTML =
       `<div class="notfound"><h2>Бүртгэл олдсонгүй</h2>
        <p>Таг <b>${esc(tag)}</b> системд бүртгэлгүй байна.</p></div>`;
