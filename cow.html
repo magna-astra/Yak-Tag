@@ -1433,7 +1433,7 @@ function watchQueue() {
     const a = document.getElementById('rejLink');
     if (a) a.onclick = e => {
       e.preventDefault();
-      const txt = rej.map(r => `${new Date(r.created).toLocaleString()} — ${QK[r.kind] || r.kind}: ${r.error}`).join('\n');
+      const txt = rej.map(r => `${fmtDateTime(r.created)} — ${QK[r.kind] || r.kind}: ${r.error}`).join('\n');
       if (confirm(`Сервер хүлээж аваагүй бүртгэл:\n\n${txt}\n\nЖагсаалтыг цэвэрлэх үү?`)) {
         localStorage.removeItem('yt-rejected'); ytQueue.flush();
       }

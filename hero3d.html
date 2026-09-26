@@ -425,7 +425,8 @@ function apply(){
   const mm = String(Math.floor(minutes%60)).padStart(2,'0');
   tv.textContent   = `${hh}:${mm}`;
   const dt = new Date(new Date().getFullYear(),0,dayOfYear);
-  dv.textContent   = dt.toLocaleDateString('mn-MN',{month:'short',day:'numeric'});
+  // Mongolian numbered month; 'mn-MN' locale printed "Feb 13" on browsers without it
+  dv.textContent   = `${dt.getMonth()+1}-р сарын ${dt.getDate()}`;
   elev.textContent = e.toFixed(1)+'°';
   seas.textContent = se.name;
 }
