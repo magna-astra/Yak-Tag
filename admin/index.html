@@ -553,6 +553,7 @@ body.role-herder .col-owner{display:none}
       <option value="lost">Алга болсон</option>
       <option value="stolen">Хулгайлагдсан</option>
     </select>
+    <button class="mcancel" id="editReplaceTag" style="width:100%;margin-top:14px;padding:10px;border-radius:10px;border:1px dashed var(--line);font-weight:700;color:var(--khukh)">Таг солих (унасан, эвдэрсэн)</button>
     <div class="mactions">
       <button class="mcancel" id="editDelete" style="color:var(--alert)">Устгах</button>
       <button class="mcancel" onclick="closeModal('editModal')">Болих</button>
@@ -618,6 +619,28 @@ body.role-herder .col-owner{display:none}
     <input type="password" id="pwNew2" autocomplete="new-password" minlength="8">
     <div class="mactions">
       <button class="msave" id="pwSave">Хадгалах</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="replaceTagModal">
+  <div class="modalbox">
+    <h3>Таг солих</h3>
+    <p class="msub" id="rtSub"></p>
+    <label>Шинэ таг (энэ фермийн чөлөөтэй таг)</label>
+    <input type="text" id="rtNew" list="rtFree" placeholder="YT-008020" style="text-transform:uppercase" autocomplete="off">
+    <datalist id="rtFree"></datalist>
+    <label>Хуучин тагийг</label>
+    <select id="rtOld">
+      <option value="lost">Алдагдсан гэж тэмдэглэх</option>
+      <option value="retired">Эвдэрсэн — бүрмөсөн хасах</option>
+    </select>
+    <label>Шалтгаан</label>
+    <input type="text" id="rtReason" placeholder="Чихнээс унасан">
+    <div class="mnote">Малын бүх түүх (сүү, вакцин, уншуулалт, хээл, зураг) хэвээр үлдэнэ. Шинэ тагийг nfc_tag.py-аар бичээд UID-г "Тагууд" хэсэгт бүртгэнэ.</div>
+    <div class="mactions">
+      <button class="mcancel" onclick="closeModal('replaceTagModal')">Болих</button>
+      <button class="msave" id="rtSave">Таг солих</button>
     </div>
   </div>
 </div>
@@ -1713,6 +1736,37 @@ function fillOwners(farmId, c){
 document.getElementById('eFarm').addEventListener('change',e=>{
   const c = allCattle.find(x=>x.id===editTarget);
   fillOwners(e.target.value, c && c.farm_id===e.target.value ? c : null);
+});
+
+// ---------- replace a tag (fell off / broke) — schema_v36 ----------
+document.getElementById('editReplaceTag').addEventListener('click', async ()=>{
+  const c = allCattle.find(x=>x.id===editTarget); if(!c) return;
+  closeModal('editModal');
+  document.getElementById('rtSub').textContent = `Одоогийн таг: ${c.tag_code} · ${c.owner_name||''}`;
+  ['rtNew','rtReason'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rtOld').value = 'lost';
+  document.getElementById('rtFree').innerHTML = '';
+  document.getElementById('replaceTagModal').classList.add('on');
+  try {                                   // suggestions: free tags of this farm
+    const {data} = await sb.from('admin_tag_list').select('tag_code,stage')
+      .eq('farm_id', c.farm_id).in('stage', ['blank','written']).order('tag_code').limit(500);
+    document.getElementById('rtFree').innerHTML = (data||[]).map(t=>`<option value="${esc(t.tag_code)}">${t.stage==='written'?'чип бичсэн':'хоосон'}</option>`).join('');
+  } catch(e){}
+});
+document.getElementById('rtSave').addEventListener('click', async ()=>{
+  const c = allCattle.find(x=>x.id===editTarget); if(!c) return;
+  const code = document.getElementById('rtNew').value.trim().toUpperCase();
+  if(!code){toast('Шинэ тагийн дугаар оруулна уу.',true);return;}
+  const oldSt = document.getElementById('rtOld').value;
+  if(!confirm(`${c.tag_code} → ${code}
+
+Хуучин таг ${oldSt==='lost'?'алдагдсан гэж тэмдэглэгдэнэ':'бүрмөсөн хасагдана'}. Үргэлжлүүлэх үү?`)) return;
+  const {error} = await sb.rpc('admin_replace_tag',{p_cattle_id:c.id, p_new_tag_code:code,
+    p_old_status:oldSt, p_reason:document.getElementById('rtReason').value.trim()||null});
+  if(error){toast('Солиж чадсангүй: '+error.message,true);return;}
+  closeModal('replaceTagModal');
+  toast(`Таг солигдлоо: ${c.tag_code} → ${code}`);
+  loadCattle();
 });
 
 document.getElementById('editDelete').addEventListener('click', ()=>{
