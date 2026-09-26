@@ -449,6 +449,22 @@ body.role-herder .col-owner{display:none}
   </div>
 </div>
 
+<!-- Opened from the password reset email link. No cancel button and no
+     backdrop close: the user arrived here to set a password. -->
+<div class="modal" id="pwModal" data-sticky>
+  <div class="modalbox">
+    <h3>Шинэ нууц үг</h3>
+    <p class="msub">Шинэ нууц үгээ хоёр удаа оруулна уу.</p>
+    <label>Шинэ нууц үг</label>
+    <input type="password" id="pwNew" autocomplete="new-password" minlength="8">
+    <label>Дахин оруулах</label>
+    <input type="password" id="pwNew2" autocomplete="new-password" minlength="8">
+    <div class="mactions">
+      <button class="msave" id="pwSave">Хадгалах</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="../config.js"></script>
@@ -592,9 +608,9 @@ async function loadUsers(){
       <td class="num">${u.cattle_count}</td>
       <td>${u.active?'<span class="badge ok">Идэвхтэй</span>':'<span class="badge late">Хаагдсан</span>'}</td>
       <td>
-        <button class="pwbtn" onclick="openUser('${u.id}')">Засах</button>
-        <button class="pwbtn" onclick="resetPw('${u.id}')">Нууц үг</button>
-        <button class="pwbtn" style="color:#B3341F" onclick="delUser('${u.id}')">Устгах</button>
+        <button class="pwbtn" data-act="openUser" data-id="${esc(u.id)}">Засах</button>
+        <button class="pwbtn" data-act="resetPw" data-id="${esc(u.id)}">Нууц үг</button>
+        <button class="pwbtn" style="color:#B3341F" data-act="delUser" data-id="${esc(u.id)}">Устгах</button>
       </td>
     </tr>`).join('');
 }
@@ -621,9 +637,9 @@ async function loadAdminFarms(){
       <td>${f.status==='active'?'<span class="badge ok">Идэвхтэй</span>':'<span class="badge warn">Түр хаагдсан</span>'}</td>
       <td>
         ${f.status==='active'
-          ? `<button class="pwbtn" onclick="archFarm('${f.id}','${esc(f.name)}')">Түр хаах</button>`
-          : `<button class="pwbtn" onclick="restFarm('${f.id}')">Сэргээх</button>`}
-        <button class="pwbtn" style="color:#B3341F" onclick="delFarm('${f.id}','${esc(f.name)}',${f.cattle_count},${f.user_count})">Устгах</button>
+          ? `<button class="pwbtn" data-act="archFarm" data-id="${esc(f.id)}">Түр хаах</button>`
+          : `<button class="pwbtn" data-act="restFarm" data-id="${esc(f.id)}">Сэргээх</button>`}
+        <button class="pwbtn" style="color:#B3341F" data-act="delFarm" data-id="${esc(f.id)}">Устгах</button>
       </td>
     </tr>`).join('');
 }
@@ -770,11 +786,11 @@ function render(){
            <span class="milkval">${Number(m.liters).toFixed(1)}</span>
            <span class="editsleft ${editsLeft?'':'none'}" title="Үлдсэн засвар">${editsLeft}/3</span>
            <button class="minibtn" ${canEdit?'':'disabled'}
-             onclick="openMilk('${c.id}','${esc(c.tag_code)}')">Засах</button>
+             data-act="openMilk" data-id="${esc(c.id)}">Засах</button>
          </div>`
       : `<div class="milkcell">
            <span class="badge warn">—</span>
-           <button class="minibtn" onclick="openMilk('${c.id}','${esc(c.tag_code)}')">Оруулах</button>
+           <button class="minibtn" data-act="openMilk" data-id="${esc(c.id)}">Оруулах</button>
          </div>`;
 
     return `<tr>
@@ -786,7 +802,7 @@ function render(){
       <td class="num">${c.milk_this_month?Number(c.milk_this_month).toFixed(1):'0.0'}</td>
       <td class="muted">${fmtD(c.last_fed_at)}</td>
       <td class="muted">${c.last_vaccination?fmtD(c.last_vaccination):'—'}
-        <button class="minibtn" onclick="openVacc('${c.id}','${esc(c.tag_code)}')">+</button></td>
+        <button class="minibtn" data-act="openVacc" data-id="${esc(c.id)}">+</button></td>
       <td>${vaccBadge(c.next_vaccination_due)}</td>
       <td class="muted">${c.last_lat
         ? `<a href="${gmapsUrl(c.last_lat,c.last_lng)}" target="_blank" rel="noopener"
@@ -796,8 +812,8 @@ function render(){
         : '<span class="muted">—</span>'}</td>
       <td>${statusBadge(c.status)}</td>
       <td class="super-only">
-        <button class="minibtn" onclick="openEdit('${c.id}')">Засах</button>
-        <button class="minibtn" style="color:#B3341F" onclick="delCattle('${c.id}','${esc(c.tag_code)}')">Устгах</button>
+        <button class="minibtn" data-act="openEdit" data-id="${esc(c.id)}">Засах</button>
+        <button class="minibtn" style="color:#B3341F" data-act="delCattle" data-id="${esc(c.id)}">Устгах</button>
       </td>
     </tr>`;
   }).join('');
@@ -1135,8 +1151,72 @@ async function resetPw(id){
   toast('Нууц үг сэргээх холбоос илгээгдлээ');
 }
 
-document.querySelectorAll('.modal').forEach(m=>{
+// ---------- row buttons ----------
+// Rows carry only data-act + data-id. Names and tags are looked up
+// here, never pasted into an onclick string: esc() is HTML escaping,
+// and the browser undoes it before inline JS runs, so a quote in a
+// farm name used to break out of the handler.
+const tagOf  = id => (allCattle.find(c=>c.id===id)||{}).tag_code || '';
+const farmOf = id => adminFarms.find(f=>f.id===id);
+const rowActions = {
+  openUser, resetPw, delUser, restFarm, openEdit,
+  archFarm:  id => { const f=farmOf(id); if(f) archFarm(id,f.name); },
+  delFarm:   id => { const f=farmOf(id); if(f) delFarm(id,f.name,f.cattle_count,f.user_count); },
+  openMilk:  id => openMilk(id, tagOf(id)),
+  openVacc:  id => openVacc(id, tagOf(id)),
+  delCattle: id => delCattle(id, tagOf(id)),
+};
+document.addEventListener('click', e=>{
+  const b = e.target.closest('[data-act]');
+  if(!b || b.disabled) return;
+  const fn = rowActions[b.dataset.act];
+  if(fn) fn(b.dataset.id);
+});
+
+document.querySelectorAll('.modal:not([data-sticky])').forEach(m=>{
   m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on');});
+});
+
+// ---------- password recovery ----------
+// The reset email links back to this page with a recovery token in
+// the URL. supabase-js signs the user in from it and fires
+// PASSWORD_RECOVERY; until now nothing listened, so the user landed
+// logged in with no way to actually choose a new password.
+// The hash check covers the event firing before this listener exists.
+const cameForRecovery = /type=recovery/.test(location.hash);
+function showPwModal(){
+  document.getElementById('pwNew').value = '';
+  document.getElementById('pwNew2').value = '';
+  document.getElementById('pwModal').classList.add('on');
+}
+sb.auth.onAuthStateChange(event=>{
+  if(event==='PASSWORD_RECOVERY') showPwModal();
+});
+if(cameForRecovery){
+  // Only when the token actually produced a session — otherwise the
+  // sticky modal would trap the user over the login screen.
+  sb.auth.getSession().then(({data:{session}})=>{ if(session) showPwModal(); });
+}
+// Expired or already-used links come back as #error_code=otp_expired.
+if(/error_code=/.test(location.hash)){
+  showErr('Нууц үг сэргээх холбоосны хугацаа дууссан байна. Админаас дахин илгээхийг хүснэ үү.');
+  history.replaceState(null,'',location.pathname);
+}
+
+document.getElementById('pwSave').addEventListener('click', async ()=>{
+  const p1 = document.getElementById('pwNew').value;
+  const p2 = document.getElementById('pwNew2').value;
+  if(p1.length<8){toast('Нууц үг хамгийн багадаа 8 тэмдэгт байна.',true);return;}
+  if(p1!==p2){toast('Нууц үг таарахгүй байна.',true);return;}
+  const btn = document.getElementById('pwSave');
+  btn.disabled = true;
+  const {error} = await sb.auth.updateUser({password:p1});
+  btn.disabled = false;
+  if(error){toast('Хадгалж чадсангүй: '+error.message,true);return;}
+  history.replaceState(null,'',location.pathname);   // drop the token from the URL
+  closeModal('pwModal');
+  toast('Нууц үг шинэчлэгдлээ');
+  boot();
 });
 
 boot();
