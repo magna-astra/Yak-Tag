@@ -87,6 +87,25 @@ const ytQueue = (() => {
       const { error } = await sb.from('scan_events').insert(row);
       if (error && error.code === '23505') return { data: null, error: null };
       return { data: null, error };
+    },
+
+    // Milk: one row per cow per day, so sending it twice is harmless.
+    // yield_date is the day it was entered on the phone, not the day
+    // it reaches the server.
+    async milk(p) {
+      const { error } = await sb.from('milk_yield').upsert(p, { onConflict: 'cattle_id,yield_date' });
+      return { data: null, error };
+    },
+
+    // Pregnancy / calving entry. p_client_uuid makes a resend return the
+    // entry the server already has (schema_v31).
+    async repro(p) {
+      let { data, error } = await sb.rpc('record_repro_event', p);
+      if (error && (error.code === 'PGRST202' || /Could not find the function/i.test(error.message))) {
+        const q = { ...p }; delete q.p_client_uuid;          // database not yet on v31
+        ({ data, error } = await sb.rpc('record_repro_event', q));
+      }
+      return { data, error };
     }
   };
 
@@ -106,7 +125,10 @@ const ytQueue = (() => {
         continue;
       }
       const send = senders[item.kind];
-      if (!send) { await del(item.id); continue; }
+      // Unknown kind: this copy of offline.js is older than the page that
+      // queued it (e.g. a cached file right after a deploy). Keep it —
+      // a newer version will send it. Never throw an entry away.
+      if (!send) continue;
       let res;
       try { res = await send(item.payload, item); }
       catch (e) { res = { error: e }; }
@@ -119,9 +141,19 @@ const ytQueue = (() => {
         break;                                  // still offline — try again later
       } else {
         item.fails = (item.fails || 0) + 1;
-        console.warn('Queued scan rejected:', item.kind, res.error);
-        if (item.fails >= MAX_SERVER_FAILS) await del(item.id);
-        else await put(item);
+        item.lastError = res.error;
+        console.warn('Queued entry rejected:', item.kind, res.error);
+        if (item.fails >= MAX_SERVER_FAILS) {
+          await del(item.id);
+          // Never lose an entry silently: remember it so the page can
+          // tell the herder what did not get saved, and why.
+          try {
+            const list = JSON.parse(localStorage.getItem('yt-rejected') || '[]');
+            list.push({ kind: item.kind, created: item.created, payload: item.payload,
+                        error: String((res.error && res.error.message) || res.error) });
+            localStorage.setItem('yt-rejected', JSON.stringify(list.slice(-50)));
+          } catch (e) {}
+        } else await put(item);
       }
     }
     return items;
@@ -160,7 +192,7 @@ const ytQueue = (() => {
     // queued = waiting for signal. Not sent AND not queued = the
     // server refused it (e.g. unknown tag); retried a few times anyway.
     return { sent, queued: !sent && (stoppedOffline || !navigator.onLine),
-             result: mine && mine.result };
+             result: mine && mine.result, error: mine && mine.lastError };
   }
 
   function onChange(fn) { listeners.push(fn); notify(); }

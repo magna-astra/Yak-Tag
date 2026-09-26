@@ -197,6 +197,7 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
     </div>
     <div class="tagbig" id="tagBig">—</div>
     <div class="cowmeta" id="cowMeta">Ачаалж байна…</div>
+    <div class="cowmeta" id="queueNote" style="display:none;margin-top:6px"></div>
   </header>
 
   <div id="cowBody"></div>
@@ -378,7 +379,9 @@ async function boot() {
   let prof = null;
   if (!offlineMode) { try { prof = await myProfile(); } catch (e) {} }
   isSuper = !!(prof && prof.role === 'super_admin');
-  myProf = prof;
+  myProf = prof || (offlineMode ? cacheGet('yt-prof') : null);
+  if (prof) cacheSet('yt-prof', prof);
+  watchQueue();
 
   const tag = getTagFromUrl();
   if (!tag) {
@@ -420,7 +423,8 @@ async function loadCow(tag) {
       document.getElementById('cowBody').insertAdjacentHTML('afterbegin',
         `<div class="offbar">Сүлжээ байхгүй — энэ утсанд сүүлд хадгалсан мэдээлэл.
          Уншуулалт утсанд хадгалагдаж, сүлжээ орохоор илгээгдэнэ.
-         Сүү, тэжээл, зураг сүлжээтэй үед л хадгалагдана.</div>`);
+         Сүү, хээл, төлийн бүртгэлийг оруулж болно — сүлжээ орохоор илгээгдэнэ.
+         Зураг, тэжээл сүлжээтэй үед л.</div>`);
       return;
     }
     document.getElementById('tagBig').textContent = tag;
@@ -610,12 +614,15 @@ function canEditCow() {
 }
 
 async function loadCowExtras() {
-  if (!cow || offlineMode) return;
+  if (!cow) return;
   await loadBreeds();
-  try {
-    const { data } = await sb.from('cattle').select('species, breed_code').eq('id', cow.id).maybeSingle();
-    cowExtra = data || {};
-  } catch (e) { cowExtra = {}; }
+  cowExtra = cacheGet('yt-extra:' + cow.id) || {};
+  if (!offlineMode && navigator.onLine) {
+    try {
+      const { data, error } = await sb.from('cattle').select('species, breed_code').eq('id', cow.id).maybeSingle();
+      if (!error) { cowExtra = data || {}; cacheSet('yt-extra:' + cow.id, cowExtra); }
+    } catch (e) {}
+  }
   renderBreedEdit();
   if (cow.sex === 'female') loadRepro();
 }
@@ -658,7 +665,9 @@ const youngWord = () => cowExtra.species === 'horse' ? 'унага' : 'туга�
 const opts = (m, sel) => Object.entries(m).map(([k, v]) => `<option value="${k}" ${String(k) === String(sel) ? 'selected' : ''}>${v}</option>`).join('');
 const inp = 'width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:4px';
 
+let reproOffline = false;
 async function loadRepro() {
+  reproOffline = false;
   const stateEl = document.getElementById('reproState');
   if (!stateEl) return;
   let events = null, status = null;
@@ -669,10 +678,19 @@ async function loadRepro() {
     events = r1.data || [];
     const r2 = await sb.from('repro_status').select('*').eq('cattle_id', cow.id).maybeSingle();
     status = r2.data;
+    cacheSet('yt-repro:' + cow.id, { events, status });
   } catch (e) {
-    stateEl.textContent = navigator.onLine ? 'Энэ хэсэг удахгүй нээгдэнэ.' : 'Сүлжээгүй — хээл, төлийн бүртгэл харагдахгүй.';
-    document.getElementById('reproBtns').style.display = 'none';
-    return;
+    const saved = cacheGet('yt-repro:' + cow.id);
+    if (saved) {
+      ({ events, status } = saved);
+      reproOffline = true;
+    } else if (navigator.onLine && !offlineMode) {
+      stateEl.textContent = 'Энэ хэсэг удахгүй нээгдэнэ.';
+      document.getElementById('reproBtns').style.display = 'none';
+      return;
+    } else {
+      events = []; status = null; reproOffline = true;
+    }
   }
 
   // current state
@@ -691,6 +709,7 @@ async function loadRepro() {
       : ` · <span style="color:var(--gold)">хээлтүүлсэн огноо эсвэл хээлийн насыг оруулбал төллөх огноо гарна</span>`);
   }
   if (status && status.calvings) html += `<br>Нийт төллөсөн: ${status.calvings} удаа`;
+  if (reproOffline) html += `<br><span style="color:var(--gold)">Сүлжээгүй — утсанд хадгалсан мэдээлэл. Шинэ бүртгэл сүлжээ орохоор илгээгдэнэ.</span>`;
   stateEl.innerHTML = html;
 
   const canEdit = canEditCow();
@@ -797,8 +816,7 @@ async function saveReproEvent(kind) {
   const err = document.getElementById('rfErr');
   const show = m => { err.textContent = m; err.style.display = 'block'; };
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-  if (!navigator.onLine) return show('Хадгалахад сүлжээ шаардлагатай.');
-  const args = { p_cattle_id: cow.id, p_kind: kind, p_date: val('rfDate'), p_note: val('rfNote') || null,
+  const args = { p_client_uuid: ytUuid(), p_cattle_id: cow.id, p_kind: kind, p_date: val('rfDate'), p_note: val('rfNote') || null,
                  p_expected_date: val('rfExpected') || null };
   if (!args.p_date) return show('Огноо оруулна уу.');
   if (args.p_expected_date && args.p_expected_date <= args.p_date) return show('Төллөх огноо үйл явдлын огнооноос хойш байх ёстой.');
@@ -822,10 +840,16 @@ async function saveReproEvent(kind) {
   }
   const btn = document.getElementById('rfSave');
   btn.disabled = true;
-  const { error } = await sb.rpc('record_repro_event', args);
+  // Through the offline queue: sent now if there is signal, otherwise
+  // kept on the phone and sent later (client_uuid stops doubles).
+  const r = await ytQueue.add('repro', args);
   btn.disabled = false;
-  if (error) return show(error.message);
+  if (!r.sent && !r.queued) return show(r.error ? String(r.error.message || r.error) : 'Хадгалж чадсангүй. Дахин оролдоно уу.');
   document.getElementById('reproForm').innerHTML = '';
+  if (r.queued) {
+    toast('Сүлжээгүй — утсанд хадгалагдлаа, сүлжээ орохоор илгээгдэнэ');
+    return;
+  }
   toast(kind === 'calving' ? `Төллөлт бүртгэгдлээ. ${youngWord()}-д таг зүүгээд бүртгэхдээ эхийн тагийг оруулаарай.` : 'Хадгалагдлаа');
   loadRepro();
 }
@@ -1091,19 +1115,23 @@ async function saveMilk() {
     return;
   }
   btn.disabled = true;
-  const { data: { user } } = await sb.auth.getUser();
-  const today = mnDate();
+  // The signed-in user from this phone (no network call), so milk can
+  // be entered with no signal; the date is today's, fixed now.
+  let uid = cacheGet('yt-uid');
+  try { const { data: { session } } = await sb.auth.getSession(); if (session) uid = session.user.id; } catch (e) {}
+  if (!uid) { btn.disabled = false; toast('Дахин нэвтэрнэ үү.', true); return; }
 
-  const { error } = await sb.from('milk_yield').upsert({
-    farm_id: cow.farm_id,
-    cattle_id: cow.id,
-    recorded_by: user.id,
-    liters: liters,
-    yield_date: today
-  }, { onConflict: 'cattle_id,yield_date' });
+  const r = await ytQueue.add('milk', {
+    farm_id: cow.farm_id, cattle_id: cow.id, recorded_by: uid,
+    liters: liters, yield_date: mnDate()
+  });
 
   btn.disabled = false;
-  if (error) { toast('Хадгалж чадсангүй: ' + error.message, true); return; }
+  if (r.queued) {
+    toast(`Сүлжээгүй — ${liters.toFixed(1)} литр утсанд хадгалагдлаа, сүлжээ орохоор илгээгдэнэ`);
+    return;
+  }
+  if (!r.sent) { toast('Хадгалж чадсангүй: ' + (r.error ? (r.error.message || r.error) : 'дахин оролдоно уу'), true); return; }
   toast(`${liters.toFixed(1)} литр хадгалагдлаа`);
   await loadCow(cow.tag_code);
 }
@@ -1384,6 +1412,33 @@ async function loadMilkHistory(range) {
     <div class="milk-total" style="border-top:0;padding-top:0;margin-top:0">
       <span>Дунджаар (бүртгэсэн өдөр)</span><b>${avg.toFixed(1)} л</b></div>
   `;
+}
+
+// ---------- offline queue notice ----------
+// Shows how many entries wait on this phone, and any the server
+// refused (so nothing is lost without the herder knowing).
+const QK = { milk: 'сүү', repro: 'хээл/төл', app_scan: 'уншуулалт', public_scan: 'уншуулалт' };
+function watchQueue() {
+  if (watchQueue.on) return; watchQueue.on = true;
+  ytQueue.onChange(n => {
+    const el = document.getElementById('queueNote');
+    if (!el) return;
+    let rej = [];
+    try { rej = JSON.parse(localStorage.getItem('yt-rejected') || '[]'); } catch (e) {}
+    const parts = [];
+    if (n) parts.push(`⏳ ${n} бүртгэл илгээгдэхийг хүлээж байна`);
+    if (rej.length) parts.push(`<a href="#" id="rejLink" style="color:#FFB4A8">⚠ ${rej.length} бүртгэл хадгалагдсангүй</a>`);
+    el.innerHTML = parts.join(' · ');
+    el.style.display = parts.length ? 'block' : 'none';
+    const a = document.getElementById('rejLink');
+    if (a) a.onclick = e => {
+      e.preventDefault();
+      const txt = rej.map(r => `${new Date(r.created).toLocaleString()} — ${QK[r.kind] || r.kind}: ${r.error}`).join('\n');
+      if (confirm(`Сервер хүлээж аваагүй бүртгэл:\n\n${txt}\n\nЖагсаалтыг цэвэрлэх үү?`)) {
+        localStorage.removeItem('yt-rejected'); ytQueue.flush();
+      }
+    };
+  });
 }
 
 // ---------- scan log ----------

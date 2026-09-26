@@ -215,6 +215,7 @@ body.role-herder .col-owner{display:none}
     <div class="tabs">
       <button data-tab="herd" class="on">Мал сүрэг</button>
       <button data-tab="map">Газрын зураг</button>
+      <button data-tab="calving" id="calvTabBtn">Төллөлт</button>
       <button data-tab="users" class="super-only">Хэрэглэгчид</button>
       <button data-tab="farms" class="super-only">Фермүүд</button>
       <button data-tab="tags" class="super-only">Тагууд</button>
@@ -334,6 +335,30 @@ body.role-herder .col-owner{display:none}
           <tbody id="farmsBody"><tr><td colspan="8" class="loading">Ачаалж байна…</td></tr></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- ===== CALVING: reminders + not yet bred ===== -->
+    <div class="tabpane" id="tab-calving">
+      <div class="stats" id="calvStats"></div>
+      <div class="filters"><div class="frow">
+        <span class="flabel">Ферм</span>
+        <select id="cvFarm" class="super-only"><option value="">Бүх ферм</option></select>
+        <span class="count-note">Төллөх огноо = таамаг (үүлдэр, эцэг, малын болон фермийн өмнөх төллөлтөөр)</span>
+      </div></div>
+
+      <h3 style="font-size:.95rem;margin:4px 0 10px">Төллөх дөхсөн (30 хоногт, хэтэрсэн орно)</h3>
+      <div class="table-wrap" style="margin-bottom:22px"><table>
+        <thead><tr><th>Дугаар</th><th class="col-owner">Эзэмшигч</th><th>Үүлдэр</th><th>Төлөв</th>
+          <th>Төллөх огноо</th><th class="num">Үлдсэн</th><th>Тооцоо</th></tr></thead>
+        <tbody id="dueBody"></tbody></table></div>
+
+      <h3 style="font-size:.95rem;margin:4px 0 4px">Хээлтүүлээгүй</h3>
+      <p class="mapnote" style="margin:0 0 10px">Хээлтүүлэх насанд хүрсэн (үхэр 2+, сарлаг ба адуу 3+ нас), хээлгүй эсвэл сувай,
+        сүүлийн 45 хоногт төллөөгүй эм мал. Сарлагийн хээлтүүлгийн улирал ихэвчлэн 7–8-р сар.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Дугаар</th><th class="col-owner">Эзэмшигч</th><th>Үүлдэр</th><th>Нас</th>
+          <th>Төлөв</th><th>Сүүлд төллөсөн</th></tr></thead>
+        <tbody id="openBody"></tbody></table></div>
     </div>
 
     <!-- ===== TAGS (super admin) ===== -->
@@ -624,8 +649,8 @@ function toast(msg, bad=false){
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function closeModal(id){document.getElementById(id).classList.remove('on');}
 function isToday(d){return d === mnDate();}
-function fmtD(ts){if(!ts)return '—';return new Date(ts).toLocaleDateString('mn-MN',{month:'short',day:'numeric'});}
-function fmtDT(ts){if(!ts)return '—';return new Date(ts).toLocaleString('mn-MN',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+function fmtD(ts){return fmtDate(ts);}          // Mongolian numbered months (config.js)
+function fmtDT(ts){return fmtDateTime(ts);}
 function daysUntil(d){if(!d)return null;return Math.ceil((new Date(d)-new Date())/86400000);}
 // A plain Google Maps URL — not the paid Maps API. No key, no billing,
 // no quota. On a phone it opens the Google Maps app with navigation,
@@ -690,6 +715,7 @@ document.querySelectorAll('.tabs button').forEach(b=>{
     if(b.dataset.tab==='map'){ setTimeout(()=>{ initMap(); drawMap(); }, 60); }
     if(b.dataset.tab==='farms'){ loadAdminFarms(); }
     if(b.dataset.tab==='tags'){ loadTags(); }
+    if(b.dataset.tab==='calving'){ renderCalving(); }
   });
 });
 
@@ -738,6 +764,7 @@ async function loadCattle(){
   allCattle = data||[];
   await loadMilkForDate();
   await loadRepro();
+  updateCalvingBadge();
   renderStats(); render();
 }
 
@@ -925,6 +952,79 @@ document.querySelectorAll('[data-repro]').forEach(b=>b.addEventListener('click',
   document.querySelectorAll('[data-repro]').forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); fRepro=b.dataset.repro; render();}));
 
+// ---------- CALVING TAB: reminders + not-yet-bred ----------
+// Built from data already loaded (allCattle + reproById), no extra
+// requests. "Due" = bred/pregnant with a predicted date within 30 days
+// or overdue. "Not bred" = females of breeding age, not bred/pregnant,
+// not calved in the last 45 days (the usual rest after calving).
+const BREED_AGE = { yak: 3, horse: 3 };           // otherwise cattle: 2
+function breedingAge(c){ return c.breed_code==='yak' ? BREED_AGE.yak : (c.species==='horse' ? BREED_AGE.horse : 2); }
+
+function calvingLists(){
+  const farm = myRole==='super_admin' ? document.getElementById('cvFarm').value : '';
+  const yr = +mnDate().slice(0,4);
+  const females = allCattle.filter(c=>c.sex==='female' && c.status==='active' && (!farm || c.farm_id===farm));
+  const due = [], open = [];
+  females.forEach(c=>{
+    const r = reproById[c.id];
+    const bred = r && (r.state==='bred' || r.state==='pregnant');
+    if(bred && r.expected_date){
+      const d = daysUntil(r.expected_date);
+      if(d <= 30) due.push({c, r, d});
+    }
+    if(!bred){
+      const age = c.birth_year ? yr - c.birth_year : null;
+      const since = r && r.last_calving_date ? -daysUntil(r.last_calving_date) : null;
+      if((age===null || age >= breedingAge(c)) && !(since!==null && since < 45)) open.push({c, r, age});
+    }
+  });
+  due.sort((a,b)=>a.d-b.d);
+  open.sort((a,b)=>(a.c.tag_code||'').localeCompare(b.c.tag_code||''));
+  return {due, open, females};
+}
+
+function updateCalvingBadge(){
+  const btn = document.getElementById('calvTabBtn');
+  if(!btn) return;
+  const n = calvingLists().due.filter(x=>x.d<=7).length;
+  btn.innerHTML = n ? `Төллөлт <span class="badge late" style="margin-left:4px">${n}</span>` : 'Төллөлт';
+}
+
+function renderCalving(){
+  const sel = document.getElementById('cvFarm');
+  if(sel && sel.options.length<=1)
+    sel.innerHTML = '<option value="">Бүх ферм</option>' + farms.map(f=>`<option value="${esc(f.id)}">${esc(f.code)} · ${esc(f.name)}</option>`).join('');
+  const {due, open, females} = calvingLists();
+  const week = due.filter(x=>x.d<=7).length;
+  const pregnant = females.filter(c=>{const r=reproById[c.id]; return r && (r.state==='pregnant'||r.state==='bred');}).length;
+  document.getElementById('calvStats').innerHTML = `
+    <div class="stat"><div class="lbl">7 хоногт төллөх</div><div class="val" style="color:${week?'var(--alert)':'inherit'}">${week}</div></div>
+    <div class="stat"><div class="lbl">30 хоногт төллөх</div><div class="val">${due.length}</div></div>
+    <div class="stat"><div class="lbl">Хээлтэй / хээлтүүлсэн</div><div class="val">${pregnant}</div></div>
+    <div class="stat"><div class="lbl">Хээлтүүлээгүй</div><div class="val">${open.length}</div></div>`;
+
+  const link = c => `<a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${esc(c.tag_code)}</a>`;
+  document.getElementById('dueBody').innerHTML = due.length ? due.map(({c,r,d})=>`<tr>
+      <td class="tag-code">${link(c)}</td>
+      <td class="col-owner">${esc(c.owner_name||'')}</td>
+      <td class="muted">${esc(c.breed||'—')}</td>
+      <td>${r.state==='pregnant'?'<span class="badge ok">Хээлтэй</span>':'<span class="badge warn">Хээлтүүлсэн</span>'}</td>
+      <td>${fmtD(r.expected_date)}${r.spread?` <span class="muted">±${r.spread}</span>`:''}</td>
+      <td class="num"><span class="badge ${d<0?'late':d<=7?'late':'warn'}">${d<0?`${-d} хоног хэтэрсэн`:d===0?'өнөөдөр':`${d} хоног`}</span></td>
+      <td class="muted" style="white-space:normal;max-width:320px;font-size:.78rem">${esc(r.basis||'')}</td>
+    </tr>`).join('') : '<tr><td colspan="7" class="empty">30 хоногт төллөх мал алга.</td></tr>';
+
+  document.getElementById('openBody').innerHTML = open.length ? open.map(({c,r,age})=>`<tr>
+      <td class="tag-code">${link(c)}</td>
+      <td class="col-owner">${esc(c.owner_name||'')}</td>
+      <td class="muted">${esc(c.breed||'—')}</td>
+      <td>${age===null?'—':age+' нас'}</td>
+      <td>${r && r.state==='open' ? '<span class="badge none">Сувай</span>' : '<span class="badge none">Бүртгэлгүй</span>'}</td>
+      <td class="muted">${r && r.last_calving_date ? fmtD(r.last_calving_date) : '—'}</td>
+    </tr>`).join('') : '<tr><td colspan="6" class="empty">Бүх эм мал хээлтүүлсэн эсвэл насанд хүрээгүй.</td></tr>';
+}
+document.getElementById('cvFarm').addEventListener('change', renderCalving);
+
 // ---------- filtering ----------
 function visible(){
   const q = document.getElementById('search').value.toLowerCase().trim();
@@ -1044,7 +1144,7 @@ function render(){
 function updateDateLabel(){
   const el = document.getElementById('dLabel');
   el.textContent = isToday(filterDate) ? 'Өнөөдөр'
-    : new Date(filterDate).toLocaleDateString('mn-MN',{month:'long',day:'numeric'});
+    : fmtDate(filterDate);
   el.style.background = isToday(filterDate)?'':'#F0F2F5';
   el.style.color = isToday(filterDate)?'':'#5A6880';
   document.getElementById('dToday').classList.toggle('on', isToday(filterDate));
