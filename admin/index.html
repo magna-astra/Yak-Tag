@@ -217,6 +217,14 @@ tbody tr:hover{background:#FAFBFD}
 .mactions button{flex:1;padding:12px;border-radius:10px;font-weight:700;border:0}
 .mcancel{background:#F0F2F5;color:var(--ink)}
 .msave{background:var(--khukh);color:#fff}
+/* telegram / transfer / excel */
+.tgok{background:var(--steppe-l);color:var(--steppe);padding:12px 14px;border-radius:10px;font-weight:700;margin-top:4px}
+.tglink{display:block;text-align:center;text-decoration:none;padding:12px;border-radius:10px;font-weight:700;margin-top:14px}
+.tgsteps{margin:10px 0 0 20px;font-size:.86rem;line-height:1.75}
+.histrow{display:flex;gap:10px;font-size:.82rem;padding:7px 0;border-bottom:1px solid var(--line)}
+.histrow .d{white-space:nowrap;color:var(--ink-soft);font-family:var(--mono)}
+.xchecks label{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:.88rem;font-weight:500;color:var(--ink)}
+.xchecks input{width:auto}
 .mnote{background:var(--gold-l);color:var(--gold);padding:11px 13px;border-radius:9px;
   font-size:.81rem;line-height:1.5;margin-top:14px}
 
@@ -269,6 +277,7 @@ body.role-herder .col-owner{display:none}
     <div class="who">
       <span><b id="userName">—</b></span>
       <span class="role-chip" id="userRole">—</span>
+      <button class="signout" id="tgBtn" style="display:none">Telegram</button>
       <button class="signout" id="myPwBtn">Нууц үг солих</button>
       <button class="signout" id="signoutBtn">Гарах</button>
     </div>
@@ -299,6 +308,7 @@ body.role-herder .col-owner{display:none}
           </div>
           <button class="chip on" id="dToday">Өнөөдөр</button>
           <span class="today-chip" id="dLabel"></span>
+          <button class="chip admin-only" id="exportBtn" style="margin-left:auto">⬇ Excel тайлан</button>
         </div>
 
         <div class="frow">
@@ -560,9 +570,10 @@ body.role-herder .col-owner{display:none}
     <h3>Мэдээлэл засах</h3>
     <p class="msub" id="editSub"></p>
     <label>Ферм</label>
-    <select id="eFarm"></select>
+    <select id="eFarm" disabled></select>
     <label>Эзэмшигч</label>
-    <select id="eOwner"></select>
+    <select id="eOwner" disabled></select>
+    <button class="mcancel" id="editTransfer" style="width:100%;margin-top:8px;padding:10px;border-radius:10px;border:1px dashed var(--line);font-weight:700;color:var(--khukh)">⇄ Эзэмшигч солих / зарах</button>
     <label>Хүйс</label>
     <select id="eSex"><option value="female">Эм</option><option value="male">Эр</option></select>
     <label>Төрөл / үүлдэр</label>
@@ -590,6 +601,73 @@ body.role-herder .col-owner{display:none}
       <button class="mcancel" onclick="closeModal('editModal')">Болих</button>
       <button class="msave" id="editSave">Хадгалах</button>
     </div>
+  </div>
+</div>
+
+<div class="modal" id="transferModal">
+  <div class="modalbox">
+    <h3>Эзэмшигч солих / зарах</h3>
+    <p class="msub" id="trSub"></p>
+    <label class="super-only">Хүлээн авах ферм</label>
+    <select id="trFarm" class="super-only"></select>
+    <label>Шинэ эзэмшигч</label>
+    <select id="trOwner"></select>
+    <label>Шалтгаан</label>
+    <select id="trReason">
+      <option value="sale">Худалдсан</option>
+      <option value="gift">Бэлэглэсэн</option>
+      <option value="inheritance">Өв залгамжлал</option>
+      <option value="correction">Бүртгэлийн алдаа засах</option>
+      <option value="other">Бусад</option>
+    </select>
+    <label>Огноо</label>
+    <input type="date" id="trDate">
+    <label>Тэмдэглэл (заавал биш — үнэ, нөхцөл)</label>
+    <input type="text" id="trNote" maxlength="300">
+    <div class="mnote" id="trInfo"></div>
+    <div class="mactions">
+      <button class="mcancel" onclick="closeModal('transferModal')">Болих</button>
+      <button class="msave" id="trSave">Шилжүүлэх</button>
+    </div>
+    <div id="trHist" style="margin-top:6px"></div>
+  </div>
+</div>
+
+<div class="modal" id="exportModal">
+  <div class="modalbox">
+    <h3>Excel тайлан</h3>
+    <p class="msub">Мал сүрэг болон сонгосон хугацааны бүртгэлийг Excel файлаар татна.</p>
+    <label class="super-only">Ферм</label>
+    <select id="xFarm" class="super-only"></select>
+    <label>Хугацаа</label>
+    <select id="xPeriod">
+      <option value="month">Энэ сар</option>
+      <option value="prev">Өнгөрсөн сар</option>
+      <option value="3m">Сүүлийн 3 сар</option>
+      <option value="year">Энэ он</option>
+      <option value="12m">Сүүлийн 12 сар</option>
+      <option value="all">Бүх хугацаа</option>
+    </select>
+    <label>Хуудаснууд</label>
+    <div class="xchecks">
+      <label><input type="checkbox" id="xHerd" checked> Мал сүрэг — одоогийн байдал</label>
+      <label><input type="checkbox" id="xMilk" checked> Сүү — сар бүрийн нийт</label>
+      <label><input type="checkbox" id="xVacc" checked> Вакцин</label>
+      <label><input type="checkbox" id="xRepro" checked> Хээл, төл</label>
+    </div>
+    <div class="mnote" id="xNote" style="display:none"></div>
+    <div class="mactions">
+      <button class="mcancel" onclick="closeModal('exportModal')">Болих</button>
+      <button class="msave" id="xSave">Татах</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="tgModal">
+  <div class="modalbox">
+    <h3>Telegram мэдэгдэл</h3>
+    <div id="tgBody"></div>
+    <div class="mactions"><button class="mcancel" onclick="closeModal('tgModal')">Хаах</button></div>
   </div>
 </div>
 
@@ -828,6 +906,7 @@ async function boot(){
   await loadBreeds();
   await loadCattle();
   if(myRole==='super_admin') loadUsers();
+  tgInit();
 }
 function roleLabel(r){return {super_admin:'Ерөнхий админ',farm_admin:'Ферм админ',herder:'Малчин'}[r]||r;}
 
@@ -1398,7 +1477,7 @@ function render(){
         <button class="editpen super-only" data-act="openEdit" data-id="${esc(c.id)}" title="Мэдээлэл засах" aria-label="Засах">✎</button>
         <div class="sub">${sub}</div>
       </td>
-      <td class="col-owner" title="${esc(c.owner_name||'')}">${esc(c.owner_name||'')}<div class="sub super-only">${esc(c.farm_code||'')}</div></td>
+      <td class="col-owner" title="${esc(c.owner_name||'')}">${esc(c.owner_name||'')}<button class="editpen admin-only" data-act="openTransfer" data-id="${esc(c.id)}" title="Эзэмшигч солих / зарах" aria-label="Шилжүүлэх">⇄</button><div class="sub super-only">${esc(c.farm_code||'')}</div></td>
       <td class="num">${milkCellNew(c)}</td>
       <td class="num mono">${month || '<span class="dash">—</span>'}</td>
       <td>${dateCell(c.last_fed_at, 'muted')}</td>
@@ -1965,14 +2044,15 @@ const AUDIT_ACT = {
   tags_create:'Таг үүсгэв', tags_assign_farm:'Тагийг фермд оноов', tag_write:'Таг бичив', tag_uid:'Чип UID бүртгэв',
   tag_recycle:'Тагийг дахин ашиглахаар сэргээв', tag_retire:'Тагийг хасав', tag_delete:'Таг устгав',
   admin_edit_profile:'Хэрэглэгчийн мэдээлэл засав', profile_delete:'Хэрэглэгч устгав',
-  farm_create:'Ферм үүсгэв', farm_archive:'Фермийг архивлав', farm_restore:'Фермийг сэргээв', farm_delete:'Ферм устгав'
+  farm_create:'Ферм үүсгэв', farm_archive:'Фермийг архивлав', farm_restore:'Фермийг сэргээв', farm_delete:'Ферм устгав',
+  cattle_transfer:'Эзэмшигч солив', telegram_link:'Telegram холбов'
 };
 const AUDIT_KIND = {
   cattle: ['register_cattle','admin_edit_cattle','cattle_delete','report_lost','report_found','tag_replace',
-           'set_contact_phone','unlock_contact_phone','set_public_photo','photo_delete','photo_unlock'],
+           'set_contact_phone','unlock_contact_phone','set_public_photo','photo_delete','photo_unlock','cattle_transfer'],
   records:['feeding_delete','vaccination_edit','repro_edit','repro_delete'],
   tags:   ['tags_create','tags_assign_farm','tag_write','tag_uid','tag_recycle','tag_retire','tag_delete'],
-  people: ['admin_edit_profile','profile_delete','farm_create','farm_archive','farm_restore','farm_delete'],
+  people: ['admin_edit_profile','profile_delete','farm_create','farm_archive','farm_restore','farm_delete','telegram_link'],
   deletes:['cattle_delete','photo_delete','feeding_delete','repro_delete','tag_delete','profile_delete','farm_delete']
 };
 const REPRO_KIND_MN = {insemination:'хээлтүүлэг', pregnancy_check:'хээл шалгалт', calving:'төллөлт', abortion:'хээл хаялт'};
@@ -1983,6 +2063,8 @@ function auditSummary(r){
   const out = [];
   const add = (lbl, v) => { if(v!==null && v!==undefined && v!=='' && typeof v!=='object') out.push(`${lbl}: ${esc(String(v))}`); };
   if(d.old_tag || d.new_tag) out.push(`${esc(d.old_tag||'—')} → <b>${esc(d.new_tag||'—')}</b>`);
+  if(typeof d.from==='string' && typeof d.to==='string') out.push(`${esc(d.from)} → <b>${esc(d.to)}</b>`);
+  if(typeof d.to_farm==='string' && d.to_farm!==d.from_farm) out.push(`Ферм: ${esc(d.from_farm||'')} → ${esc(d.to_farm)}`);
   if(typeof d.kind==='string') add('Төрөл', REPRO_KIND_MN[d.kind] || d.kind);
   if(d.old_date && d.new_date && d.old_date!==d.new_date) out.push(`${fmtD(d.old_date)} → ${fmtD(d.new_date)}`);
   if(d.given_on) add('Хийсэн', fmtD(d.given_on));
@@ -1994,7 +2076,7 @@ function auditSummary(r){
   add('UID', d.nfc_uid);
   add('Шилжүүлсэн', d.moved);
   if(d.forced===true) out.push('албадан');
-  add('Шалтгаан', d.reason);
+  add('Шалтгаан', r.action==='cattle_transfer' ? (TR_REASON[d.reason]||d.reason) : d.reason);
   add('Тэмдэглэл', d.note);
   return out.join(' · ') || '<span class="muted">—</span>';
 }
@@ -2073,6 +2155,359 @@ function renderAudit(){
 
 ['aFarm','aKind','aFrom'].forEach(id=>document.getElementById(id).addEventListener('change',()=>loadAudit(true)));
 document.getElementById('auditMore').addEventListener('click',()=>loadAudit(false));
+
+// ---------- transfer / sell an animal (schema_v39) ----------
+// The one way to change an owner: kept as history with a reason and a
+// date. Within a farm: that farm's admin. To another farm: super admin
+// only — the animal then takes its tag and whole record along.
+const TR_REASON = {sale:'Худалдсан', gift:'Бэлэглэсэн', inheritance:'Өв залгамжлал',
+                   correction:'Бүртгэлийн алдаа засах', other:'Бусад'};
+let trTarget = null, trUsers = [];
+async function openTransfer(id){
+  const c = allCattle.find(x=>x.id===id); if(!c) return;
+  trTarget = c;
+  closeModal('editModal');
+  document.getElementById('trSub').textContent =
+    `${c.tag_code} · одоогийн эзэмшигч: ${c.owner_name||'—'}${myRole==='super_admin' && c.farm_code ? ' ('+c.farm_code+')' : ''}`;
+  trUsers = users.length ? users : [];
+  if(!trUsers.length){                      // farm admin: users of their own farm (RLS)
+    try { const {data} = await sb.from('admin_users').select('id,full_name,phone,role,active,farm_id'); trUsers = data||[]; }
+    catch(e){ trUsers = []; }
+  }
+  const fsel = document.getElementById('trFarm');
+  fsel.innerHTML = farms.map(f=>`<option value="${esc(f.id)}">${esc(f.code)} · ${esc(f.name)}</option>`).join('');
+  fsel.value = c.farm_id;
+  fillTrOwners();
+  document.getElementById('trReason').value = 'sale';
+  document.getElementById('trDate').value = mnDate();
+  document.getElementById('trDate').max = mnDate();
+  document.getElementById('trNote').value = '';
+  document.getElementById('trHist').innerHTML = '';
+  document.getElementById('transferModal').classList.add('on');
+  loadTrHistory(c.id);
+}
+function fillTrOwners(){
+  const farm = document.getElementById('trFarm').value;
+  const opts = trUsers.filter(u=>u.farm_id===farm && u.active && u.role!=='super_admin' && u.id!==trTarget.owner_id);
+  document.getElementById('trOwner').innerHTML = opts.length
+    ? '<option value="">— сонгох —</option>' + opts.map(u=>`<option value="${esc(u.id)}">${esc(u.full_name)}${u.role==='farm_admin'?' (админ)':''}</option>`).join('')
+    : '<option value="">— Энэ фермд өөр хэрэглэгч алга —</option>';
+  trInfo();
+}
+function trInfo(){
+  const cross = document.getElementById('trFarm').value !== trTarget.farm_id;
+  const u = trUsers.find(x=>x.id===document.getElementById('trOwner').value);
+  const lines = [];
+  if(cross) lines.push('Мал, таг болон бүх түүх (сүү, вакцин, хээл, зураг) шинэ фермд шилжинэ. Хуучин ферм энэ малыг харахаа болино.');
+  lines.push(u && !u.phone
+    ? 'Шинэ эзэмшигчид утас бүртгэлгүй тул таг уншуулсан хүнд "Залгах" товч гарахгүй. Малын хуудаснаас дугаар оруулна уу.'
+    : 'Таг уншуулсан хүний залгах дугаар шинэ эзэмшигчийн утас болно.');
+  document.getElementById('trInfo').innerHTML = lines.map(esc).join('<br>');
+}
+async function loadTrHistory(id){
+  const box = document.getElementById('trHist');
+  try {
+    const {data,error} = await sb.rpc('cattle_ownership_history',{p_cattle_id:id});
+    if(error || !data || !data.length){ box.innerHTML = ''; return; }
+    box.innerHTML = '<label>Эзэмшлийн түүх</label>' + data.map(h=>`<div class="histrow"><span class="d">${fmtD(h.transferred_at)}</span>
+      <span>${esc(h.from_name||'—')} → <b>${esc(h.to_name||'—')}</b>${h.from_farm && h.to_farm && h.from_farm!==h.to_farm ? ` (${esc(h.from_farm)} → ${esc(h.to_farm)})` : ''}
+      · ${esc(TR_REASON[h.reason]||h.reason||'')}${h.note ? ` · ${esc(h.note)}` : ''}</span></div>`).join('');
+  } catch(e){ box.innerHTML = ''; }
+}
+document.getElementById('trFarm').addEventListener('change', fillTrOwners);
+document.getElementById('trOwner').addEventListener('change', trInfo);
+document.getElementById('editTransfer').addEventListener('click', ()=>{ if(editTarget) openTransfer(editTarget); });
+document.getElementById('trSave').addEventListener('click', async ()=>{
+  const to = document.getElementById('trOwner').value;
+  if(!to){ toast('Шинэ эзэмшигчийг сонгоно уу.', true); return; }
+  const u = trUsers.find(x=>x.id===to);
+  const cross = document.getElementById('trFarm').value !== trTarget.farm_id;
+  if(!confirm(`${trTarget.tag_code} — шинэ эзэмшигч: ${u ? u.full_name : ''}.${cross ? '\n\nӨөр ферм рүү: бүх түүх хамт шилжинэ.' : ''}\n\nШилжүүлэх үү?`)) return;
+  const btn = document.getElementById('trSave'); btn.disabled = true;
+  const {error} = await sb.rpc('transfer_cattle', {
+    p_cattle_id: trTarget.id, p_to_owner: to, p_reason: document.getElementById('trReason').value,
+    p_note: document.getElementById('trNote').value.trim() || null, p_date: document.getElementById('trDate').value || null });
+  btn.disabled = false;
+  if(error){ toast('Шилжүүлж чадсангүй: ' + error.message, true); return; }
+  closeModal('transferModal');
+  toast(`${trTarget.tag_code} шилжлээ: ${u ? u.full_name : ''}`);
+  if(myRole==='super_admin') loadUsers();
+  await loadCattle();
+});
+
+// ---------- Telegram alerts (schema_v38) ----------
+// The button stays hidden until the bot is set up; before v38 is run
+// the status call simply fails and nothing changes.
+let tgPoll = null;
+async function tgInit(){
+  try {
+    const {data,error} = await sb.rpc('telegram_status');
+    if(!error && data && data.configured) document.getElementById('tgBtn').style.display = '';
+  } catch(e){}
+}
+async function renderTelegram(){
+  const box = document.getElementById('tgBody');
+  clearInterval(tgPoll);
+  const {data:st, error} = await sb.rpc('telegram_status');
+  if(error){ box.innerHTML = `<div class="mnote">${esc(mnError(error.message))}</div>`; return; }
+  if(st.linked){
+    box.innerHTML = `<div class="tgok">✓ Холбогдсон${st.tg_name ? ': ' + esc(st.tg_name) : ''}</div>
+      <p class="msub" style="margin:10px 0 0">Алга болсон гэж мэдэгдсэн мал уншуулагдвал хэзээ, хаана уншуулсныг энэ Telegram-д шууд мэдэгдэнэ.
+        ${myRole==='super_admin' ? 'Ерөнхий админ бүх фермийн мэдэгдлийг авна.' : myRole==='farm_admin' ? 'Фермийн админ фермийнхээ бүх малын мэдэгдлийг авна.' : ''}</p>
+      <div class="mactions"><button class="mcancel" id="tgUnlink" style="color:var(--alert)">Салгах</button>
+        <button class="msave" id="tgTest">Туршилт илгээх</button></div>`;
+    document.getElementById('tgTest').onclick = async ()=>{
+      const {error} = await sb.rpc('telegram_test');
+      toast(error ? error.message : 'Илгээлээ — Telegram-аа шалгана уу', !!error);
+    };
+    document.getElementById('tgUnlink').onclick = async ()=>{
+      if(!confirm('Telegram мэдэгдлийг салгах уу?')) return;
+      const {error} = await sb.rpc('telegram_unlink');
+      if(error){ toast(error.message, true); return; }
+      toast('Салгалаа'); renderTelegram();
+    };
+    return;
+  }
+  const {data:lk, error:e2} = await sb.rpc('telegram_link_code');
+  if(e2){ box.innerHTML = `<div class="mnote">${esc(mnError(e2.message))}</div>`; return; }
+  box.innerHTML = `<p class="msub" style="margin:6px 0 0">Алга болсон гэж мэдэгдсэн мал уншуулагдвал хэзээ, хаана уншуулсныг Telegram-аар шууд мэдэгдэнэ. Үнэгүй.</p>
+    <ol class="tgsteps"><li>Доорх товчийг дарна — Telegram нээгдэнэ.</li>
+      <li><b>Start</b> (Эхлэх) товчийг дарна.</li><li>"✅ Холбогдлоо" гэсэн мессеж ирнэ.</li></ol>
+    <a class="msave tglink" href="${esc(lk.url)}" target="_blank" rel="noopener">Telegram холбох</a>
+    <p class="msub" style="margin:8px 0 0;font-size:.78rem">Холбоос 30 минут хүчинтэй. Холбогдмогц энэ цонх өөрөө шинэчлэгдэнэ.</p>`;
+  let n = 0;
+  tgPoll = setInterval(async ()=>{
+    if(!document.getElementById('tgModal').classList.contains('on') || ++n > 60){ clearInterval(tgPoll); return; }
+    try { const {data} = await sb.rpc('telegram_status'); if(data && data.linked){ clearInterval(tgPoll); renderTelegram(); } } catch(e){}
+  }, 4000);
+}
+document.getElementById('tgBtn').addEventListener('click', ()=>{
+  document.getElementById('tgBody').innerHTML = '<p class="msub">Ачаалж байна…</p>';
+  document.getElementById('tgModal').classList.add('on');
+  renderTelegram();
+});
+
+// ---------- Excel report ----------
+// Built in the browser — no library, no paid service, nothing sent
+// anywhere. An .xlsx file is a zip of a few XML files; stored
+// (uncompressed) entries are valid, which keeps the writer short.
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const CRC_T = (()=>{ const t = new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); t[n] = c >>> 0; }
+  return t; })();
+function crc32(b){ let c = 0xFFFFFFFF; for(let i=0;i<b.length;i++) c = CRC_T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zipStore(files){
+  const enc = new TextEncoder(), parts = [], central = [];
+  const d = new Date();
+  const dt = ((d.getFullYear()-1980) << 9) | ((d.getMonth()+1) << 5) | d.getDate();
+  const tm = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  let off = 0;
+  for(const f of files){
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, tm, true); lh.setUint16(12, dt, true); lh.setUint32(14, crc, true);
+    lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint16(10, 0, true); ch.setUint16(12, tm, true); ch.setUint16(14, dt, true); ch.setUint32(16, crc, true);
+    ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true);
+    ch.setUint16(30, 0, true); ch.setUint16(32, 0, true); ch.setUint16(34, 0, true); ch.setUint16(36, 0, true);
+    ch.setUint32(38, 0, true); ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    off += 30 + name.length + size;
+  }
+  const cd = central.reduce((a, b)=>a + b.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(4, 0, true); end.setUint16(6, 0, true);
+  end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cd, true); end.setUint32(16, off, true); end.setUint16(20, 0, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], {type: XLSX_MIME});
+}
+// sheets: [{name, cols:[{h:'Header', w:12, t:'t'|'n'|'n1'}], rows:[[...]]}]
+function xlsxBlob(sheets){
+  const enc = new TextEncoder(), files = [];
+  const H = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+  const NS = 'http://schemas.openxmlformats.org';
+  const x = v => String(v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const col = i => { let s = ''; i++; while(i){ const m = (i-1) % 26; s = String.fromCharCode(65+m) + s; i = Math.floor((i-1)/26); } return s; };
+  const names = sheets.map((sh, i)=>String(sh.name).replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31).trim() || ('Sheet' + (i+1)));
+  const add = (name, text) => files.push({name, data: enc.encode(text)});
+  add('[Content_Types].xml', H + `<Types xmlns="${NS}/package/2006/content-types">`
+    + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+    + '<Default Extension="xml" ContentType="application/xml"/>'
+    + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+    + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+    + sheets.map((sh, i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')
+    + '</Types>');
+  add('_rels/.rels', H + `<Relationships xmlns="${NS}/package/2006/relationships">`
+    + `<Relationship Id="rId1" Type="${NS}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
+  add('xl/workbook.xml', H + `<workbook xmlns="${NS}/spreadsheetml/2006/main" xmlns:r="${NS}/officeDocument/2006/relationships"><sheets>`
+    + names.map((n, i)=>`<sheet name="${x(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('') + '</sheets><definedNames>'
+    + sheets.map((sh, i)=>`<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${x(names[i].replace(/'/g, "''"))}'!$A$1:$${col(sh.cols.length-1)}$${sh.rows.length+1}</definedName>`).join('')
+    + '</definedNames></workbook>');
+  add('xl/_rels/workbook.xml.rels', H + `<Relationships xmlns="${NS}/package/2006/relationships">`
+    + sheets.map((sh, i)=>`<Relationship Id="rId${i+1}" Type="${NS}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')
+    + `<Relationship Id="rId${sheets.length+1}" Type="${NS}/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
+  add('xl/styles.xml', H + `<styleSheet xmlns="${NS}/spreadsheetml/2006/main">`
+    + '<numFmts count="1"><numFmt numFmtId="164" formatCode="0.0"/></numFmts>'
+    + '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>'
+    + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+    + '<fill><patternFill patternType="solid"><fgColor rgb="FF1B4FA8"/><bgColor indexed="64"/></patternFill></fill></fills>'
+    + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+    + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    + '<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+    + '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+    + '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>'
+    + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>');
+  sheets.forEach((sh, i)=>{
+    const last = col(sh.cols.length-1), n = sh.rows.length + 1;
+    const cell = (v, r, c) => {
+      if(v === null || v === undefined || v === '') return '';
+      const t = (sh.cols[c] || {}).t, ref = col(c) + r;
+      if((t === 'n' || t === 'n1') && typeof v === 'number' && isFinite(v)) return `<c r="${ref}"${t === 'n1' ? ' s="2"' : ''}><v>${v}</v></c>`;
+      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${x(v)}</t></is></c>`;
+    };
+    const head = '<row r="1">' + sh.cols.map((c, j)=>`<c r="${col(j)}1" t="inlineStr" s="1"><is><t>${x(c.h)}</t></is></c>`).join('') + '</row>';
+    const body = sh.rows.map((row, k)=>`<row r="${k+2}">` + row.map((v, j)=>cell(v, k+2, j)).join('') + '</row>').join('');
+    add(`xl/worksheets/sheet${i+1}.xml`, H + `<worksheet xmlns="${NS}/spreadsheetml/2006/main">`
+      + `<dimension ref="A1:${last}${n}"/>`
+      + '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+      + '<sheetFormatPr defaultRowHeight="15"/>'
+      + '<cols>' + sh.cols.map((c, j)=>`<col min="${j+1}" max="${j+1}" width="${c.w || 14}" customWidth="1"/>`).join('') + '</cols>'
+      + `<sheetData>${head}${body}</sheetData><autoFilter ref="A1:${last}${n}"/></worksheet>`);
+  });
+  return zipStore(files);
+}
+
+const X_STATUS = {active:'Идэвхтэй', sold:'Зарагдсан', dead:'Үхсэн', lost:'Алга болсон', stolen:'Хулгайлагдсан'};
+const X_KIND   = {insemination:'Хээлтүүлэг', pregnancy_check:'Хээл шалгалт', calving:'Төллөлт', abortion:'Хээл хаялт'};
+const X_METHOD = {natural:'Байгалийн', run_with_bull:'Сүрэгт хамт', ai:'Зохиомол хээлтүүлэг', embryo:'Үр хөврөл'};
+const X_RESULT = {pregnant:'Хээлтэй', empty:'Сувай (хээлгүй)', unknown:'Тодорхойгүй'};
+const X_BIRTH  = {alive:'Амьд', stillborn:'Үхсэн төрсөн', died_later:'Төрөөд үхсэн'};
+function xPeriod(v){
+  const t = mnDate(), [y, m] = t.split('-').map(Number);
+  const first = (yy, mm) => { while(mm < 1){ mm += 12; yy--; } return `${yy}-${String(mm).padStart(2,'0')}-01`; };
+  const dayBefore = iso => new Date(Date.parse(iso + 'T00:00:00Z') - 86400000).toISOString().slice(0, 10);
+  return ({ month:[first(y, m), t], prev:[first(y, m-1), dayBefore(first(y, m))], '3m':[first(y, m-2), t],
+            year:[`${y}-01-01`, t], '12m':[first(y, m-11), t] })[v] || ['2000-01-01', t];
+}
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const sel = document.getElementById('xFarm'), cur = sel.value;
+  sel.innerHTML = '<option value="">Бүх ферм</option>' + farms.map(f=>`<option value="${esc(f.id)}">${esc(f.code)} · ${esc(f.name)}</option>`).join('');
+  sel.value = cur || document.getElementById('fFarm').value || '';
+  document.getElementById('xNote').style.display = 'none';
+  document.getElementById('exportModal').classList.add('on');
+});
+async function buildExport(){
+  const farm = myRole==='super_admin' ? document.getElementById('xFarm').value : '';
+  const [from, to] = xPeriod(document.getElementById('xPeriod').value);
+  const byId = Object.fromEntries(allCattle.map(c=>[c.id, c]));
+  const tagOfId = id => (byId[id] || {}).tag_code || '—';
+  const ownerOfId = id => (byId[id] || {}).owner_name || '';
+  const farmQ = q => farm ? q.eq('farm_id', farm) : q;
+  const failRow = e => [['Ачаалж чадсангүй: ' + mnError(e.message || String(e))]];
+  const sheets = [];
+
+  if(document.getElementById('xHerd').checked){
+    const year = Number(mnDate().slice(0, 4));
+    const rows = allCattle.filter(c=>!farm || c.farm_id===farm).map(c=>{
+      const r = c.sex==='female' ? reproById[c.id] : null;
+      const rep = r && r.state ? ({pregnant:'Хээлтэй', bred:'Хээлтүүлсэн', open:'Сувай'}[r.state] || r.state) : '';
+      return [c.tag_code, c.farm_code || '', c.owner_name || '',
+        c.species==='horse' ? 'Адуу' : c.species==='cattle' ? 'Үхэр' : '',
+        (breedByCode[c.breed_code] && !breedByCode[c.breed_code].is_other ? breedByCode[c.breed_code].name_mn : c.breed) || '',
+        c.sex==='female' ? 'Эм' : 'Эр', c.birth_year || null, c.birth_year ? year - c.birth_year : null,
+        c.colour || '', c.mother_tag || '', c.weight_kg != null ? Number(c.weight_kg) : null,
+        X_STATUS[c.status] || c.status || '', rep, r && r.expected_date && r.state!=='open' ? fmtD(r.expected_date) : '',
+        c.last_vaccination ? fmtD(c.last_vaccination) : '', c.vaccine_name || '',
+        c.next_vaccination_due ? fmtD(c.next_vaccination_due) : '',
+        c.milk_this_month != null ? Number(c.milk_this_month) : null,
+        c.last_fed_at ? fmtD(c.last_fed_at) : '', c.last_seen_at ? fmtDT(c.last_seen_at) : '',
+        c.last_lat != null ? Number(c.last_lat) : null, c.last_lng != null ? Number(c.last_lng) : null];
+    });
+    sheets.push({name:'Мал сүрэг', rows, cols:[
+      {h:'Таг',w:12},{h:'Ферм',w:8},{h:'Эзэмшигч',w:18},{h:'Төрөл',w:8},{h:'Үүлдэр',w:18},{h:'Хүйс',w:6},
+      {h:'Төрсөн он',w:10,t:'n'},{h:'Нас',w:6,t:'n'},{h:'Зүс',w:10},{h:'Эхийн таг',w:12},{h:'Жин (кг)',w:9,t:'n'},
+      {h:'Төлөв',w:13},{h:'Хээл',w:13},{h:'Төллөх огноо',w:13},{h:'Сүүлд вакцин',w:13},{h:'Вакцин',w:16},
+      {h:'Дараагийн вакцин',w:15},{h:'Энэ сарын сүү (л)',w:15,t:'n1'},{h:'Сүүлд тэжээсэн',w:14},
+      {h:'Сүүлд харагдсан',w:17},{h:'Өргөрөг',w:11,t:'n'},{h:'Уртраг',w:11,t:'n'}]});
+  }
+
+  if(document.getElementById('xMilk').checked){
+    let rows;
+    try {
+      const {data, error} = await fetchAll(()=>sb.rpc('export_milk_monthly', {p_from:from, p_to:to, p_farm_id:farm || null}).order('cattle_id').order('month'));
+      if(error) throw error;
+      rows = (data || []).map(m=>[tagOfId(m.cattle_id), ownerOfId(m.cattle_id), String(m.month).slice(0, 7).replace('-', '/'),
+        m.days, Number(m.liters), m.days ? Math.round(Number(m.liters) / m.days * 10) / 10 : null])
+        .sort((a, b)=>a[0].localeCompare(b[0]) || a[2].localeCompare(b[2]));
+    } catch(e){ rows = failRow(e); }
+    sheets.push({name:'Сүү сараар', rows, cols:[{h:'Таг',w:12},{h:'Эзэмшигч',w:18},{h:'Сар',w:9},
+      {h:'Бүртгэсэн өдөр',w:14,t:'n'},{h:'Нийт (л)',w:10,t:'n1'},{h:'Өдрийн дундаж (л)',w:16,t:'n1'}]});
+  }
+
+  if(document.getElementById('xVacc').checked){
+    let rows;
+    try {
+      const {data, error} = await fetchAll(()=>farmQ(sb.from('health_events')
+        .select('id,cattle_id,vaccine_name,title,given_on,occurred_at,due_next,detail').eq('kind', 'vaccination')
+        .gte('occurred_at', from + 'T00:00:00+08:00').lte('occurred_at', to + 'T23:59:59+08:00'))
+        .order('occurred_at').order('id'));
+      if(error) throw error;
+      rows = (data || []).map(v=>[fmtD(v.given_on || v.occurred_at), tagOfId(v.cattle_id), ownerOfId(v.cattle_id),
+        v.vaccine_name || v.title || '', v.due_next ? fmtD(v.due_next) : '', v.detail || '']);
+    } catch(e){ rows = failRow(e); }
+    sheets.push({name:'Вакцин', rows, cols:[{h:'Огноо',w:12},{h:'Таг',w:12},{h:'Эзэмшигч',w:18},
+      {h:'Вакцин',w:20},{h:'Дараагийн тун',w:14},{h:'Тэмдэглэл',w:30}]});
+  }
+
+  if(document.getElementById('xRepro').checked){
+    let rows;
+    try {
+      const {data, error} = await fetchAll(()=>farmQ(sb.from('repro_events')
+        .select('id,cattle_id,kind,event_date,method,sire_tag,sire_name,result,expected_date,note,repro_calves(sex,birth_status,birth_weight_kg)')
+        .gte('event_date', from).lte('event_date', to))
+        .order('event_date').order('id'));
+      if(error) throw error;
+      rows = (data || []).map(e=>[fmtD(e.event_date), tagOfId(e.cattle_id), ownerOfId(e.cattle_id),
+        X_KIND[e.kind] || e.kind, e.kind==='insemination' ? (X_METHOD[e.method] || e.method || '') : '',
+        [e.sire_tag, e.sire_name].filter(Boolean).join(' · '), e.result ? (X_RESULT[e.result] || e.result) : '',
+        e.expected_date ? fmtD(e.expected_date) : '',
+        (e.repro_calves || []).map(k=>`${k.sex==='female' ? 'Эм' : 'Эр'}, ${X_BIRTH[k.birth_status] || k.birth_status || ''}${k.birth_weight_kg ? ', ' + k.birth_weight_kg + ' кг' : ''}`).join('; '),
+        e.note || '']);
+    } catch(e){ rows = failRow(e); }
+    sheets.push({name:'Хээл, төл', rows, cols:[{h:'Огноо',w:12},{h:'Таг',w:12},{h:'Эзэмшигч',w:18},
+      {h:'Үйл явдал',w:14},{h:'Арга',w:18},{h:'Эцэг',w:16},{h:'Үр дүн',w:15},{h:'Төллөх огноо',w:13},
+      {h:'Төл',w:28},{h:'Тэмдэглэл',w:28}]});
+  }
+  return {sheets, farm, from, to};
+}
+document.getElementById('xSave').addEventListener('click', async ()=>{
+  const note = document.getElementById('xNote'), btn = document.getElementById('xSave');
+  if(!['xHerd','xMilk','xVacc','xRepro'].some(id=>document.getElementById(id).checked)){
+    note.textContent = 'Дор хаяж нэг хуудас сонгоно уу.'; note.style.display = ''; return;
+  }
+  btn.disabled = true; btn.textContent = 'Бэлдэж байна…';
+  note.style.display = 'none';
+  try {
+    const {sheets, farm, from, to} = await buildExport();
+    const fc = farm ? ((farms.find(f=>f.id===farm) || {}).code || 'farm') : (myRole==='super_admin' ? 'all' : ((farms[0] || {}).code || 'farm'));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(xlsxBlob(sheets));
+    a.download = `YAK-TAG_${fc}_${from}_${to}.xlsx`;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    closeModal('exportModal');
+    toast('Excel файл татагдлаа');
+  } catch(e){
+    note.textContent = 'Бэлдэж чадсангүй: ' + mnError(e.message || String(e)); note.style.display = '';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Татах';
+  }
+});
 
 function farmOptions(){
   return farms.map(f=>`<option value="${esc(f.id)}">${esc(f.code)} · ${esc(f.name)}</option>`).join('');
@@ -2246,7 +2681,7 @@ document.getElementById('mpSave').addEventListener('click', async ()=>{
 const tagOf  = id => (allCattle.find(c=>c.id===id)||{}).tag_code || '';
 const farmOf = id => adminFarms.find(f=>f.id===id);
 const rowActions = {
-  openUser, resetPw, delUser, restFarm, openEdit, editFarm, setTagUid,
+  openUser, resetPw, delUser, restFarm, openEdit, editFarm, setTagUid, openTransfer,
   archFarm:  id => { const f=farmOf(id); if(f) archFarm(id,f.name); },
   delFarm:   id => { const f=farmOf(id); if(f) delFarm(id,f.name,f.cattle_count,f.user_count); },
   openMilk:  id => openMilk(id, tagOf(id)),

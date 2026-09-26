@@ -51,6 +51,10 @@ input{font-family:inherit;font-size:16px}
 .btn-primary{width:100%;padding:14px;background:var(--khukh);color:#fff;border:0;border-radius:11px;
   font-weight:600;font-size:1rem}
 .btn-primary:disabled{opacity:.55}
+.btn-ghost{background:#F0F2F5;color:var(--ink);margin-top:8px}
+.tgok{background:var(--steppe-light);color:var(--steppe);padding:12px 14px;border-radius:11px;font-weight:700}
+.tglink{display:block;text-align:center;text-decoration:none;margin-top:14px}
+.tgsteps{margin:10px 0 0 20px;font-size:.88rem;line-height:1.75}
 .err{background:var(--alert-light);color:var(--alert);padding:10px 13px;border-radius:9px;
   font-size:.85rem;margin-bottom:15px;display:none}
 
@@ -205,6 +209,7 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
       <img src="assets/logo-64.png" alt="">
       <span class="brand">YAK-TAG</span>
       <button class="out" id="myPwBtn" style="margin-left:auto">Нууц үг</button>
+      <button class="out" id="tgBtn" style="margin-left:8px;display:none">Telegram</button>
       <button class="out" id="signoutBtn" style="margin-left:8px">Гарах</button>
     </div>
     <div class="tagbig" id="tagBig">—</div>
@@ -216,6 +221,14 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 </div>
 
 <!-- Change own password. Forgot it? The admin sets a new one. -->
+<div class="pwover" id="tgModal">
+  <div class="card">
+    <h2><span class="dot"></span>Telegram мэдэгдэл</h2>
+    <div id="tgBody"></div>
+    <button class="btn-primary btn-ghost" id="tgClose">Хаах</button>
+  </div>
+</div>
+
 <div class="pwover" id="myPwModal">
   <div class="card">
     <h2><span class="dot"></span>Нууц үг солих</h2>
@@ -285,6 +298,61 @@ loginBtn.addEventListener('click', doLogin);
 document.getElementById('password').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
+// ---------- Telegram alerts (schema_v38) ----------
+// The button appears only once the bot is set up. Linking: a one-time
+// link opens Telegram, the user presses Start, the page notices.
+let tgPoll = null;
+async function tgInit() {
+  try {
+    const { data, error } = await sb.rpc('telegram_status');
+    if (!error && data && data.configured) document.getElementById('tgBtn').style.display = '';
+  } catch (e) {}
+}
+async function renderTelegram() {
+  const box = document.getElementById('tgBody');
+  clearInterval(tgPoll);
+  const { data: st, error } = await sb.rpc('telegram_status');
+  if (error) { box.innerHTML = `<div class="err" style="display:block">${esc(mnError(error.message))}</div>`; return; }
+  if (st.linked) {
+    box.innerHTML = `<div class="tgok">✓ Холбогдсон${st.tg_name ? ': ' + esc(st.tg_name) : ''}</div>
+      <p class="hint">Алга болсон гэж мэдэгдсэн мал тань уншуулагдвал хэзээ, хаана уншуулсныг энэ Telegram-д шууд мэдэгдэнэ.</p>
+      <button class="btn-primary" id="tgTest" style="margin-top:14px">Туршилт илгээх</button>
+      <button class="btn-primary btn-ghost" id="tgUnlink" style="color:var(--alert)">Салгах</button>`;
+    document.getElementById('tgTest').onclick = async () => {
+      const { error } = await sb.rpc('telegram_test');
+      toast(error ? error.message : 'Илгээлээ — Telegram-аа шалгана уу', !!error);
+    };
+    document.getElementById('tgUnlink').onclick = async () => {
+      if (!confirm('Telegram мэдэгдлийг салгах уу?')) return;
+      const { error } = await sb.rpc('telegram_unlink');
+      if (error) { toast(error.message, true); return; }
+      toast('Салгалаа'); renderTelegram();
+    };
+    return;
+  }
+  const { data: lk, error: e2 } = await sb.rpc('telegram_link_code');
+  if (e2) { box.innerHTML = `<div class="err" style="display:block">${esc(mnError(e2.message))}</div>`; return; }
+  box.innerHTML = `<p class="hint" style="margin-top:0">Алга болсон гэж мэдэгдсэн мал тань уншуулагдвал хэзээ, хаана уншуулсныг Telegram-аар шууд мэдэгдэнэ. Үнэгүй.</p>
+    <ol class="tgsteps"><li>Доорх товчийг дарна — Telegram нээгдэнэ.</li>
+      <li><b>Start</b> (Эхлэх) товчийг дарна.</li><li>"✅ Холбогдлоо" гэсэн мессеж ирнэ.</li></ol>
+    <a class="btn-primary tglink" href="${esc(lk.url)}" target="_blank" rel="noopener">Telegram холбох</a>
+    <p class="hint">Холбоос 30 минут хүчинтэй. Холбогдмогц энэ цонх өөрөө шинэчлэгдэнэ.</p>`;
+  let n = 0;
+  tgPoll = setInterval(async () => {
+    if (!document.getElementById('tgModal').classList.contains('on') || ++n > 60) { clearInterval(tgPoll); return; }
+    try { const { data } = await sb.rpc('telegram_status'); if (data && data.linked) { clearInterval(tgPoll); renderTelegram(); } } catch (e) {}
+  }, 4000);
+}
+document.getElementById('tgBtn').addEventListener('click', () => {
+  document.getElementById('tgBody').innerHTML = '<p class="hint">Ачаалж байна…</p>';
+  document.getElementById('tgModal').classList.add('on');
+  renderTelegram();
+});
+document.getElementById('tgClose').addEventListener('click', () => {
+  clearInterval(tgPoll);
+  document.getElementById('tgModal').classList.remove('on');
+});
+
 // ---------- change own password ----------
 // Proves the current password first (a fresh sign-in), then sets the
 // new one. No codes, no email: a forgotten password is reset by the admin.
@@ -394,6 +462,7 @@ async function boot() {
   myProf = prof || (offlineMode ? cacheGet('yt-prof') : null);
   if (prof) cacheSet('yt-prof', prof);
   watchQueue();
+  if (!offlineMode) tgInit();
 
   const tag = getTagFromUrl();
   if (!tag) {
@@ -638,6 +707,24 @@ async function loadCowExtras() {
   renderBreedEdit();
   if (cow.sex === 'female') loadRepro();
   loadFeedings();
+  loadOwnership();
+}
+
+// Who owned this animal before (schema_v39). Nothing shown when there
+// is no transfer, offline, or before v39 is run.
+const OWN_REASON = { sale: 'худалдсан', gift: 'бэлэглэсэн', inheritance: 'өв залгамжлал',
+                     correction: 'бүртгэлийн засвар', other: 'бусад' };
+async function loadOwnership() {
+  const box = document.getElementById('ownHist');
+  if (!box || !cow || offlineMode || !navigator.onLine) return;
+  try {
+    const { data, error } = await sb.rpc('cattle_ownership_history', { p_cattle_id: cow.id });
+    if (error || !data || !data.length) return;
+    box.innerHTML = `<p class="hint" style="margin:14px 0 2px">Эзэмшлийн түүх</p>` + data.map(h =>
+      `<div class="kv" style="font-size:.84rem;gap:10px"><span class="mono">${fmtDate(h.transferred_at)}</span>
+        <span style="text-align:right">${esc(h.from_name || '—')} → <b>${esc(h.to_name || '—')}</b>
+        · ${esc(OWN_REASON[h.reason] || h.reason || '')}${h.note ? ` · ${esc(h.note)}` : ''}</span></div>`).join('');
+  } catch (e) {}
 }
 
 function renderBreedEdit() {
@@ -1026,6 +1113,7 @@ function renderCow() {
                target="_blank" rel="noopener" style="color:#1B4FA8;text-decoration:none">
                ${Number(cow.last_lat).toFixed(4)}, ${Number(cow.last_lng).toFixed(4)} ↗</a>`
           : '—'}</span></div>
+      <div id="ownHist"></div>
     </div>
 
     <!-- LOST / STOLEN -->
