@@ -66,6 +66,9 @@ main{flex:1;max-width:460px;width:100%;margin:0 auto;padding:22px 18px 34px}
 .verified{color:var(--steppe);font-weight:700}
 .pending{color:var(--ink-soft)}
 .failed{color:var(--gold);font-weight:600}
+.queued{color:var(--khukh);font-weight:600;text-align:center}
+.offbar{background:#F0F2F5;color:var(--ink-soft);padding:9px 12px;border-radius:10px;
+  font-size:.82rem;font-weight:600;text-align:center;margin-bottom:12px}
 
 .login{display:block;text-align:center;margin-top:22px;padding:15px;
   background:var(--card);border:1px solid var(--line);border-radius:13px;
@@ -88,6 +91,7 @@ main{flex:1;max-width:460px;width:100%;margin:0 auto;padding:22px 18px 34px}
 <div class="foot">Энэ мал YAK-TAG системд бүртгэлтэй.</div>
 
 <script src="config.js"></script>
+<script src="offline.js"></script>
 <script>
 let scanId = null;
 
@@ -107,7 +111,28 @@ async function boot(){
     return;
   }
 
-  const { data, error } = await sb.rpc('public_tag_lookup', { p_tag_code: tag });
+  let data = null, error = null;
+  try { ({ data, error } = await sb.rpc('public_tag_lookup', { p_tag_code: tag })); }
+  catch (e) { error = e; }
+
+  // No signal: show the last copy this phone saw of this tag (photo
+  // may not load, but the call button works on voice without data),
+  // and still save the scan to the offline queue.
+  if (error && isOffline(error)) {
+    const cached = readCache(tag);
+    if (cached) { render(cached, true); }
+    else {
+      document.getElementById('main').innerHTML =
+        `<div class="notfound"><h2>Сүлжээ байхгүй</h2>
+         <p>Таг <b>${esc(tag)}</b> уншигдлаа. Байршил утсанд хадгалагдаж,
+         сүлжээ орохоор автоматаар илгээгдэнэ.</p>
+         <div class="locrow" id="locRow"><span class="spin"></span>
+         <span class="pending">Байршил тогтоож байна…</span></div></div>`;
+    }
+    logScan(tag);
+    return;
+  }
+
   // !tag_code: older versions of public_tag_lookup returned an all-null
   // row for unknown tags (fixed in schema_v22) — treat it as not found.
   if(error || !data || !data.length || !data[0].tag_code){
@@ -117,11 +142,25 @@ async function boot(){
     return;
   }
 
+  writeCache(tag, data[0]);
   render(data[0]);
   logScan(tag);
 }
 
-function render(c){
+function isOffline(error){
+  if (!navigator.onLine) return true;
+  return /fetch|network|load failed|timeout|abort/i.test(String(error && (error.message || error)));
+}
+// Last lookup per tag, so a tap with no signal still shows something.
+// Holds only what this page already displayed.
+function readCache(tag){
+  try { return JSON.parse(localStorage.getItem('yt-tag:' + tag)); } catch (e) { return null; }
+}
+function writeCache(tag, row){
+  try { localStorage.setItem('yt-tag:' + tag, JSON.stringify(row)); } catch (e) {}
+}
+
+function render(c, offline){
   // The public photo sits in a separate PUBLIC bucket. The private
   // cattle-photos bucket holds muzzle prints and evidence and is
   // never reachable from this page.
@@ -153,6 +192,7 @@ function render(c){
     : `<button class="call" disabled>Утасны дугаар бүртгэгдээгүй</button>`;
 
   document.getElementById('main').innerHTML = `
+    ${offline ? '<div class="offbar">Сүлжээгүй — энэ утсанд сүүлд хадгалсан мэдээлэл</div>' : ''}
     ${lostBar}
     ${photo}
     <div class="idblock">
@@ -177,27 +217,36 @@ function setLoc(state){
     el.innerHTML = `<span class="tick">✓</span><span class="verified">Байршил бүртгэгдлээ</span>`;
   }else if(state === 'denied'){
     el.innerHTML = `<span class="failed">Байршил аваагүй</span>`;
+  }else if(state === 'queued'){
+    // Saved on the phone, not yet on the server — say exactly that.
+    el.innerHTML = `<span class="queued">Сүлжээгүй — утсанд хадгалагдлаа, сүлжээ орохоор илгээнэ</span>`;
   }else{
     el.innerHTML = `<span class="pending">Байршил боломжгүй</span>`;
   }
 }
 
+// The scan goes through the offline queue (offline.js): stored on the
+// phone first, sent now if there is signal, otherwise later. The time
+// is taken at the tap, not when GPS or the network answers.
 function logScan(tag){
-  const send = (lat,lng,acc) => {
-    sb.rpc('record_public_scan',{
-      p_tag_code: tag, p_lat: lat, p_lng: lng, p_accuracy: acc,
-      p_user_agent: navigator.userAgent.slice(0,200)
-    }).then(({data,error})=>{
-      scanId = data;
-      if(error){ setLoc('unavailable'); return; }
-      setLoc(lat != null ? 'ok' : 'denied');
+  const scannedAt = new Date().toISOString();
+  const send = async (lat,lng,acc) => {
+    const r = await ytQueue.add('public_scan', {
+      tag_code: tag, lat, lng, accuracy: acc,
+      user_agent: navigator.userAgent.slice(0,200),
+      client_uuid: ytUuid(), scanned_at: scannedAt
     });
+    scanId = r.result;
+    if(r.queued){ setLoc('queued'); return; }
+    if(!r.sent){ setLoc('unavailable'); return; }
+    setLoc(lat != null ? 'ok' : 'denied');
   };
   if(!navigator.geolocation){ setLoc('unavailable'); send(null,null,null); return; }
   navigator.geolocation.getCurrentPosition(
     pos => send(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
     ()  => send(null,null,null),
-    { enableHighAccuracy:true, timeout:12000, maximumAge:30000 }
+    // GPS works without mobile data, but a cold fix takes longer offline.
+    { enableHighAccuracy:true, timeout: navigator.onLine ? 12000 : 25000, maximumAge:30000 }
   );
 }
 

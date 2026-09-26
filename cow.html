@@ -156,6 +156,8 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 .privtag{background:#F0F2F5;color:var(--ink-soft)}
 .kbtag{font-family:var(--mono);font-size:.62rem;color:var(--ink-soft)}
 .notfound{text-align:center;padding:60px 20px;color:var(--ink-soft)}
+.offbar{background:#F0F2F5;color:var(--ink-soft);padding:11px 14px;border-radius:12px;
+  font-size:.84rem;font-weight:600;line-height:1.5;margin:14px 16px 0}
 .notfound h2{color:var(--ink);margin-bottom:8px}
 </style>
 </head>
@@ -199,6 +201,7 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
 
 <script src="config.js"></script>
+<script src="offline.js"></script>
 <script>
 let cow = null;
 let isSuper = false;
@@ -284,9 +287,31 @@ function updateGpsNote() {
 }
 
 // ---------- boot ----------
+// The moment this page opened = when the tag was tapped. Used as the
+// scan time even if GPS or the network answers much later.
+const openedAt = new Date().toISOString();
+let offlineMode = false;
+
+function isOffline(error) {
+  if (!navigator.onLine) return true;
+  return /fetch|network|load failed|timeout|abort/i.test(String(error && (error.message || error)));
+}
+// Last good copy of each animal and of who is signed in, on this phone
+// only, so the page still opens (and the scan is still saved) with no
+// signal. Holds only what this page already showed its owner.
+function cacheGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+function cacheSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
 async function boot() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
+  let session = null;
+  try { ({ data: { session } } = await sb.auth.getSession()); } catch (e) {}
+
+  // No signal and the login token needs refreshing: getSession() gives
+  // nothing. Open from the saved copy if this phone has one — the
+  // queued scan is sent with a fresh token once the network is back.
+  if (!session && !navigator.onLine && cacheGet('yt-uid')) {
+    offlineMode = true;
+  } else if (!session) {
     document.getElementById('loginView').style.display = 'grid';
     document.getElementById('appView').style.display = 'none';
     return;
@@ -294,9 +319,12 @@ async function boot() {
   document.getElementById('loginView').style.display = 'none';
   document.getElementById('appView').style.display = 'block';
 
+  if (session) cacheSet('yt-uid', session.user.id);
+
   // Role decides whether destructive actions appear. The database
   // enforces it independently — this only hides what would fail anyway.
-  const prof = await myProfile();
+  let prof = null;
+  if (!offlineMode) { try { prof = await myProfile(); } catch (e) {} }
   isSuper = !!(prof && prof.role === 'super_admin');
 
   const tag = getTagFromUrl();
@@ -313,16 +341,43 @@ async function boot() {
   // One scan per page open, logged after GPS answers. The timeout
   // covers a permission prompt the herder never taps — without it
   // the scan would never be recorded at all.
-  await Promise.race([gpsReady, new Promise(r => setTimeout(r, 20000))]);
+  // Offline, a cold GPS fix takes longer (no network assistance).
+  const wait = navigator.onLine ? 20000 : 35000;
+  await Promise.race([gpsReady, new Promise(r => setTimeout(r, wait))]);
   logScan();
 }
 
 async function loadCow(tag) {
-  const { data, error } = await sb
-    .from('cattle_dashboard')
-    .select('*')
-    .eq('tag_code', tag)
-    .maybeSingle();
+  let data = null, error = null;
+  if (!offlineMode) {
+    try {
+      ({ data, error } = await sb
+        .from('cattle_dashboard')
+        .select('*')
+        .eq('tag_code', tag)
+        .maybeSingle());
+    } catch (e) { error = e; }
+  }
+
+  if (offlineMode || (error && isOffline(error))) {
+    const saved = cacheGet('yt-cow:' + tag);
+    if (saved) {
+      cow = saved;
+      renderCow();
+      document.getElementById('cowBody').insertAdjacentHTML('afterbegin',
+        `<div class="offbar">Сүлжээ байхгүй — энэ утсанд сүүлд хадгалсан мэдээлэл.
+         Уншуулалт утсанд хадгалагдаж, сүлжээ орохоор илгээгдэнэ.
+         Сүү, тэжээл, зураг сүлжээтэй үед л хадгалагдана.</div>`);
+      return;
+    }
+    document.getElementById('tagBig').textContent = tag;
+    document.getElementById('cowMeta').textContent = 'Сүлжээ байхгүй';
+    document.getElementById('cowBody').innerHTML =
+      `<div class="notfound"><h2>Сүлжээ байхгүй</h2>
+       <p>Энэ мал энэ утсанд хадгалагдаагүй байна. Сүлжээтэй газар нэг удаа
+       нээвэл дараа нь сүлжээгүй үед ч нээгдэнэ.</p></div>`;
+    return;
+  }
 
   if (error || !data) {
     document.getElementById('tagBig').textContent = tag;
@@ -333,6 +388,7 @@ async function loadCow(tag) {
     return;
   }
   cow = data;
+  cacheSet('yt-cow:' + tag, data);
   renderCow();
   loadPhotos();
   // The scan itself is logged once, from boot(). loadCow() is also
@@ -879,20 +935,29 @@ async function loadMilkHistory(range) {
 }
 
 // ---------- scan log ----------
+// Through the offline queue (offline.js): kept on the phone first,
+// sent now if there is signal, otherwise as soon as there is.
+// scan_events.client_uuid is unique, so a retry can never double up.
 async function logScan() {
-  const { data: { user } } = await sb.auth.getUser();
-  await sb.from('scan_events').insert({
-    client_uuid: crypto.randomUUID(),
+  let uid = cacheGet('yt-uid');
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) uid = session.user.id;
+  } catch (e) {}
+  if (!uid) return;
+
+  const r = await ytQueue.add('app_scan', {
+    client_uuid: ytUuid(),
     farm_id: cow.farm_id,
     cattle_id: cow.id,
-    scanned_by: user.id,
+    scanned_by: uid,
     method: 'nfc',
     lat: gps ? gps.lat : null,
     lng: gps ? gps.lng : null,
     accuracy_m: gps ? gps.accuracy : null,
-    scanned_at: new Date().toISOString(),
-    was_offline: false
+    scanned_at: openedAt
   });
+  if (r.queued) toast('Сүлжээгүй — уншуулалт утсанд хадгалагдлаа');
 }
 
 boot();
