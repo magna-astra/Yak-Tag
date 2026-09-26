@@ -124,18 +124,30 @@ tbody tr:hover{background:#FAFBFD}
 /* Fixed layout: every column keeps its width, text never pushes the
    table wider; long text ends in "…" with the full value on hover. */
 #herdTable{table-layout:fixed;width:100%;min-width:1060px;font-size:13px}
-#herdTable th{font-size:12px;padding:10px 8px;white-space:normal;line-height:1.3;vertical-align:bottom}
-#herdTable tbody td{padding:9px 8px;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#herdTable thead th{font-size:12px;padding:10px 8px;white-space:normal;line-height:1.3;vertical-align:bottom;
+  background:var(--khukh-l);color:var(--khukh)}
+#herdTable tbody td{padding:10px 8px;vertical-align:middle;white-space:normal;word-break:break-word;line-height:1.35}
+#herdTable tbody tr:nth-child(even){background:#FBFCFE}
+#herdTable .w-menu{width:44px}
+.ic{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  vertical-align:-3px;margin-right:4px;flex:0 0 auto}
+.c-milk{color:#1B4FA8} .c-vacc{color:#2C7A45} .c-heel{color:#B0457A} .c-feed{color:#B8892C}
+.c-seen{color:#0E7490} .c-owner{color:#5A6880} .c-tag{color:#1B4FA8} .c-stat{color:#2C7A45}
+.milkv{color:var(--steppe)!important}
+.stat{display:flex;gap:12px;align-items:flex-start}
+.stat .sic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}
+.stat .sic .ic{width:18px;height:18px;margin:0}
+.stat.blue .sic{background:var(--khukh-l);color:var(--khukh)} .stat.green .sic{background:var(--steppe-l);color:var(--steppe)}
+.stat.gold .sic{background:var(--gold-l);color:var(--gold-d)} .stat.red .sic{background:var(--alert-l);color:var(--alert)}
+.stat.pink .sic{background:#FBEAF2;color:#B0457A}
+.duegroup td{background:#F5F6F9!important;font-weight:700;font-size:.8rem;padding:8px 14px!important}
+.duegroup.red td{color:var(--alert)} .duegroup.amber td{color:var(--gold-d)}
 #herdTable td.num,#herdTable th.num{text-align:right}
-#herdTable .w-animal{width:15%} #herdTable .w-owner{width:10%} #herdTable .w-milk{width:6%}
-#herdTable .w-month{width:7%}  #herdTable .w-fed{width:7%}    #herdTable .w-vdone{width:9%}
-#herdTable .w-vnext{width:9%}  #herdTable .w-repro{width:11%} #herdTable .w-seen{width:11%}
-#herdTable .w-status{width:10%} #herdTable .w-menu{width:5%}
 #herdTable .mono{font-family:var(--mono);font-size:12.5px}
 #herdTable td.menucell{overflow:visible}
 .vplus{padding:0 6px;margin-left:4px;font-size:.75rem;line-height:18px}
 #herdTable tr.urgent td:first-child{box-shadow:inset 3px 0 0 var(--alert)}
-.animal .sub{font-size:.78rem;color:var(--ink-soft);margin-top:2px;white-space:nowrap}
+.animal .sub{font-size:.78rem;color:var(--ink-soft);margin-top:2px;white-space:normal}
 .animal .tag-code{font-size:.9rem}
 .ghostlink{background:none;border:0;color:var(--khukh);font-weight:600;font-size:.82rem;padding:2px 0}
 .ghostlink:disabled{color:var(--ink-soft);cursor:default}
@@ -221,6 +233,8 @@ body.role-herder .col-owner{display:none}
 </style>
 </head>
 <body>
+<!-- Icons: Tabler Icons (MIT) https://tabler.io/icons -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-tag" viewBox="0 0 24 24"><path d="M7.5 7.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M3 6v5.172a2 2 0 0 0 .586 1.414l7.71 7.71a2.41 2.41 0 0 0 3.408 0l5.592 -5.592a2.41 2.41 0 0 0 0 -3.408l-7.71 -7.71a2 2 0 0 0 -1.414 -.586h-5.172a3 3 0 0 0 -3 3z" /></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></symbol><symbol id="i-milk" viewBox="0 0 24 24"><path d="M8 6h8v-2a1 1 0 0 0 -1 -1h-6a1 1 0 0 0 -1 1v2z" /><path d="M16 6l1.094 1.759a6 6 0 0 1 .906 3.17v8.071a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-8.071a6 6 0 0 1 .906 -3.17l1.094 -1.759" /><path d="M12 16m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M10 10h4" /></symbol><symbol id="i-chart-bar" viewBox="0 0 24 24"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z" /><path d="M4 20h14" /></symbol><symbol id="i-grain" viewBox="0 0 24 24"><path d="M4.5 9.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M9.5 4.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M9.5 14.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M4.5 19.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M14.5 9.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19.5 4.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M14.5 19.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19.5 14.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></symbol><symbol id="i-vaccine" viewBox="0 0 24 24"><path d="M17 3l4 4" /><path d="M19 5l-4.5 4.5" /><path d="M11.5 6.5l6 6" /><path d="M16.5 11.5l-6.5 6.5h-4v-4l6.5 -6.5" /><path d="M7.5 12.5l1.5 1.5" /><path d="M10.5 9.5l1.5 1.5" /><path d="M3 21l3 -3" /></symbol><symbol id="i-calendar-event" viewBox="0 0 24 24"><path d="M4 5m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" /><path d="M16 3l0 4" /><path d="M8 3l0 4" /><path d="M4 11l16 0" /><path d="M8 15h2v2h-2z" /></symbol><symbol id="i-baby-carriage" viewBox="0 0 24 24"><path d="M8 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M18 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M2 5h2.5l1.632 4.897a6 6 0 0 0 5.693 4.103h2.675a5.5 5.5 0 0 0 0 -11h-.5v6" /><path d="M6 9h14" /><path d="M9 17l1 -3" /><path d="M16 14l1 3" /></symbol><symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" /></symbol><symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M11.46 20.846a12 12 0 0 1 -7.96 -14.846a12 12 0 0 0 8.5 -3a12 12 0 0 0 8.5 3a12 12 0 0 1 -.09 7.06" /><path d="M15 19l2 2l4 -4" /></symbol><symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></symbol><symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" /><path d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 2.712 -3.678 4.32 -4.674m2.86 -1.146a9.055 9.055 0 0 1 1.82 -.18c3.6 0 6.6 2 9 6c-.666 1.11 -1.379 2.067 -2.138 2.87" /><path d="M3 3l18 18" /></symbol><symbol id="i-heart" viewBox="0 0 24 24"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /></symbol></svg>
 
 <!-- ============ LOGIN ============ -->
 <div class="login-wrap" id="loginView">
@@ -315,16 +329,16 @@ body.role-herder .col-owner{display:none}
         <table id="herdTable">
           <thead>
             <tr>
-              <th class="w-animal">Мал</th>
-              <th class="w-owner col-owner">Эзэмшигч</th>
-              <th class="w-milk num" id="milkHead">Сүү</th>
-              <th class="w-month num">Сарын нийт</th>
-              <th class="w-fed">Тэжээсэн</th>
-              <th class="w-vdone">Вакцин хийсэн</th>
-              <th class="w-vnext">Дараагийн вакцин</th>
-              <th class="w-repro">Хээл</th>
-              <th class="w-seen">Сүүлд харагдсан</th>
-              <th class="w-status">Төлөв</th>
+              <th><svg class="ic c-tag"><use href="#i-tag"/></svg>Мал</th>
+              <th class="col-owner"><svg class="ic c-owner"><use href="#i-user"/></svg>Эзэмшигч</th>
+              <th class="num"><svg class="ic c-milk"><use href="#i-milk"/></svg><span id="milkHead">Сүү</span></th>
+              <th class="num"><svg class="ic c-milk"><use href="#i-chart-bar"/></svg>Сарын нийт</th>
+              <th><svg class="ic c-feed"><use href="#i-grain"/></svg>Тэжээсэн</th>
+              <th><svg class="ic c-vacc"><use href="#i-vaccine"/></svg>Вакцин хийсэн</th>
+              <th><svg class="ic c-vacc"><use href="#i-calendar-event"/></svg>Дараагийн вакцин</th>
+              <th><svg class="ic c-heel"><use href="#i-baby-carriage"/></svg>Хээл</th>
+              <th><svg class="ic c-seen"><use href="#i-map-pin"/></svg>Сүүлд харагдсан</th>
+              <th><svg class="ic c-stat"><use href="#i-shield-check"/></svg>Төлөв</th>
               <th class="w-menu"></th>
             </tr>
           </thead>
@@ -389,7 +403,8 @@ body.role-herder .col-owner{display:none}
         <span class="count-note">Төллөх огноо = таамаг (үүлдэр, эцэг, малын болон фермийн өмнөх төллөлтөөр)</span>
       </div></div>
 
-      <h3 style="font-size:.95rem;margin:4px 0 10px">Төллөх дөхсөн (30 хоногт, хэтэрсэн орно)</h3>
+      <h3 style="font-size:.95rem;margin:4px 0 4px"><svg class="ic c-heel"><use href="#i-baby-carriage"/></svg>Төллөх дөхсөн мал</h3>
+      <p class="mapnote" style="margin:0 0 10px">Хугацаа нь хэтэрсэн, ойрын 7 хоногт, 8–30 хоногт төллөх гэж бүлэглэв.</p>
       <div class="table-wrap" style="margin-bottom:22px"><table>
         <thead><tr><th>Дугаар</th><th class="col-owner">Эзэмшигч</th><th>Үүлдэр</th><th>Төлөв</th>
           <th>Төллөх огноо</th><th class="num">Үлдсэн</th><th>Тооцоо</th></tr></thead>
@@ -674,7 +689,7 @@ body.role-herder .col-owner{display:none}
 
 <div class="toast" id="toast"></div>
 
-<script src="../config.js?v=20260926"></script>
+<script src="../config.js?v=20260927"></script>
 <script>
 let allCattle = [], farms = [], users = [], myRole = null, myId = null;
 let map = null, markers = [];
@@ -1047,7 +1062,14 @@ function renderCalving(){
     <div class="stat"><div class="lbl">Хээлтүүлээгүй</div><div class="val">${open.length}</div></div>`;
 
   const link = c => `<a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${esc(c.tag_code)}</a>`;
-  document.getElementById('dueBody').innerHTML = due.length ? due.map(({c,r,d})=>`<tr>
+  const grp = d => d<0 ? 'over' : d<=7 ? 'week' : 'month';
+  const GRP = { over:['red','Хугацаа хэтэрсэн'], week:['red','Ойрын 7 хоногт'], month:['amber','8–30 хоногт'] };
+  let lastG = '';
+  document.getElementById('dueBody').innerHTML = due.length ? due.map(({c,r,d})=>{
+    const g = grp(d), head = g!==lastG
+      ? `<tr class="duegroup ${GRP[g][0]}"><td colspan="7">${GRP[g][1]} · ${due.filter(x=>grp(x.d)===g).length}</td></tr>` : '';
+    lastG = g;
+    return head + `<tr>
       <td class="tag-code">${link(c)}</td>
       <td class="col-owner">${esc(c.owner_name||'')}</td>
       <td class="muted">${esc(c.breed||'—')}</td>
@@ -1055,7 +1077,7 @@ function renderCalving(){
       <td>${fmtD(r.expected_date)}${r.spread?` <span class="muted">±${r.spread}</span>`:''}</td>
       <td class="num"><span class="badge ${d<0?'late':d<=7?'late':'warn'}">${d<0?`${-d} хоног хэтэрсэн`:d===0?'өнөөдөр':`${d} хоног`}</span></td>
       <td class="muted" style="white-space:normal;max-width:320px;font-size:.78rem">${esc(r.basis||'')}</td>
-    </tr>`).join('') : '<tr><td colspan="7" class="empty">30 хоногт төллөх мал алга.</td></tr>';
+    </tr>`;}).join('') : '<tr><td colspan="7" class="empty">Ойрын 30 хоногт төллөх мал алга.</td></tr>';
 
   document.getElementById('openBody').innerHTML = open.length ? open.map(({c,r,age})=>`<tr>
       <td class="tag-code">${link(c)}</td>
@@ -1103,14 +1125,15 @@ function renderStats(){
   const due = rows.filter(c=>{const d=daysUntil(c.next_vaccination_due);return d!==null&&d<=0;}).length;
   const lost = rows.filter(c=>c.status==='lost'||c.status==='stolen').length;
 
-  document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="lbl">Нийт мал</div><div class="val">${rows.length}</div></div>
-    <div class="stat"><div class="lbl">Идэвхтэй</div><div class="val">${active.length}</div></div>
-    <div class="stat"><div class="lbl">Сүү (${isToday(filterDate)?'өнөөдөр':fmtD(filterDate)})</div>
-      <div class="val">${milkTotal.toFixed(1)}<small>л</small></div></div>
-    <div class="stat"><div class="lbl">Бүртгэсэн</div><div class="val">${logged}<small>/${rows.length}</small></div></div>
-    <div class="stat"><div class="lbl">Вакцин хийх</div><div class="val">${due}</div></div>
-    <div class="stat"><div class="lbl">Алга болсон</div><div class="val">${lost}</div></div>`;
+  const card = (cls, icon, lbl, val) => `<div class="stat ${cls}"><div class="sic"><svg class="ic"><use href="#i-${icon}"/></svg></div>
+    <div><div class="lbl">${lbl}</div><div class="val">${val}</div></div></div>`;
+  document.getElementById('stats').innerHTML =
+    card('blue',  'tag',            'Нийт мал', rows.length) +
+    card('green', 'shield-check',   'Идэвхтэй', active.length) +
+    card('blue',  'milk',           `Сүү (${isToday(filterDate)?'өнөөдөр':fmtDate(filterDate)})`, `${milkTotal.toFixed(1)}<small>л</small>`) +
+    card('blue',  'chart-bar',      'Сүү бүртгэсэн', `${logged}<small>/${rows.length}</small>`) +
+    card('green', 'vaccine',        'Вакцин хийх', due) +
+    card('red',   'alert-triangle', 'Алга болсон', lost);
 }
 
 function vaccBadge(due){
@@ -1130,12 +1153,7 @@ function statusBadge(s){
 // ---------- herd table cells ----------
 // Short dates keep the columns narrow and even: "09.11" this year,
 // "2027.02.13" other years; the full Mongolian date is on hover.
-function fmtS(ts){
-  if(!ts) return '';
-  const p = mnParts(ts);
-  const mmdd = `${String(p.m).padStart(2,'0')}.${String(p.d).padStart(2,'0')}`;
-  return p.y === +mnDate().slice(0,4) ? mmdd : `${p.y}.${mmdd}`;
-}
+function fmtS(ts){ return ts ? fmtDate(ts) : ''; }   // YYYY/MM/DD everywhere
 function dateCell(ts, cls){
   if(!ts) return '<span class="dash">—</span>';
   return `<span class="mono ${cls||''}" title="${esc(fmtDateTime(ts))}">${fmtS(ts)}</span>`;
@@ -1170,10 +1188,7 @@ function vaccCell(due){
 function relSeen(ts){
   const today = mnDate(), day = mnDate(new Date(ts));
   const days = Math.round((new Date(today) - new Date(day)) / 86400000);
-  if(days<=0) return `өнөөдөр ${fmtDateTime(ts).split(', ')[1]||''}`;
-  if(days===1) return 'өчигдөр';
-  if(days<45)  return `${days} хоногийн өмнө`;
-  return fmtS(ts);
+  return fmtDateTime(ts);
 }
 function seenCell(c){
   if(!c.last_lat) return '<span class="dash">—</span>';
@@ -1182,7 +1197,7 @@ function seenCell(c){
   const globe = c.last_scan_source==='public'
     ? '<svg class="globe" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><title>Гаднаас уншуулсан</title><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>' : '';
   return `<a href="${gmapsUrl(c.last_lat,c.last_lng)}" target="_blank" rel="noopener" class="${cls}"
-            style="text-decoration:none;${cls?'':'color:var(--ink)'}" title="${esc(fmtDT(c.last_seen_at))} — Google Maps дээр нээх">${relSeen(c.last_seen_at)}</a>${globe}`;
+            style="text-decoration:none;${cls?'':'color:var(--ink)'}" title="${days} хоногийн өмнө — Google Maps дээр нээх">${relSeen(c.last_seen_at)}</a>${globe}`;
 }
 
 function milkCellNew(c){
@@ -1218,18 +1233,18 @@ function isUrgent(c){
 // ---------- attention bar (chips filter the table) ----------
 let fAttn = '';
 const ATTN = {
-  calv7: { cls:'red',   test:c=>{const r=reproById[c.id];return r&&(r.state==='bred'||r.state==='pregnant')&&r.expected_date&&daysUntil(r.expected_date)<=7;}, lbl:n=>`${n} төллөх 7 хоногт` },
-  lost:  { cls:'red',   test:c=>c.status==='lost'||c.status==='stolen', lbl:n=>`${n} алга болсон` },
-  vacc:  { cls:'amber', test:c=>{const d=daysUntil(c.next_vaccination_due);return d!==null&&d<=30;}, lbl:n=>`${n} вакцин дөхсөн / хэтэрсэн` },
-  stale: { cls:'amber', test:c=>c.status==='active'&&(!c.last_seen_at||daysSince(c.last_seen_at)>30), lbl:n=>`${n} 30+ хоног харагдаагүй` },
-  milk:  { cls:'grey',  test:c=>c.sex==='female'&&c.status==='active'&&!milkByDate[c.id], lbl:(n,t)=>`${n} / ${t} сүү бүртгээгүй` }
+  calv7: { icon:'baby-carriage', cls:'red',   test:c=>{const r=reproById[c.id];return r&&(r.state==='bred'||r.state==='pregnant')&&r.expected_date&&daysUntil(r.expected_date)<=7;}, lbl:n=>`${n} төллөх 7 хоногт` },
+  lost:  { icon:'alert-triangle', cls:'red',   test:c=>c.status==='lost'||c.status==='stolen', lbl:n=>`${n} алга болсон` },
+  vacc:  { icon:'vaccine', cls:'amber', test:c=>{const d=daysUntil(c.next_vaccination_due);return d!==null&&d<=30;}, lbl:n=>`${n} вакцин дөхсөн / хэтэрсэн` },
+  stale: { icon:'eye-off', cls:'amber', test:c=>c.status==='active'&&(!c.last_seen_at||daysSince(c.last_seen_at)>30), lbl:n=>`${n} 30+ хоног харагдаагүй` },
+  milk:  { icon:'milk', cls:'grey',  test:c=>c.sex==='female'&&c.status==='active'&&!milkByDate[c.id], lbl:(n,t)=>`${n} / ${t} сүү бүртгээгүй` }
 };
 function renderAttn(base){
   const females = base.filter(c=>c.sex==='female'&&c.status==='active').length;
   const chips = Object.entries(ATTN).map(([k,a])=>{
     const n = base.filter(a.test).length;
     if(!n && fAttn!==k) return '';
-    return `<button class="${a.cls}${fAttn===k?' on':''}" data-attn="${k}">${a.lbl(n,females)}</button>`;
+    return `<button class="${a.cls}${fAttn===k?' on':''}" data-attn="${k}"><svg class="ic"><use href="#i-${a.icon}"/></svg>${a.lbl(n,females)}</button>`;
   }).join('');
   document.getElementById('attnBar').innerHTML = chips
     ? chips + (fAttn ? '<button class="clear" data-attn="">✕ Бүгдийг харах</button>' : '')
@@ -1255,7 +1270,7 @@ function render(){
   renderAttn(base);
   const rows = fAttn ? base.filter(ATTN[fAttn].test) : base;
   document.getElementById('countNote').textContent = `${rows.length} / ${allCattle.length}`;
-  document.getElementById('milkHead').textContent = isToday(filterDate) ? 'Сүү' : `Сүү ${fmtS(filterDate)}`;
+  document.getElementById('milkHead').textContent = isToday(filterDate) ? 'Сүү' : `Сүү ${fmtDate(filterDate)}`;
   renderStats();
 
   if(!rows.length){

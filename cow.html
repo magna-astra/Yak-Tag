@@ -224,8 +224,8 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 <div class="toast" id="toast"></div>
 <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
 
-<script src="config.js?v=20260926"></script>
-<script src="offline.js?v=20260926"></script>
+<script src="config.js?v=20260927"></script>
+<script src="offline.js?v=20260927"></script>
 <script>
 let cow = null;
 let myProf = null;          // role / farm of the signed-in user
@@ -703,7 +703,7 @@ async function loadRepro() {
     const d = status.expected_date ? daysUntil(status.expected_date) : null;
     const lbl = status.state === 'pregnant' ? 'Хээлтэй' : 'Хээлтүүлсэн (баталгаажаагүй)';
     html = `<b style="color:var(--steppe)">${lbl}</b>` + (status.expected_date
-      ? ` · төллөх ~ <b>${status.expected_date}</b>${status.spread ? ` (±${status.spread} хоног)` : ''} ` +
+      ? ` · төллөх ~ <b>${fmtDate(status.expected_date)}</b>${status.spread ? ` (±${status.spread} хоног)` : ''} ` +
         (d >= 0 ? `· ${d} хоног үлдсэн` : `<span style="color:var(--alert)">· ${-d} хоног хэтэрсэн</span>`) +
         (status.basis ? `<br><span style="font-size:.76rem">Тооцоо: ${esc(status.basis)}</span>` : '')
       : ` · <span style="color:var(--gold)">хээлтүүлсэн огноо эсвэл хээлийн насыг оруулбал төллөх огноо гарна</span>`);
@@ -726,11 +726,11 @@ async function loadRepro() {
     if (e.kind === 'calving') d = [e.calving_ease && R_EASE[e.calving_ease],
       ...(e.repro_calves || []).map(x => `${x.sex === 'female' ? 'Эм' : 'Эр'} ${youngWord()} (${R_BIRTH[x.birth_status]}${x.birth_weight_kg ? `, ${x.birth_weight_kg} кг` : ''})${x.calf_cattle_id ? ' ✓таг' : ''}`)]
       .filter(Boolean).join(' · ');
-    if (e.expected_date && e.expected_is_manual) d += ` · төллөх огноо (гараар): ${e.expected_date}`;
+    if (e.expected_date && e.expected_is_manual) d += ` · төллөх огноо (гараар): ${fmtDate(e.expected_date)}`;
     if (e.note) d += ` · ${esc(e.note)}`;
     const canDel = admin || (e.recorded_by === me && Date.now() - new Date(e.created_at) < 7 * 86400000);
     return `<div class="kv" style="align-items:flex-start;gap:10px">
-      <span style="min-width:92px">${e.event_date}</span>
+      <span style="min-width:92px">${fmtDate(e.event_date)}</span>
       <span style="text-align:left;flex:1;font-weight:500"><b>${R_KIND[e.kind]}</b><br><span class="hint" style="margin:0">${d}</span></span>
       ${canDel ? `<button class="delphoto" style="width:auto;padding:4px 8px" data-del="${esc(e.id)}">✕</button>` : ''}
     </div>`;

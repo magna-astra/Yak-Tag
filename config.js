@@ -125,7 +125,7 @@ function mnDate(d = new Date()) {
   return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ulaanbaatar' });
 }
 
-// Dates in Mongolian: months are numbered ("5-р сарын 12"). The old
+// Dates as YYYY/MM/DD (Ulaanbaatar time). The old
 // toLocaleDateString('mn-MN') printed "May 12" in English on phones
 // without Mongolian locale data. Always shown in Ulaanbaatar time; a
 // plain 'YYYY-MM-DD' date is taken as-is (no timezone shift).
@@ -141,21 +141,17 @@ function mnParts(ts) {
   return { y: +p.year, m: +p.month, d: +p.day, h: p.hour, mi: p.minute };
 }
 
+// One format everywhere: YYYY/MM/DD, and YYYY/MM/DD HH:MM with a time.
 function fmtDate(ts) {
   if (!ts) return '—';
   const p = mnParts(ts);
-  // This year: "5-р сарын 12". Other years: compact "2027.02.13",
-  // which fits the dashboard badges.
-  if (p.y !== +mnDate().slice(0, 4)) {
-    return `${p.y}.${String(p.m).padStart(2, '0')}.${String(p.d).padStart(2, '0')}`;
-  }
-  return `${p.m}-р сарын ${p.d}`;
+  return `${p.y}/${String(p.m).padStart(2, '0')}/${String(p.d).padStart(2, '0')}`;
 }
 
 function fmtDateTime(ts) {
   if (!ts) return '—';
   const p = mnParts(ts);
-  return p.h == null ? fmtDate(ts) : `${fmtDate(ts)}, ${p.h}:${p.mi}`;
+  return p.h == null ? fmtDate(ts) : `${fmtDate(ts)} ${p.h}:${p.mi}`;
 }
 
 function daysUntil(dateStr) {
