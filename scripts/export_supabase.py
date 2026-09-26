@@ -24,6 +24,8 @@ TABLES = [
     "farms", "profiles", "tag_batches", "tags", "cattle",
     "cattle_photos", "scan_events", "ownership_transfers",
     "health_events", "audit_log", "heartbeat",
+    # added later: milk, pregnancy / calving, breeds, strangers' taps
+    "milk_yield", "repro_events", "repro_calves", "breeds", "public_scans",
 ]
 
 PAGE = 1000
@@ -32,9 +34,12 @@ URL = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
 KEY = os.environ.get("SUPABASE_SERVICE_KEY") or ""
 
 
-def fetch(table, offset):
+def fetch(table, offset, order):
+    # Paging needs a fixed order, or rows can repeat or go missing
+    # between pages of a table bigger than one page.
+    sort = f"&order={order}" if order else ""
     req = urllib.request.Request(
-        f"{URL}/rest/v1/{table}?select=*&limit={PAGE}&offset={offset}",
+        f"{URL}/rest/v1/{table}?select=*{sort}&limit={PAGE}&offset={offset}",
         headers={
             "apikey": KEY,
             "Authorization": f"Bearer {KEY}",
@@ -46,11 +51,14 @@ def fetch(table, offset):
 
 
 def export(table, outdir):
-    rows, offset = [], 0
+    rows, offset, order = [], 0, "id"
     while True:
         try:
-            page = fetch(table, offset)
+            page = fetch(table, offset, order)
         except urllib.error.HTTPError as e:
+            if e.code == 400 and order and offset == 0:
+                order = None          # table has no "id" column: read unsorted, as before
+                continue
             print(f"::warning::{table} HTTP {e.code} — skipped")
             return None
         except Exception as e:
