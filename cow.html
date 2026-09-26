@@ -685,11 +685,10 @@ async function loadRepro() {
     const d = status.expected_date ? daysUntil(status.expected_date) : null;
     const lbl = status.state === 'pregnant' ? 'Хээлтэй' : 'Хээлтүүлсэн (баталгаажаагүй)';
     html = `<b style="color:var(--steppe)">${lbl}</b>` + (status.expected_date
-      ? ` · төллөх ~ <b>${status.expected_date}</b> ` +
-        (d >= 0 ? `(${d} хоног үлдсэн)` : `<span style="color:var(--alert)">(${-d} хоног хэтэрсэн)</span>`)
-      : ` · <span style="color:var(--gold)">${cowExtra.breed_code
-          ? 'төллөх огноо тодорхойгүй — хээлтүүлсэн огноо, хээлийн нас эсвэл төллөх огноог оруулна уу'
-          : 'үүлдэр сонгоогүй тул төллөх огноо гараагүй — доорх "Үүлдэр сонгох"-ыг дарна уу'}</span>`);
+      ? ` · төллөх ~ <b>${status.expected_date}</b>${status.spread ? ` (±${status.spread} хоног)` : ''} ` +
+        (d >= 0 ? `· ${d} хоног үлдсэн` : `<span style="color:var(--alert)">· ${-d} хоног хэтэрсэн</span>`) +
+        (status.basis ? `<br><span style="font-size:.76rem">Тооцоо: ${esc(status.basis)}</span>` : '')
+      : ` · <span style="color:var(--gold)">хээлтүүлсэн огноо эсвэл хээлийн насыг оруулбал төллөх огноо гарна</span>`);
   }
   if (status && status.calvings) html += `<br>Нийт төллөсөн: ${status.calvings} удаа`;
   stateEl.innerHTML = html;
@@ -708,7 +707,7 @@ async function loadRepro() {
     if (e.kind === 'calving') d = [e.calving_ease && R_EASE[e.calving_ease],
       ...(e.repro_calves || []).map(x => `${x.sex === 'female' ? 'Эм' : 'Эр'} ${youngWord()} (${R_BIRTH[x.birth_status]}${x.birth_weight_kg ? `, ${x.birth_weight_kg} кг` : ''})${x.calf_cattle_id ? ' ✓таг' : ''}`)]
       .filter(Boolean).join(' · ');
-    if (e.expected_date) d += ` · төллөх ~ ${e.expected_date}`;
+    if (e.expected_date && e.expected_is_manual) d += ` · төллөх огноо (гараар): ${e.expected_date}`;
     if (e.note) d += ` · ${esc(e.note)}`;
     const canDel = admin || (e.recorded_by === me && Date.now() - new Date(e.created_at) < 7 * 86400000);
     return `<div class="kv" style="align-items:flex-start;gap:10px">
@@ -731,7 +730,7 @@ function openReproForm(kind) {
   let body = `<label class="hint" style="display:block;margin-top:12px">Огноо</label>
     <input type="date" id="rfDate" value="${today}" max="${today}" style="${inp}">`;
   if ((kind === 'insemination' || kind === 'pregnancy_check') && !cowExtra.breed_code) body += `
-    <div class="gps-note bad" style="margin-top:12px">Үүлдэр сонгоогүй байна — төллөх огноо автоматаар гарахгүй.
+    <div class="gps-note" style="margin-top:12px;background:var(--khukh-light);color:var(--khukh)">Үүлдэр сонгоогүй — фермийн мэдээллээр таамаглана. Үүлдэр сонговол илүү нарийвчлалтай.
       <button type="button" class="lockbtn" id="rfPickBreed" style="margin-top:8px">Үүлдэр сонгох</button></div>`;
   if (kind === 'insemination') body += `
     <label class="hint" style="display:block;margin-top:10px">Арга</label>
@@ -748,7 +747,7 @@ function openReproForm(kind) {
     <label class="hint" style="display:block;margin-top:10px">Хээлийн нас, хоног (мэдвэл — огноог нарийвчилна)</label>
     <input type="number" id="rfAge" min="0" max="450" inputmode="numeric" style="${inp}">`;
   if (kind === 'insemination' || kind === 'pregnancy_check') body += `
-    <label class="hint" style="display:block;margin-top:10px">Төллөх огноо (мэдвэл — хоосон бол автоматаар тооцно)</label>
+    <label class="hint" style="display:block;margin-top:10px">Төллөх огноо — хоосон орхивол автоматаар таамаглана (малын эмч хэлсэн бол оруулна)</label>
     <input type="date" id="rfExpected" style="${inp}">`;
   if (kind === 'calving') body += `
     <label class="hint" style="display:block;margin-top:10px">Төллөлтийн хүндрэл</label>

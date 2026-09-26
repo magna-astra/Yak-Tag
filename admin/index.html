@@ -918,7 +918,8 @@ function reproBadge(id){
   const lbl = r.state==='pregnant' ? 'Хээлтэй' : 'Хээлтүүлсэн';
   const when = r.expected_date ? ` · ${fmtD(r.expected_date)}` : '';
   const cls = d!==null && d<=30 ? 'late' : 'warn';
-  return ` <span class="badge ${cls}" title="Төллөх: ${r.expected_date||'—'}${d!==null?` (${d} хоног)`:''}">${lbl}${when}</span>`;
+  const tip = `Төллөх: ${r.expected_date||'—'}${r.spread?` ±${r.spread}`:''}${d!==null?` (${d} хоног)`:''}${r.basis?` — ${r.basis}`:''}`;
+  return ` <span class="badge ${cls}" title="${esc(tip)}">${lbl}${when}</span>`;
 }
 document.querySelectorAll('[data-repro]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('[data-repro]').forEach(x=>x.classList.remove('on'));
