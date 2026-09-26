@@ -217,6 +217,7 @@ body.role-herder .col-owner{display:none}
       <button data-tab="map">Газрын зураг</button>
       <button data-tab="users" class="super-only">Хэрэглэгчид</button>
       <button data-tab="farms" class="super-only">Фермүүд</button>
+      <button data-tab="tags" class="super-only">Тагууд</button>
     </div>
 
     <!-- ===== HERD ===== -->
@@ -325,6 +326,49 @@ body.role-herder .col-owner{display:none}
           <tbody id="farmsBody"><tr><td colspan="8" class="loading">Ачаалж байна…</td></tr></tbody>
         </table>
       </div>
+    </div>
+
+    <!-- ===== TAGS (super admin) ===== -->
+    <div class="tabpane" id="tab-tags">
+      <div class="stats" id="tagStats"></div>
+      <div class="filters">
+        <div class="frow">
+          <button class="chip on" id="newTagsBtn">+ Таг үүсгэх</button>
+          <span class="flabel">Ферм</span>
+          <select id="tFarm"><option value="">Бүх ферм</option></select>
+          <input type="search" id="tSearch" placeholder="Тагийн дугаар…">
+          <span class="count-note" id="tagCount"></span>
+        </div>
+        <div class="frow">
+          <span class="flabel">Төлөв</span>
+          <button class="chip on" data-stage="">Бүгд</button>
+          <button class="chip" data-stage="blank">Хоосон</button>
+          <button class="chip" data-stage="written">Мал хүлээж буй</button>
+          <button class="chip" data-stage="assigned">Малтай</button>
+          <button class="chip" data-stage="lost">Алдагдсан</button>
+          <button class="chip" data-stage="retired">Хасагдсан</button>
+        </div>
+        <div class="frow">
+          <span class="flabel">Сонгосон</span>
+          <span id="tagSelNote" class="muted">0</span>
+          <button class="minibtn" id="tagAssignBtn">Фермд оноох</button>
+          <button class="minibtn" id="tagLostBtn">Алдагдсан</button>
+          <button class="minibtn" id="tagRestoreBtn">Сэргээх</button>
+          <button class="minibtn" id="tagRetireBtn" style="color:#B3341F">Хасах</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th><input type="checkbox" id="tagAll" title="Харагдаж буй бүгдийг сонгох"></th>
+                <th>Дугаар</th><th>Ферм</th><th>Төлөв</th><th>Чип UID</th>
+                <th>Мал / эзэмшигч</th><th>Бичсэн</th><th>Багц</th></tr>
+          </thead>
+          <tbody id="tagsBody"><tr><td colspan="8" class="loading">Ачаалж байна…</td></tr></tbody>
+        </table>
+      </div>
+      <p class="mapnote">Малчин зөвхөн өөрийн фермийн "Мал хүлээж буй" таг дээр мал бүртгэнэ.
+        Тагийн фермийг энд зөвхөн ерөнхий админ сонгоно.</p>
     </div>
 
     <!-- ===== USERS (super admin) ===== -->
@@ -472,6 +516,35 @@ body.role-herder .col-owner{display:none}
   </div>
 </div>
 
+<div class="modal" id="newTagsModal">
+  <div class="modalbox">
+    <h3>Таг үүсгэх</h3>
+    <p class="msub">Дугаарууд системд бүртгэгдэнэ. Дараа нь чип дээр бичнэ (tools/nfc_tag.py).</p>
+    <label>Угтвар</label><input type="text" id="ntPrefix" value="YT" maxlength="6">
+    <label>Эхний дугаар</label><input type="number" id="ntFrom" placeholder="8010">
+    <label>Сүүлийн дугаар</label><input type="number" id="ntTo" placeholder="8099">
+    <label>Ферм</label><select id="ntFarm"></select>
+    <div class="mnote" id="ntPreview">Жишээ: YT-008010 … YT-008099</div>
+    <div class="mactions">
+      <button class="mcancel" onclick="closeModal('newTagsModal')">Болих</button>
+      <button class="msave" id="ntSave">Үүсгэх</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="assignTagsModal">
+  <div class="modalbox">
+    <h3>Фермд оноох</h3>
+    <p class="msub" id="atSub"></p>
+    <label>Ферм</label><select id="atFarm"></select>
+    <div class="mnote">Малтай таг шилжихгүй — малын фермийг "Мал сүрэг" хүснэгтээс засна.</div>
+    <div class="mactions">
+      <button class="mcancel" onclick="closeModal('assignTagsModal')">Болих</button>
+      <button class="msave" id="atSave">Оноох</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="newUserModal">
   <div class="modalbox">
     <h3>Шинэ хэрэглэгч</h3>
@@ -606,6 +679,7 @@ document.querySelectorAll('.tabs button').forEach(b=>{
     document.getElementById('tab-'+b.dataset.tab).classList.add('on');
     if(b.dataset.tab==='map'){ setTimeout(()=>{ initMap(); drawMap(); }, 60); }
     if(b.dataset.tab==='farms'){ loadAdminFarms(); }
+    if(b.dataset.tab==='tags'){ loadTags(); }
   });
 });
 
@@ -1233,6 +1307,160 @@ document.getElementById('userSave').addEventListener('click', async ()=>{
   toast('Хадгалагдлаа');
   loadUsers();
 });
+
+// ---------- TAGS (super admin) ----------
+// Stock of physical tags: which exist, which farm they belong to, which
+// wait for a herder, which carry an animal. The farm of a tag decides
+// who may register an animal on it, so only the super admin sets it.
+let allTags = [], tStage = '', tagSel = new Set();
+const STAGE = { blank:['none','Хоосон'], written:['warn','Мал хүлээж буй'],
+  assigned:['ok','Малтай'], lost:['late','Алдагдсан'], retired:['none','Хасагдсан'] };
+
+async function loadTags(){
+  const {data,error} = await fetchAll(
+    ()=>sb.from('admin_tag_list').select('*').order('tag_code').order('id'),
+    n=>{ if(n>=1000) document.getElementById('tagCount').textContent = `Ачаалж байна… ${n}`; });
+  if(error){
+    document.getElementById('tagsBody').innerHTML =
+      `<tr><td colspan="8" class="empty">Алдаа: ${esc(error.message)}</td></tr>`;
+    return;
+  }
+  allTags = data || [];
+  tagSel = new Set([...tagSel].filter(c=>allTags.some(t=>t.tag_code===c)));
+  const opts = farms.map(f=>`<option value="${esc(f.id)}">${esc(f.code)} · ${esc(f.name)}</option>`).join('');
+  const cur = document.getElementById('tFarm').value;
+  document.getElementById('tFarm').innerHTML = '<option value="">Бүх ферм</option>' + opts;
+  document.getElementById('tFarm').value = cur;
+  renderTags();
+}
+
+function visibleTags(){
+  const q = document.getElementById('tSearch').value.trim().toUpperCase();
+  const farm = document.getElementById('tFarm').value;
+  return allTags.filter(t=>
+    (!tStage || t.stage===tStage) &&
+    (!farm || t.farm_id===farm) &&
+    (!q || t.tag_code.toUpperCase().includes(q)));
+}
+
+function renderTags(){
+  const n = st => allTags.filter(t=>t.stage===st).length;
+  document.getElementById('tagStats').innerHTML = `
+    <div class="stat"><div class="lbl">Нийт таг</div><div class="val">${allTags.length}</div></div>
+    <div class="stat"><div class="lbl">Хоосон</div><div class="val">${n('blank')}</div></div>
+    <div class="stat"><div class="lbl">Мал хүлээж буй</div><div class="val">${n('written')}</div></div>
+    <div class="stat"><div class="lbl">Малтай</div><div class="val">${n('assigned')}</div></div>
+    <div class="stat"><div class="lbl">Алдагдсан / хасагдсан</div><div class="val">${n('lost')+n('retired')}</div></div>`;
+
+  const rows = visibleTags();
+  document.getElementById('tagCount').textContent = `${rows.length} / ${allTags.length}`;
+  document.getElementById('tagSelNote').textContent = tagSel.size;
+  document.getElementById('tagAll').checked = rows.length>0 && rows.every(t=>tagSel.has(t.tag_code));
+
+  // Render at most 1000 rows; the counts and bulk actions still cover all.
+  const shown = rows.slice(0, 1000);
+  document.getElementById('tagsBody').innerHTML = shown.length ? shown.map(t=>{
+    const [cls,lbl] = STAGE[t.stage] || ['none', t.stage];
+    return `<tr>
+      <td><input type="checkbox" class="tagchk" data-code="${esc(t.tag_code)}" ${tagSel.has(t.tag_code)?'checked':''}></td>
+      <td class="tag-code">${t.cattle_id
+        ? `<a href="../cow.html?tag=${encodeURIComponent(t.tag_code)}">${esc(t.tag_code)}</a>`
+        : esc(t.tag_code)}</td>
+      <td class="muted">${esc(t.farm_code||'')} · ${esc(t.farm_name||'')}</td>
+      <td><span class="badge ${cls}">${lbl}</span>${t.retire_reason?` <span class="muted" title="${esc(t.retire_reason)}">ⓘ</span>`:''}</td>
+      <td class="muted" style="font-family:var(--mono);font-size:.78rem">${esc(t.nfc_uid||'—')}</td>
+      <td>${t.cattle_id ? esc(t.owner_name||'—') : '<span class="muted">—</span>'}</td>
+      <td class="muted">${fmtD(t.written_at)}</td>
+      <td class="muted">${esc(t.batch_code||'—')}</td>
+    </tr>`;}).join('')
+    + (rows.length>1000 ? `<tr><td colspan="8" class="empty">Эхний 1000-г харуулав. Шүүлтүүрээр нарийсгана уу.</td></tr>` : '')
+    : '<tr><td colspan="8" class="empty">Тохирох таг алга.</td></tr>';
+}
+
+document.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-stage]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); tStage=b.dataset.stage; renderTags();}));
+document.getElementById('tFarm').addEventListener('change',renderTags);
+document.getElementById('tSearch').addEventListener('input',renderTags);
+document.getElementById('tagsBody').addEventListener('change',e=>{
+  if(!e.target.classList.contains('tagchk')) return;
+  const c = e.target.dataset.code;
+  e.target.checked ? tagSel.add(c) : tagSel.delete(c);
+  document.getElementById('tagSelNote').textContent = tagSel.size;
+});
+document.getElementById('tagAll').addEventListener('change',e=>{
+  visibleTags().forEach(t=> e.target.checked ? tagSel.add(t.tag_code) : tagSel.delete(t.tag_code));
+  renderTags();
+});
+
+function farmOptions(){
+  return farms.map(f=>`<option value="${esc(f.id)}">${esc(f.code)} · ${esc(f.name)}</option>`).join('');
+}
+function needSel(){
+  if(!tagSel.size){ toast('Эхлээд таг сонгоно уу.',true); return false; }
+  return true;
+}
+
+// create a range of codes
+function ntPreview(){
+  const p = document.getElementById('ntPrefix').value.trim().toUpperCase() || 'YT';
+  const a = parseInt(document.getElementById('ntFrom').value), b = parseInt(document.getElementById('ntTo').value);
+  const code = n => `${p}-${String(n).padStart(6,'0')}`;
+  document.getElementById('ntPreview').textContent = (a>=0 && b>=a)
+    ? `${code(a)} … ${code(b)}  (${b-a+1} таг)` : 'Жишээ: YT-008010 … YT-008099';
+}
+['ntPrefix','ntFrom','ntTo'].forEach(id=>document.getElementById(id).addEventListener('input',ntPreview));
+document.getElementById('newTagsBtn').addEventListener('click',()=>{
+  document.getElementById('ntFarm').innerHTML = farmOptions();
+  ntPreview();
+  document.getElementById('newTagsModal').classList.add('on');
+});
+document.getElementById('ntSave').addEventListener('click', async ()=>{
+  const {data,error} = await sb.rpc('admin_create_tags',{
+    p_prefix: document.getElementById('ntPrefix').value.trim(),
+    p_from: parseInt(document.getElementById('ntFrom').value),
+    p_to: parseInt(document.getElementById('ntTo').value),
+    p_farm_id: document.getElementById('ntFarm').value });
+  if(error){toast(error.message,true);return;}
+  closeModal('newTagsModal');
+  toast(`${data.created} таг үүслээ${data.skipped?` · ${data.skipped} аль хэдийн байсан`:''}`);
+  loadTags();
+});
+
+// move selected tags to a farm
+document.getElementById('tagAssignBtn').addEventListener('click',()=>{
+  if(!needSel()) return;
+  document.getElementById('atSub').textContent = `${tagSel.size} таг сонгосон`;
+  document.getElementById('atFarm').innerHTML = farmOptions();
+  document.getElementById('assignTagsModal').classList.add('on');
+});
+document.getElementById('atSave').addEventListener('click', async ()=>{
+  const {data,error} = await sb.rpc('admin_assign_tags',{
+    p_codes:[...tagSel], p_farm_id: document.getElementById('atFarm').value });
+  if(error){toast(error.message,true);return;}
+  closeModal('assignTagsModal');
+  toast(`${data.moved} таг шилжлээ${data.skipped?` · ${data.skipped} алгассан (малтай эсвэл аль хэдийн тэр ферм)`:''}`);
+  tagSel.clear(); loadTags();
+});
+
+// lost / restore / retire
+async function tagStatus(action, question, askReason){
+  if(!needSel()) return;
+  if(!confirm(`${tagSel.size} таг: ${question}`)) return;
+  const reason = askReason ? prompt('Шалтгаан (бүртгэлд үлдэнэ):','') : null;
+  if(askReason && reason===null) return;
+  const {data,error} = await sb.rpc('admin_tag_status',{p_codes:[...tagSel], p_action:action, p_reason:reason});
+  if(error){toast(error.message,true);return;}
+  toast(`${data.changed} таг өөрчлөгдлөө${data.skipped?` · ${data.skipped} алгассан`:''}`);
+  tagSel.clear(); loadTags();
+  if(action!=='restore') loadCattle();
+}
+document.getElementById('tagLostBtn').addEventListener('click',
+  ()=>tagStatus('lost','алдагдсан гэж тэмдэглэх үү? Малтай бол мал бүртгэлээ хадгална, зөвхөн тагийн холбоос салгана.',true));
+document.getElementById('tagRestoreBtn').addEventListener('click',
+  ()=>tagStatus('restore','олдсон — сэргээх үү? (зөвхөн малгүй алдагдсан таг)',false));
+document.getElementById('tagRetireBtn').addEventListener('click',
+  ()=>tagStatus('retired','БҮРМӨСӨН хасах уу? Буцаах боломжгүй.',true));
 
 // ---------- accounts (super admin) ----------
 // Creating a login and setting someone else's password need the
