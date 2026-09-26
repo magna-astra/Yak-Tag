@@ -626,6 +626,7 @@ async function loadCowExtras() {
   }
   renderBreedEdit();
   if (cow.sex === 'female') loadRepro();
+  loadFeedings();
 }
 
 function renderBreedEdit() {
@@ -733,9 +734,15 @@ async function loadRepro() {
     return `<div class="kv" style="align-items:flex-start;gap:10px">
       <span style="min-width:92px">${fmtDate(e.event_date)}</span>
       <span style="text-align:left;flex:1;font-weight:500"><b>${R_KIND[e.kind]}</b><br><span class="hint" style="margin:0">${d}</span></span>
-      ${canDel ? `<button class="delphoto" style="width:auto;padding:4px 8px" data-del="${esc(e.id)}">✕</button>` : ''}
+      ${canDel ? `<span style="display:flex;gap:6px">
+        <button class="delphoto" style="width:auto;padding:4px 8px;color:var(--khukh);border-color:var(--line)" data-edit="${esc(e.id)}" title="Засах">✎</button>
+        <button class="delphoto" style="width:auto;padding:4px 8px" data-del="${esc(e.id)}" title="Устгах">✕</button></span>` : ''}
     </div>`;
   }).join('') : '';
+  document.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => {
+    const ev = events.find(x => x.id === b.dataset.edit);
+    if (ev) openReproForm(ev.kind, ev);
+  }));
   document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
     if (!confirm('Энэ бүртгэлийг устгах уу?')) return;
     const { error } = await sb.rpc('delete_repro_event', { p_event_id: b.dataset.del });
@@ -744,9 +751,12 @@ async function loadRepro() {
   }));
 }
 
-function openReproForm(kind) {
+// ev = an existing entry to edit (prefilled); without it, a new entry.
+let reproEditing = null;
+function openReproForm(kind, ev) {
   const f = document.getElementById('reproForm');
   const today = mnDate();
+  reproEditing = ev || null;
   let body = `<label class="hint" style="display:block;margin-top:12px">Огноо</label>
     <input type="date" id="rfDate" value="${today}" max="${today}" style="${inp}">`;
   if ((kind === 'insemination' || kind === 'pregnancy_check') && !cowExtra.breed_code) body += `
@@ -780,7 +790,7 @@ function openReproForm(kind) {
     <button class="btn-primary" id="rfSave" style="margin-top:12px">Хадгалах</button>
     <button class="btn-primary" id="rfCancel" style="margin-top:8px;background:#F0F2F5;color:var(--ink)">Болих</button>`;
   f.innerHTML = `<div style="border-top:1px solid #F0F2F5;margin-top:12px;padding-top:4px">
-    <b style="display:block;margin-top:10px">${R_KIND[kind]}</b>${body}</div>`;
+    <b style="display:block;margin-top:10px">${R_KIND[kind]}${ev ? ' — засах' : ''}</b>${body}</div>`;
 
   if (kind === 'calving') {
     const addCalf = () => {
@@ -799,11 +809,30 @@ function openReproForm(kind) {
         b.classList.add('on'); row.dataset.sex = b.dataset.cs;
       }));
     };
-    addCalf();
+    const calves = ev ? (ev.repro_calves || []) : [];
+    if (!calves.length) addCalf();
+    calves.forEach(c => {
+      addCalf();
+      const row = document.getElementById('rfCalves').lastElementChild;
+      row.dataset.id = c.id;
+      row.querySelector(`[data-cs=${c.sex}]`).click();
+      row.querySelector('.cStatus').value = c.birth_status;
+      row.querySelector('.cWeight').value = c.birth_weight_kg ?? '';
+      if (c.calf_cattle_id) row.insertAdjacentHTML('beforeend', '<p class="hint" style="margin:6px 0 0">✓ Тагтай — хасах боломжгүй</p>');
+    });
     document.getElementById('rfAddCalf').addEventListener('click', addCalf);
   }
 
-  document.getElementById('rfCancel').addEventListener('click', () => { f.innerHTML = ''; });
+  if (ev) {
+    const setv = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+    setv('rfDate', ev.event_date); setv('rfNote', ev.note);
+    setv('rfMethod', ev.method); setv('rfSireTag', ev.sire_tag); setv('rfSireName', ev.sire_name);
+    setv('rfResult', ev.result); setv('rfCheck', ev.check_method); setv('rfAge', ev.foetal_age_days);
+    setv('rfEase', ev.calving_ease);
+    if (ev.expected_is_manual) setv('rfExpected', ev.expected_date);
+  }
+
+  document.getElementById('rfCancel').addEventListener('click', () => { f.innerHTML = ''; reproEditing = null; });
   const pick = document.getElementById('rfPickBreed');
   if (pick) pick.addEventListener('click', () => {
     const b = document.getElementById('breedEditBtn');
@@ -840,6 +869,24 @@ async function saveReproEvent(kind) {
     args.p_calves = calves;
   }
   const btn = document.getElementById('rfSave');
+  if (reproEditing) {                       // editing: online, straight to the server
+    if (!navigator.onLine) return show('Засахад сүлжээ шаардлагатай.');
+    if (kind === 'calving') args.p_calves = [...document.querySelectorAll('.rfCalf')].map((r, i) => ({ ...args.p_calves[i], id: r.dataset.id || null }));
+    btn.disabled = true;
+    const { error } = await sb.rpc('update_repro_event', {
+      p_event_id: reproEditing.id, p_date: args.p_date, p_method: args.p_method ?? null,
+      p_sire_tag: args.p_sire_tag ?? null, p_sire_name: args.p_sire_name ?? null,
+      p_result: args.p_result ?? null, p_check_method: args.p_check_method ?? null,
+      p_foetal_age: args.p_foetal_age ?? null, p_calving_ease: args.p_calving_ease ?? null,
+      p_expected_date: args.p_expected_date, p_note: args.p_note, p_calves: args.p_calves ?? null });
+    btn.disabled = false;
+    if (error) return show(mnError(error.message));
+    reproEditing = null;
+    document.getElementById('reproForm').innerHTML = '';
+    toast('Засагдлаа');
+    loadRepro();
+    return;
+  }
   btn.disabled = true;
   // Through the offline queue: sent now if there is signal, otherwise
   // kept on the phone and sent later (client_uuid stops doubles).
@@ -895,6 +942,7 @@ function renderCow() {
       <h2><span class="dot"></span>Тэжээл</h2>
       <div class="kv"><span>Сүүлд тэжээсэн</span><span id="lastFedVal">${fmtDate(cow.last_fed_at)}</span></div>
       <button class="feed-btn" id="feedBtn">Тэжээсэн гэж тэмдэглэх</button>
+      <div id="feedList" style="margin-top:10px"></div>
     </div>
 
     <!-- MILK HISTORY -->
@@ -1339,6 +1387,36 @@ async function loadPhotos() {
 }
 
 // ---------- feeding ----------
+// Last 5 feedings. A mistaken one can be deleted by whoever entered it
+// (7 days) or by an admin — schema_v35 delete_feeding enforces it.
+async function loadFeedings() {
+  const box = document.getElementById('feedList');
+  if (!box || !cow || offlineMode || !navigator.onLine) return;
+  let rows = [];
+  try {
+    const { data, error } = await sb.from('health_events').select('id, occurred_at, recorded_by')
+      .eq('cattle_id', cow.id).eq('kind', 'feeding').order('occurred_at', { ascending: false }).limit(5);
+    if (error) return;
+    rows = data || [];
+  } catch (e) { return; }
+  const admin = myProf && (myProf.role === 'super_admin' || (myProf.role === 'farm_admin' && myProf.farm_id === cow.farm_id));
+  const me = myProf && myProf.id;
+  box.innerHTML = rows.length ? `<p class="hint" style="margin:0 0 4px">Сүүлийн тэжээлүүд</p>` + rows.map(r => {
+    const can = admin || (r.recorded_by === me && Date.now() - new Date(r.occurred_at) < 7 * 86400000);
+    return `<div class="kv" style="align-items:center"><span>${fmtDateTime(r.occurred_at)}</span>
+      ${can ? `<button class="delphoto" style="width:auto;padding:4px 8px" data-feeddel="${esc(r.id)}" title="Устгах">✕</button>` : '<span></span>'}</div>`;
+  }).join('') : '';
+  box.querySelectorAll('[data-feeddel]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Энэ тэжээлийн бүртгэлийг устгах уу?')) return;
+    const { error } = await sb.rpc('delete_feeding', { p_event_id: b.dataset.feeddel });
+    if (error) { toast('Устгаж чадсангүй: ' + error.message, true); return; }
+    toast('Тэжээлийн бүртгэл устгагдлаа');
+    const left = rows.filter(r => r.id !== b.dataset.feeddel);
+    document.getElementById('lastFedVal').textContent = left.length ? fmtDate(left[0].occurred_at) : '—';
+    loadFeedings();
+  }));
+}
+
 async function logFeeding() {
   const btn = document.getElementById('feedBtn');
   btn.disabled = true;
@@ -1351,6 +1429,7 @@ async function logFeeding() {
   if (error) { toast('Бүртгэж чадсангүй: ' + error.message, true); return; }
   toast('Тэжээсэн гэж тэмдэглэлээ');
   document.getElementById('lastFedVal').textContent = fmtDate(new Date().toISOString());
+  loadFeedings();
 }
 
 // ---------- milk history ----------
