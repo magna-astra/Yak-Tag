@@ -227,6 +227,7 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 <script src="offline.js"></script>
 <script>
 let cow = null;
+let myProf = null;          // role / farm of the signed-in user
 let isSuper = false;
 let gps = null;
 let photoKind = 'profile';
@@ -377,6 +378,7 @@ async function boot() {
   let prof = null;
   if (!offlineMode) { try { prof = await myProfile(); } catch (e) {} }
   isSuper = !!(prof && prof.role === 'super_admin');
+  myProf = prof;
 
   const tag = getTagFromUrl();
   if (!tag) {
@@ -499,8 +501,14 @@ function renderRegistration(tag, info) {
       <div class="field"><label for="regYear">Төрсөн он *</label>
         <input type="number" id="regYear" inputmode="numeric" min="1990" max="${thisYear}"
                placeholder="${thisYear - 3}"></div>
-      <div class="field"><label for="regBreed">Үүлдэр</label>
-        <input type="text" id="regBreed" maxlength="60" placeholder="Монгол, Хайнаг…"></div>
+      <div class="field"><label for="regBreed">Төрөл / үүлдэр *</label>
+        <select id="regBreed" style="width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:#fff">
+          <option value="">Ачаалж байна…</option></select>
+        <input type="text" id="regBreedOther" maxlength="60" placeholder="Үүлдрийн нэр"
+               style="display:none;margin-top:8px"></div>
+      <div class="field"><label for="regMother">Эхийн тагийн дугаар (төл бол)</label>
+        <input type="text" id="regMother" maxlength="20" placeholder="YT-008000"
+               style="text-transform:uppercase"></div>
       <div class="field"><label for="regColour">Зүс</label>
         <input type="text" id="regColour" maxlength="60" placeholder="Хар, алаг…"></div>
 
@@ -516,6 +524,7 @@ function renderRegistration(tag, info) {
     b.classList.add('on'); sex = b.dataset.sex;
   }));
   updateGpsNote();
+  fillBreedSelect('regBreed', 'regBreedOther', null);
   document.getElementById('regSave').addEventListener('click', () => saveRegistration(tag, () => sex));
 }
 
@@ -531,19 +540,280 @@ async function saveRegistration(tag, getSex) {
   if (!year || year < 1990 || year > new Date().getFullYear()) return showErr('Төрсөн оноо зөв оруулна уу.');
   if (!navigator.onLine) return showErr('Бүртгэхэд сүлжээ шаардлагатай.');
 
+  const breedCode = document.getElementById('regBreed').value;
+  const breedOther = document.getElementById('regBreedOther').value.trim();
+  if (breeds.length && !breedCode) return showErr('Төрөл / үүлдрээ сонгоно уу.');
+  if (breedByCode[breedCode]?.is_other && !breedOther) return showErr('Үүлдрийн нэрийг бичнэ үү.');
+
   btn.disabled = true; btn.textContent = 'Бүртгэж байна…';
-  const { error } = await sb.rpc('register_cattle', {
+  const base = {
     p_tag_code: tag, p_sex: sex, p_birth_year: year,
-    p_breed: document.getElementById('regBreed').value.trim() || null,
+    p_breed: breedOther || null,
     p_colour: document.getElementById('regColour').value.trim() || null,
     p_lat: gps ? gps.lat : null, p_lng: gps ? gps.lng : null
-  });
+  };
+  let { error } = await sb.rpc('register_cattle', { ...base,
+    p_breed_code: breedCode || null,
+    p_mother_tag: document.getElementById('regMother').value.trim() || null });
+  // Database not yet on schema_v28: register without breed/mother.
+  if (error && (error.code === 'PGRST202' || /Could not find the function/i.test(error.message))) {
+    ({ error } = await sb.rpc('register_cattle', base));
+  }
   btn.disabled = false; btn.textContent = 'Бүртгэх';
   if (error) return showErr(error.message);
 
   toast('Мал бүртгэгдлээ — одоо бүтэн биеийн зураг аваарай');
   await loadCow(tag);
   if (cow) logScan();            // registering is also an encounter
+}
+
+// ---------- breeds + pregnancy / calving (schema_v28) ----------
+// Species and breed decide the expected birth date: a yak carries
+// ~258 days, a Mongolian cow ~283, a horse ~340 (see db/schema_v28).
+// Events follow ICAR ADE names: insemination, pregnancy check,
+// calving (parturition), abortion. Everything here is optional:
+// before v28 is run, the card just says it is not available yet.
+let breeds = [], breedByCode = {}, cowExtra = {};
+
+async function loadBreeds() {
+  if (breeds.length) return;
+  try {
+    const { data, error } = await sb.from('breeds').select('*').eq('active', true)
+      .order('species').order('sort_order');
+    if (!error && data) { breeds = data; breedByCode = Object.fromEntries(data.map(b => [b.code, b])); }
+  } catch (e) {}
+}
+
+async function fillBreedSelect(selId, otherId, selected) {
+  await loadBreeds();
+  const sel = document.getElementById(selId), other = document.getElementById(otherId);
+  if (!sel) return;
+  if (!breeds.length) {                     // before schema_v28: free text as before
+    sel.style.display = 'none';
+    other.style.display = 'block';
+    other.placeholder = 'Үүлдэр (Монгол, Хайнаг…)';
+    return;
+  }
+  const grp = (sp, label) => `<optgroup label="${label}">` + breeds.filter(b => b.species === sp)
+    .map(b => `<option value="${esc(b.code)}" ${b.code === selected ? 'selected' : ''}>${esc(b.name_mn)}</option>`)
+    .join('') + '</optgroup>';
+  sel.innerHTML = '<option value="">— сонгох —</option>' + grp('cattle', 'Үхэр') + grp('horse', 'Адуу');
+  const toggle = () => { other.style.display = breedByCode[sel.value]?.is_other ? 'block' : 'none'; };
+  sel.onchange = toggle; toggle();
+}
+
+function canEditCow() {
+  if (!cow || !myProf) return false;
+  if (myProf.role === 'super_admin') return true;
+  if (myProf.role === 'farm_admin' && myProf.farm_id === cow.farm_id) return true;
+  return cow.owner_id === myProf.id;
+}
+
+async function loadCowExtras() {
+  if (!cow || offlineMode) return;
+  await loadBreeds();
+  try {
+    const { data } = await sb.from('cattle').select('species, breed_code').eq('id', cow.id).maybeSingle();
+    cowExtra = data || {};
+  } catch (e) { cowExtra = {}; }
+  renderBreedEdit();
+  if (cow.sex === 'female') loadRepro();
+}
+
+function renderBreedEdit() {
+  const box = document.getElementById('breedEdit');
+  if (!box || !breeds.length || !canEditCow()) return;
+  box.innerHTML = cowExtra.breed_code
+    ? `<button class="lockbtn" id="breedEditBtn" style="margin-top:8px">Үүлдэр засах</button>`
+    : `<p class="hint" style="color:var(--gold)">Төрөл / үүлдэр сонговол төллөх огноо автоматаар гарна.</p>
+       <button class="lockbtn" id="breedEditBtn" style="margin-top:6px">Үүлдэр сонгох</button>`;
+  document.getElementById('breedEditBtn').addEventListener('click', () => {
+    box.innerHTML = `
+      <select id="beSel" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;margin-top:8px;background:#fff"></select>
+      <input type="text" id="beOther" placeholder="Үүлдрийн нэр" style="display:none;width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;margin-top:8px">
+      <button class="btn-primary" id="beSave" style="margin-top:8px">Хадгалах</button>`;
+    fillBreedSelect('beSel', 'beOther', cowExtra.breed_code);
+    document.getElementById('beSave').addEventListener('click', async () => {
+      const code = document.getElementById('beSel').value;
+      if (!code) { toast('Үүлдрээ сонгоно уу.', true); return; }
+      const { error } = await sb.rpc('set_cattle_breed', { p_cattle_id: cow.id, p_breed_code: code,
+        p_breed_text: document.getElementById('beOther').value.trim() || null });
+      if (error) { toast(error.message, true); return; }
+      toast('Хадгалагдлаа');
+      await loadCow(cow.tag_code);
+    });
+  });
+}
+
+// --- labels (Mongolian) for the ICAR ADE codes ---
+const R_KIND = { insemination: 'Хээлтүүлэг', pregnancy_check: 'Хээл шалгалт', calving: 'Төллөлт', abortion: 'Хээл хаялт' };
+const R_METHOD = { natural: 'Байгалийн', run_with_bull: 'Сүрэгт хамт', ai: 'Зохиомол хээлтүүлэг', embryo: 'Үр хөврөл шилжүүлэн суулгах' };
+const R_RESULT = { pregnant: 'Хээлтэй', empty: 'Сувай (хээлгүй)', unknown: 'Тодорхойгүй' };
+const R_CHECK = { palpation: 'Гараар (шулуун гэдсээр)', echography: 'Хэт авиа', blood: 'Цусны шинжилгээ',
+                  milk: 'Сүүний шинжилгээ', visual: 'Нүдээр', other: 'Бусад' };
+const R_EASE = { 1: 'Хөнгөн, тусламжгүй', 2: 'Бага зэрэг тусалсан', 3: 'Хүндрэлтэй, их тусламж',
+                 4: 'Малын эмчийн тусламж', 5: 'Кесар / мэс засал' };
+const R_BIRTH = { alive: 'Амьд', stillborn: 'Үхсэн төрсөн', died_later: 'Төрөөд үхсэн' };
+const youngWord = () => cowExtra.species === 'horse' ? 'унага' : 'тугал';
+const opts = (m, sel) => Object.entries(m).map(([k, v]) => `<option value="${k}" ${String(k) === String(sel) ? 'selected' : ''}>${v}</option>`).join('');
+const inp = 'width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:4px';
+
+async function loadRepro() {
+  const stateEl = document.getElementById('reproState');
+  if (!stateEl) return;
+  let events = null, status = null;
+  try {
+    const r1 = await sb.from('repro_events').select('*, repro_calves(*)')
+      .eq('cattle_id', cow.id).order('event_date', { ascending: false }).order('created_at', { ascending: false });
+    if (r1.error) throw r1.error;
+    events = r1.data || [];
+    const r2 = await sb.from('repro_status').select('*').eq('cattle_id', cow.id).maybeSingle();
+    status = r2.data;
+  } catch (e) {
+    stateEl.textContent = navigator.onLine ? 'Энэ хэсэг удахгүй нээгдэнэ.' : 'Сүлжээгүй — хээл, төлийн бүртгэл харагдахгүй.';
+    document.getElementById('reproBtns').style.display = 'none';
+    return;
+  }
+
+  // current state
+  let html;
+  if (!status || !status.state) {
+    html = 'Бүртгэл алга.';
+  } else if (status.state === 'open') {
+    html = `<b>Сувай</b>${status.last_calving_date ? ` · сүүлд төллөсөн ${fmtDate(status.last_calving_date)}` : ''}`;
+  } else {
+    const d = status.expected_date ? daysUntil(status.expected_date) : null;
+    const lbl = status.state === 'pregnant' ? 'Хээлтэй' : 'Хээлтүүлсэн (баталгаажаагүй)';
+    html = `<b style="color:var(--steppe)">${lbl}</b>` + (status.expected_date
+      ? ` · төллөх ~ <b>${status.expected_date}</b> ` +
+        (d >= 0 ? `(${d} хоног үлдсэн)` : `<span style="color:var(--alert)">(${-d} хоног хэтэрсэн)</span>`)
+      : (cowExtra.species ? '' : ' · <span style="color:var(--gold)">үүлдэр сонговол төллөх огноо гарна</span>'));
+  }
+  if (status && status.calvings) html += `<br>Нийт төллөсөн: ${status.calvings} удаа`;
+  stateEl.innerHTML = html;
+
+  const canEdit = canEditCow();
+  document.getElementById('reproBtns').style.display = canEdit ? 'grid' : 'none';
+  document.querySelectorAll('#reproBtns button').forEach(b => b.onclick = () => openReproForm(b.dataset.rk));
+
+  // history
+  const me = myProf && myProf.id;
+  const admin = myProf && (myProf.role === 'super_admin' || (myProf.role === 'farm_admin' && myProf.farm_id === cow.farm_id));
+  document.getElementById('reproList').innerHTML = events.length ? events.map(e => {
+    let d = '';
+    if (e.kind === 'insemination') d = [R_METHOD[e.method], e.sire_tag && `эцэг ${esc(e.sire_tag)}`, e.sire_name && esc(e.sire_name)].filter(Boolean).join(' · ');
+    if (e.kind === 'pregnancy_check') d = [R_RESULT[e.result], R_CHECK[e.check_method], e.foetal_age_days != null && `${e.foetal_age_days} хоногтой`].filter(Boolean).join(' · ');
+    if (e.kind === 'calving') d = [e.calving_ease && R_EASE[e.calving_ease],
+      ...(e.repro_calves || []).map(x => `${x.sex === 'female' ? 'Эм' : 'Эр'} ${youngWord()} (${R_BIRTH[x.birth_status]}${x.birth_weight_kg ? `, ${x.birth_weight_kg} кг` : ''})${x.calf_cattle_id ? ' ✓таг' : ''}`)]
+      .filter(Boolean).join(' · ');
+    if (e.expected_date) d += ` · төллөх ~ ${e.expected_date}`;
+    if (e.note) d += ` · ${esc(e.note)}`;
+    const canDel = admin || (e.recorded_by === me && Date.now() - new Date(e.created_at) < 7 * 86400000);
+    return `<div class="kv" style="align-items:flex-start;gap:10px">
+      <span style="min-width:92px">${e.event_date}</span>
+      <span style="text-align:left;flex:1;font-weight:500"><b>${R_KIND[e.kind]}</b><br><span class="hint" style="margin:0">${d}</span></span>
+      ${canDel ? `<button class="delphoto" style="width:auto;padding:4px 8px" data-del="${esc(e.id)}">✕</button>` : ''}
+    </div>`;
+  }).join('') : '';
+  document.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Энэ бүртгэлийг устгах уу?')) return;
+    const { error } = await sb.rpc('delete_repro_event', { p_event_id: b.dataset.del });
+    if (error) { toast(error.message, true); return; }
+    toast('Устлаа'); loadRepro();
+  }));
+}
+
+function openReproForm(kind) {
+  const f = document.getElementById('reproForm');
+  const today = mnDate();
+  let body = `<label class="hint" style="display:block;margin-top:12px">Огноо</label>
+    <input type="date" id="rfDate" value="${today}" max="${today}" style="${inp}">`;
+  if (kind === 'insemination') body += `
+    <label class="hint" style="display:block;margin-top:10px">Арга</label>
+    <select id="rfMethod" style="${inp}">${opts(R_METHOD, 'natural')}</select>
+    <label class="hint" style="display:block;margin-top:10px">${cowExtra.species === 'horse' ? 'Азарга' : 'Бух'} — тагийн дугаар (заавал биш)</label>
+    <input type="text" id="rfSireTag" style="${inp};text-transform:uppercase" placeholder="YT-007999">
+    <label class="hint" style="display:block;margin-top:10px">эсвэл нэр / үрийн код</label>
+    <input type="text" id="rfSireName" style="${inp}">`;
+  if (kind === 'pregnancy_check') body += `
+    <label class="hint" style="display:block;margin-top:10px">Үр дүн</label>
+    <select id="rfResult" style="${inp}">${opts(R_RESULT, 'pregnant')}</select>
+    <label class="hint" style="display:block;margin-top:10px">Арга</label>
+    <select id="rfCheck" style="${inp}">${opts(R_CHECK, 'palpation')}</select>
+    <label class="hint" style="display:block;margin-top:10px">Хээлийн нас, хоног (мэдвэл — огноог нарийвчилна)</label>
+    <input type="number" id="rfAge" min="0" max="450" inputmode="numeric" style="${inp}">`;
+  if (kind === 'calving') body += `
+    <label class="hint" style="display:block;margin-top:10px">Төллөлтийн хүндрэл</label>
+    <select id="rfEase" style="${inp}"><option value="">—</option>${opts(R_EASE, '')}</select>
+    <div id="rfCalves"></div>
+    <button type="button" class="lockbtn" id="rfAddCalf" style="margin-top:8px">+ Ихэр (дахин ${youngWord()})</button>`;
+  body += `<label class="hint" style="display:block;margin-top:10px">Тэмдэглэл</label>
+    <input type="text" id="rfNote" maxlength="200" style="${inp}">
+    <div class="err" id="rfErr" style="margin-top:10px"></div>
+    <button class="btn-primary" id="rfSave" style="margin-top:12px">Хадгалах</button>
+    <button class="btn-primary" id="rfCancel" style="margin-top:8px;background:#F0F2F5;color:var(--ink)">Болих</button>`;
+  f.innerHTML = `<div style="border-top:1px solid #F0F2F5;margin-top:12px;padding-top:4px">
+    <b style="display:block;margin-top:10px">${R_KIND[kind]}</b>${body}</div>`;
+
+  if (kind === 'calving') {
+    const addCalf = () => {
+      const box = document.getElementById('rfCalves');
+      if (box.children.length >= 4) return;
+      const i = box.children.length;
+      box.insertAdjacentHTML('beforeend', `<div class="rfCalf" style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:10px">
+        <b style="font-size:.85rem">${i + 1}-р ${youngWord()}</b>
+        <div class="kind-pick" style="margin:8px 0 6px"><button type="button" data-cs="female">Эм</button><button type="button" data-cs="male">Эр</button></div>
+        <select class="cStatus" style="${inp}">${opts(R_BIRTH, 'alive')}</select>
+        <input type="number" class="cWeight" step="0.1" min="1" max="149" inputmode="decimal" placeholder="Жин, кг (заавал биш)" style="${inp}">
+      </div>`);
+      const row = box.lastElementChild;
+      row.querySelectorAll('[data-cs]').forEach(b => b.addEventListener('click', () => {
+        row.querySelectorAll('[data-cs]').forEach(x => x.classList.remove('on'));
+        b.classList.add('on'); row.dataset.sex = b.dataset.cs;
+      }));
+    };
+    addCalf();
+    document.getElementById('rfAddCalf').addEventListener('click', addCalf);
+  }
+
+  document.getElementById('rfCancel').addEventListener('click', () => { f.innerHTML = ''; });
+  document.getElementById('rfSave').addEventListener('click', () => saveReproEvent(kind));
+  f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function saveReproEvent(kind) {
+  const err = document.getElementById('rfErr');
+  const show = m => { err.textContent = m; err.style.display = 'block'; };
+  const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  if (!navigator.onLine) return show('Хадгалахад сүлжээ шаардлагатай.');
+  const args = { p_cattle_id: cow.id, p_kind: kind, p_date: val('rfDate'), p_note: val('rfNote') || null };
+  if (!args.p_date) return show('Огноо оруулна уу.');
+  if (kind === 'insemination') {
+    args.p_method = val('rfMethod');
+    args.p_sire_tag = val('rfSireTag').toUpperCase() || null;
+    args.p_sire_name = val('rfSireName') || null;
+  }
+  if (kind === 'pregnancy_check') {
+    args.p_result = val('rfResult');
+    args.p_check_method = val('rfCheck');
+    args.p_foetal_age = val('rfAge') ? parseInt(val('rfAge'), 10) : null;
+  }
+  if (kind === 'calving') {
+    args.p_calving_ease = val('rfEase') ? parseInt(val('rfEase'), 10) : null;
+    const calves = [...document.querySelectorAll('.rfCalf')].map(r => ({
+      sex: r.dataset.sex, birth_status: r.querySelector('.cStatus').value,
+      birth_weight_kg: r.querySelector('.cWeight').value || null }));
+    if (calves.some(c => !c.sex)) return show(`${youngWord()} бүрийн хүйсийг сонгоно уу.`);
+    args.p_calves = calves;
+  }
+  const btn = document.getElementById('rfSave');
+  btn.disabled = true;
+  const { error } = await sb.rpc('record_repro_event', args);
+  btn.disabled = false;
+  if (error) return show(error.message);
+  document.getElementById('reproForm').innerHTML = '';
+  toast(kind === 'calving' ? `Төллөлт бүртгэгдлээ. ${youngWord()}-д таг зүүгээд бүртгэхдээ эхийн тагийг оруулаарай.` : 'Хадгалагдлаа');
+  loadRepro();
 }
 
 function renderCow() {
@@ -623,13 +893,29 @@ function renderCow() {
       <div class="photo-grid" id="photoGrid"></div>
     </div>
 
+    ${cow.sex === 'female' ? `
+    <!-- PREGNANCY & CALVING (schema_v28, ICAR ADE events) -->
+    <div class="card" id="reproCard">
+      <h2><span class="dot"></span>Хээл, төл</h2>
+      <div id="reproState" class="hint" style="margin-top:0">Ачаалж байна…</div>
+      <div class="kind-pick" id="reproBtns" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+        <button data-rk="insemination">+ Хээлтүүлэг</button>
+        <button data-rk="pregnancy_check">+ Хээл шалгах</button>
+        <button data-rk="calving">+ Төллөлт</button>
+        <button data-rk="abortion">+ Хээл хаялт</button>
+      </div>
+      <div id="reproForm"></div>
+      <div id="reproList" style="margin-top:12px"></div>
+    </div>` : ''}
+
     <!-- INFO -->
     <div class="card">
       <h2><span class="dot"></span>Мэдээлэл</h2>
       <div class="kv"><span>Эзэмшигч</span><span>${esc(cow.owner_name)}</span></div>
       <div class="kv"><span>Хүйс</span><span>${sex}</span></div>
       <div class="kv"><span>Төрсөн он</span><span class="mono">${cow.birth_year || '—'}</span></div>
-      <div class="kv"><span>Үүлдэр</span><span>${esc(cow.breed || '—')}</span></div>
+      <div class="kv"><span>Төрөл / үүлдэр</span><span id="breedVal">${esc(cow.breed || '—')}</span></div>
+      <div id="breedEdit"></div>
       <div class="kv"><span>Жин</span><span class="mono">${cow.weight_kg ? cow.weight_kg + ' кг' : '—'}</span></div>
       <div class="kv"><span>Сүүлд тэжээсэн</span><span>${fmtDate(cow.last_fed_at)}</span></div>
       <div class="kv"><span>Дараагийн вакцин</span><span>${cow.next_vaccination_due ? fmtDate(cow.next_vaccination_due) : '—'}</span></div>
@@ -644,6 +930,7 @@ function renderCow() {
   `;
 
   renderPhone();
+  loadCowExtras();
   document.getElementById('milkBtn').addEventListener('click', saveMilk);
   document.getElementById('feedBtn').addEventListener('click', logFeeding);
   document.querySelectorAll('#milkTabs button').forEach(b => {

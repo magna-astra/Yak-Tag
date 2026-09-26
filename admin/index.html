@@ -256,6 +256,14 @@ body.role-herder .col-owner{display:none}
           <input type="search" id="search" placeholder="Дугаар, эзэмшигчээр хайх…">
           <span class="count-note" id="countNote"></span>
         </div>
+
+        <div class="frow">
+          <span class="flabel">Хээл</span>
+          <button class="chip on" data-repro="">Бүгд</button>
+          <button class="chip" data-repro="pregnant">Хээлтэй</button>
+          <button class="chip" data-repro="due30">30 хоногт төллөх</button>
+          <button class="chip" data-repro="open">Сувай</button>
+        </div>
       </div>
 
       <div class="table-wrap">
@@ -434,8 +442,9 @@ body.role-herder .col-owner{display:none}
     <select id="eFarm"></select>
     <label>Эзэмшигч</label>
     <select id="eOwner"></select>
-    <label>Үүлдэр</label>
-    <input type="text" id="eBreed">
+    <label>Төрөл / үүлдэр</label>
+    <select id="eBreed"></select>
+    <input type="text" id="eBreedOther" placeholder="Үүлдрийн нэр" style="margin-top:6px;display:none">
     <label>Төрсөн он</label>
     <input type="number" id="eYear" min="1990" max="2030">
     <label>Жин (кг)</label>
@@ -665,6 +674,7 @@ async function boot(){
   updateDateLabel();
 
   await loadFarms();
+  await loadBreeds();
   await loadCattle();
   if(myRole==='super_admin') loadUsers();
 }
@@ -727,6 +737,7 @@ async function loadCattle(){
   }
   allCattle = data||[];
   await loadMilkForDate();
+  await loadRepro();
   renderStats(); render();
 }
 
@@ -863,6 +874,56 @@ async function delUser(id){
   toast('Устлаа'); loadUsers();
 }
 
+// ---------- breeds + pregnancy (schema_v28) ----------
+// Both load quietly: before v28 is run they simply return nothing and
+// the herd table looks exactly as before.
+let breeds = [], breedByCode = {}, reproById = {}, fRepro = '';
+async function loadBreeds(){
+  try {
+    const {data,error} = await sb.from('breeds').select('*').eq('active',true).order('species').order('sort_order');
+    if(!error && data){ breeds = data; breedByCode = Object.fromEntries(data.map(b=>[b.code,b])); }
+  } catch(e){}
+}
+async function loadRepro(){
+  reproById = {};
+  try {
+    const {data,error} = await fetchAll(()=>sb.from('repro_status').select('*').order('cattle_id'));
+    if(!error && data) data.forEach(r=>{ reproById[r.cattle_id] = r; });
+  } catch(e){}
+  // breed_code is read from cattle directly, so cattle_dashboard (which
+  // the map uses) does not need to change.
+  try {
+    const {data,error} = await fetchAll(()=>sb.from('cattle').select('id,breed_code,species').order('id'));
+    if(!error && data){
+      const m = Object.fromEntries(data.map(x=>[x.id,x]));
+      allCattle.forEach(c=>{ const x = m[c.id]; if(x){ c.breed_code = x.breed_code; c.species = x.species; } });
+    }
+  } catch(e){}
+}
+function breedOptions(selected){
+  const grp = (sp,label) => `<optgroup label="${label}">` + breeds.filter(b=>b.species===sp)
+    .map(b=>`<option value="${esc(b.code)}" ${b.code===selected?'selected':''}>${esc(b.name_mn)}</option>`).join('') + '</optgroup>';
+  return `<option value="">— сонгоогүй —</option>` + grp('cattle','Үхэр') + grp('horse','Адуу');
+}
+function toggleBreedOther(){
+  const b = breedByCode[document.getElementById('eBreed').value];
+  document.getElementById('eBreedOther').style.display = b && b.is_other ? 'block' : 'none';
+}
+document.getElementById('eBreed').addEventListener('change', toggleBreedOther);
+function reproBadge(id){
+  const r = reproById[id];
+  if(!r || !r.state) return '';
+  if(r.state==='open') return ' <span class="badge none" title="Сүүлд төллөсөн: ' + (r.last_calving_date||'—') + '">Сувай</span>';
+  const d = r.expected_date ? daysUntil(r.expected_date) : null;
+  const lbl = r.state==='pregnant' ? 'Хээлтэй' : 'Хээлтүүлсэн';
+  const when = r.expected_date ? ` · ${fmtD(r.expected_date)}` : '';
+  const cls = d!==null && d<=30 ? 'late' : 'warn';
+  return ` <span class="badge ${cls}" title="Төллөх: ${r.expected_date||'—'}${d!==null?` (${d} хоног)`:''}">${lbl}${when}</span>`;
+}
+document.querySelectorAll('[data-repro]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-repro]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); fRepro=b.dataset.repro; render();}));
+
 // ---------- filtering ----------
 function visible(){
   const q = document.getElementById('search').value.toLowerCase().trim();
@@ -876,6 +937,15 @@ function visible(){
       const d = daysUntil(c.next_vaccination_due);
       if(fVacc==='due'  && !(d!==null && d<=0)) return false;
       if(fVacc==='soon' && !(d!==null && d>0 && d<=30)) return false;
+    }
+    if(fRepro){
+      const r = reproById[c.id];
+      if(fRepro==='pregnant' && !(r && (r.state==='pregnant' || r.state==='bred'))) return false;
+      if(fRepro==='open' && !(r && r.state==='open')) return false;
+      if(fRepro==='due30'){
+        const d = r && r.expected_date && (r.state==='pregnant' || r.state==='bred') ? daysUntil(r.expected_date) : null;
+        if(!(d!==null && d<=30)) return false;
+      }
     }
     return true;
   });
@@ -947,7 +1017,7 @@ function render(){
       <td class="tag-code"><a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${esc(c.tag_code)}</a></td>
       <td class="col-owner">${esc(c.owner_name)}</td>
       <td class="super-only muted">${esc(c.farm_code)}</td>
-      <td>${sex} · ${age}</td>
+      <td>${sex} · ${age}${c.breed?`<br><span class="muted" style="font-size:.78rem">${esc(c.breed)}</span>`:''}</td>
       <td class="num">${milkCell}</td>
       <td class="num">${c.milk_this_month?Number(c.milk_this_month).toFixed(1):'0.0'}</td>
       <td class="muted">${fmtD(c.last_fed_at)}</td>
@@ -960,7 +1030,7 @@ function render(){
              ${fmtDT(c.last_seen_at)} ↗</a>${c.last_scan_source==='public'
                ? ' <span class="badge warn" title="Гаднаас уншуулсан">гадны</span>' : ''}`
         : '<span class="muted">—</span>'}</td>
-      <td>${statusBadge(c.status)}</td>
+      <td>${statusBadge(c.status)}${reproBadge(c.id)}</td>
       <td class="super-only">
         <button class="minibtn" data-act="openEdit" data-id="${esc(c.id)}">Засах</button>
         <button class="minibtn" style="color:#B3341F" data-act="delCattle" data-id="${esc(c.id)}">Устгах</button>
@@ -1234,7 +1304,10 @@ function openEdit(id){
   document.getElementById('eFarm').value = c.farm_id;
   fillOwners(c.farm_id, c);
   document.getElementById('eOwner').value = c.owner_id;
-  document.getElementById('eBreed').value = c.breed||'';
+  document.getElementById('eBreed').innerHTML = breedOptions(c.breed_code);
+  document.getElementById('eBreedOther').value = (c.breed_code && breedByCode[c.breed_code]?.is_other) ? (c.breed||'') : '';
+  document.getElementById('eBreedOther').placeholder = c.breed_code ? 'Үүлдрийн нэр' : (c.breed ? `Одоогийн: ${c.breed}` : 'Үүлдрийн нэр');
+  toggleBreedOther();
   document.getElementById('eYear').value = c.birth_year||'';
   document.getElementById('eWeight').value = c.weight_kg||'';
   document.getElementById('eStatus').value = c.status;
@@ -1267,13 +1340,20 @@ document.getElementById('editSave').addEventListener('click', async ()=>{
     p_cattle_id: editTarget,
     p_farm_id:   document.getElementById('eFarm').value,
     p_owner_id:  document.getElementById('eOwner').value,
-    p_breed:     document.getElementById('eBreed').value||null,
+    p_breed:     null,                       // breed is saved by set_cattle_breed below
     p_birth_year:parseInt(document.getElementById('eYear').value)||null,
     p_weight:    parseFloat(document.getElementById('eWeight').value)||null,
     p_sex:       null,
     p_status:    document.getElementById('eStatus').value
   });
   if(error){toast('Хадгалж чадсангүй: '+error.message,true);return;}
+  const code = document.getElementById('eBreed').value;
+  const cur = allCattle.find(x=>x.id===editTarget);
+  const other = document.getElementById('eBreedOther').value.trim();
+  if(code && (code !== (cur && cur.breed_code) || (breedByCode[code]?.is_other && other !== (cur && cur.breed)))){
+    const {error:e2} = await sb.rpc('set_cattle_breed',{p_cattle_id:editTarget, p_breed_code:code, p_breed_text:other||null});
+    if(e2){toast('Үүлдэр хадгалагдсангүй: '+e2.message,true);return;}
+  }
   closeModal('editModal');
   toast('Хадгалагдлаа');
   loadCattle();
