@@ -513,3 +513,28 @@ html,body{overflow-x:hidden}
 .faddr:not([hidden]){display:block;color:var(--ink2);padding:4px 0;max-width:30ch}
 .contacts .crow:not([hidden]){display:flex;justify-content:space-between;gap:12px;font-size:.92rem}
 .contacts .crow span{color:var(--muted)} .contacts .crow b{color:var(--ink);text-align:right}
+
+/* facts: drawn icons in the site palette */
+.fact{display:grid;grid-template-columns:auto 1fr;column-gap:14px;row-gap:12px;align-items:center;align-content:start}
+.fact .fic{grid-column:1;grid-row:1}
+.fact b{grid-column:2;grid-row:1;line-height:1}
+.fact b.inf{font-size:2.9rem;line-height:.8}
+.fact > span{grid-column:1 / -1}
+.fact .fic{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;transition:transform .3s}
+.fact:hover .fic{transform:rotate(-6deg) scale(1.06)}
+.fic svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.fic.g{background:var(--green-l);color:var(--green)}
+.fic.s{background:var(--sun-l);color:#B07A12}
+.fic .w1{animation:wave 2.2s ease-in-out infinite}
+.fic .w2{animation:wave 2.2s .35s ease-in-out infinite}
+.fic .w3{animation:wave 2.2s .7s ease-in-out infinite}
+.fic .dot{fill:currentColor}
+@keyframes wave{0%,100%{opacity:.25}50%{opacity:1}}
+.fic .plane{animation:fly 3.2s ease-in-out infinite}
+@keyframes fly{0%,100%{transform:translate(0,0)}50%{transform:translate(1.5px,-1.5px)}}
+.fic .heart{fill:currentColor;fill-opacity:.18;transform-origin:12px 15px;animation:hb 1.6s ease-in-out infinite}
+@keyframes hb{0%,100%{transform:scale(1)}20%{transform:scale(1.12)}}
+.fic .tick{stroke-dasharray:12;stroke-dashoffset:0}
+.fact.in .fic .tick{animation:tickdraw 1s .6s both}
+@keyframes tickdraw{from{stroke-dashoffset:12}to{stroke-dashoffset:0}}
+@media(prefers-reduced-motion:reduce){.fic *{animation:none !important}}
