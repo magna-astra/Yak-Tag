@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="mn">
+<html lang="mn" class="no-js">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,11 +18,12 @@
 <link rel="canonical" href="https://magna-astra.github.io/Yak-Tag/">
 <link rel="icon" href="assets/favicon.ico">
 <link rel="apple-touch-icon" href="assets/logo-180.png">
-<meta name="theme-color" content="#0B1729">
+<meta name="theme-color" content="#FFFDF8">
+<script>document.documentElement.classList.remove('no-js')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/site.css?v=2026100104">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style-a.css?v=2026100104">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Organization","name":"YAK-TAG",
  "url":"https://magna-astra.github.io/Yak-Tag/","logo":"https://magna-astra.github.io/Yak-Tag/assets/logo-512.png",
@@ -31,17 +32,14 @@
 </script>
 </head>
 <body>
-<nav id="nav">
-  <div class="navin">
-    <a href="index.html" class="logo"><img src="assets/logo-256.png" alt="" class="marklogo">YAK-TAG</a>
-    <div class="navbtns">
-      <a href="how.html" class="navbtn">Хэрхэн ажилладаг</a>
-      <a href="faq.html" class="navbtn">Асуулт хариулт</a>
-      <a href="order.html" class="navbtn navorder">Захиалах</a>
-      <a href="admin/" class="navlogin">Нэвтрэх</a>
-      <button class="themebtn" id="theme" aria-label="Өнгө солих" title="Гэрэлт / бараан">◐</button>
-      <button class="navburger" id="burger" aria-label="Цэс" aria-expanded="false" aria-controls="navmenu">☰</button>
-    </div>
+<nav class="nav" id="nav">
+  <div class="wrap navin">
+    <a href="index.html" class="logo"><img src="assets/logo-256.png" alt="" width="34" height="34">YAK-TAG</a>
+    <a href="how.html" class="navlink">Хэрхэн ажилладаг</a>
+    <a href="faq.html" class="navlink">Асуулт хариулт</a>
+    <a href="admin/" class="navlogin">Нэвтрэх</a>
+    <a href="order.html" class="btn btn-green">Захиалах</a>
+    <button class="navburger" id="burger" aria-label="Цэс" aria-expanded="false" aria-controls="navmenu">☰</button>
   </div>
   <div class="navmenu" id="navmenu">
     <a href="how.html">Хэрхэн ажилладаг</a>
@@ -52,76 +50,139 @@
 </nav>
 
 <header class="hero">
-  <div class="heroPhoto">
-    <picture>
-      <source media="(max-width:820px)" srcset="assets/herd-760.webp" type="image/webp">
-      <source media="(max-width:1400px)" srcset="assets/herd-1200.webp" type="image/webp">
-      <source srcset="assets/herd-1920.webp" type="image/webp">
-      <img src="assets/herd-1920.jpg" alt="Монголын тал дахь үхрийн сүрэг" loading="eager" decoding="async" fetchpriority="high">
-    </picture>
-  </div>
-
-  <div class="cowspots" id="cowspots">
-    <button class="cowspot" style="left:47%;top:72%" data-tag="YT-008000" aria-label="YT-008000">
-      <img src="assets/logo-256.png" alt=""><span class="ping"></span></button>
-    <button class="cowspot" style="left:72%;top:62%" data-tag="YT-008001" aria-label="YT-008001">
-      <img src="assets/logo-256.png" alt=""><span class="ping"></span></button>
-    <button class="cowspot" style="left:93%;top:63%" data-tag="YT-008002" aria-label="YT-008002">
-      <img src="assets/logo-256.png" alt=""><span class="ping"></span></button>
-    <div class="spothint">Тагийн тэмдэг дээр дарж үзээрэй →</div>
-  </div>
-
   <div class="wrap herogrid">
     <div>
-      <div class="eyebrow">Мал аж ахуйн цахим бүртгэл</div>
-      <h1>Мал бүр<br><em>цахим үнэмлэхтэй.</em></h1>
-      <p class="lead">NFC таг малыг таниулна. Малчин утсаа ойртуулахад л мал тодорхойлогдож, байршил, огноо, цаг автоматаар бүртгэгдэнэ. Сүү, вакцин, хээлтүүлэг, төллөлтийг нэг дор хөтөлж, төллөх огноог урьдчилан хэлнэ. Апп суулгах шаардлагагүй.</p>
-      <div class="herocta">
-        <a href="order.html" class="btn pri">Захиалах</a>
-        <a href="how.html" class="btn">Хэрхэн ажилладаг</a>
-        <button class="btn demotap" id="demoTap">Жишээ таг уншуулах</button>
+      <span class="eyebrow ani">Мал аж ахуйн цахим бүртгэл</span>
+      <h1 class="ani" style="--d:.08s">Мал бүр<br><em>цахим үнэмлэхтэй.</em></h1>
+      <p class="lead ani" style="--d:.16s">NFC таг малыг таниулна. Малчин утсаа ойртуулахад л мал тодорхойлогдож, байршил, огноо, цаг автоматаар бүртгэгдэнэ. Сүү, вакцин, хээлтүүлэг, төллөлтийг нэг дор хөтөлж, төллөх огноог урьдчилан хэлнэ. Апп суулгах шаардлагагүй.</p>
+      <div class="herocta ani" style="--d:.24s">
+        <a href="order.html" class="btn btn-green">Таг захиалах</a>
+        <a href="how.html" class="btn btn-ghost">Хэрхэн ажилладаг</a>
+        <button class="btn btn-link" id="demoTap">▶ Жишээ таг уншуулах</button>
       </div>
-      <div class="trustrow">
-        <span>Батерейгүй таг</span>
-        <span>Апп суулгахгүй</span>
-        <span>Төллөх огноо таамаглана</span>
+      <div class="trust ani" style="--d:.32s">
+        <span><i>✓</i>Батерейгүй таг</span>
+        <span><i>✓</i>Апп суулгахгүй</span>
+        <span><i>✓</i>Сүлжээгүй газар ч</span>
       </div>
+    </div>
+    <div class="herophoto ani" id="heroPhoto" role="button" tabindex="0" aria-label="Жишээ таг уншуулах" style="--d:.15s">
+      <div class="ph">
+        <picture>
+          <source media="(max-width:700px)" srcset="assets/photos/hero-640.webp">
+          <source media="(max-width:1200px)" srcset="assets/photos/hero-960.webp">
+          <img src="assets/photos/hero-1536.webp" alt="Малчин утсаараа сарлагийн тагийг уншуулж байна" width="1536" height="1024" fetchpriority="high">
+        </picture>
+      </div>
+      <div class="rings" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="fcard info" aria-hidden="true"><b>YT-008000</b><span class="sub">Эм · 5 нас · Монгол сарлаг</span><span class="ok">Байршил бүртгэгдлээ</span></div>
+      <div class="fcard alert" aria-hidden="true"><span class="ic">✈</span><span><b>Алга болсон мал олдлоо</b><small>Telegram · дөнгөж сая</small></span></div>
     </div>
   </div>
 </header>
 
-<section class="feats">
+<section>
   <div class="wrap">
-    <div class="eyebrow">Нэг таг — бүх бүртгэл</div>
-    <h2 class="sech">Малчин, ферм, админд хэрэгтэй бүхэн нэг дор.</h2>
-    <div class="grid3 featgrid">
-      <div class="card reveal"><span class="num">01 · СҮҮ</span><h3>Өдөр бүрийн сүү</h3>
-        <p>Нэг товшилтоор бүртгэнэ. Сарын нийт, мал бүрийн түүх автоматаар гарна.</p></div>
-      <div class="card reveal"><span class="num">02 · ВАКЦИН</span><h3>Тунг мартахгүй</h3>
-        <p>Хийсэн тун, дараагийн тунгийн огноо хадгалагдаж, хугацаа нь болсон мал самбарт тодорч харагдана.</p></div>
-      <div class="card reveal"><span class="num">03 · ХЭЭЛ, ТӨЛ</span><h3>Төллөх огноог урьдчилан</h3>
-        <p>Хээлтүүлгээс төллөлт хүртэл бүртгэж, төллөх огноог таамаглана. Төл эхтэйгээ автоматаар холбогдоно.</p></div>
-      <div class="card reveal"><span class="num">04 · АЛГА БОЛБОЛ</span><h3>Telegram-аар шууд мэдэгдэнэ</h3>
-        <p>Алга болсон малыг хэн нэгэн уншуулмагц хэзээ, хаана уншуулсныг газрын зургийн холбоостой мессежээр авна. Үнэгүй.</p></div>
-      <div class="card reveal"><span class="num">05 · СҮЛЖЭЭГҮЙ ГАЗАР</span><h3>Хөдөө ч ажиллана</h3>
-        <p>Уншуулалт, сүү, хээл төлийн бүртгэл утсанд хадгалагдаж, сүлжээ орохоор өөрөө илгээгдэнэ.</p></div>
-      <div class="card reveal"><span class="num">06 · ТАЙЛАН, ТҮҮХ</span><h3>Excel тайлан нэг товчоор</h3>
-        <p>Мал сүрэг, сүү, вакцин, хээл төлийн бүртгэлийг Excel-ээр татна. Мал зарахад эзэмшлийн түүх үлдэнэ.</p></div>
+    <div class="facts">
+      <div class="fact rv"><b data-count="0">0</b><span>батерей, цэнэглэлт — таг хэзээ ч дуусахгүй</span></div>
+      <div class="fact rv" style="--d:.08s"><b>0₮</b><span>алга болсон малын Telegram мэдэгдэл</span></div>
+      <div class="fact rv" style="--d:.16s"><b data-count="258">258</b><span>хоног — сарлагийн хээлээр төллөх огноог тооцно</span></div>
+      <div class="fact rv" style="--d:.24s"><b data-count="3">3</b><span>түвшний эрх: малчин, ферм админ, ерөнхий админ</span></div>
     </div>
-    <div class="featcta">
-      <a href="order.html" class="btn pri">Таг захиалах</a>
-      <a href="how.html" class="btn">Дэлгэрэнгүй үзэх</a>
-      <a href="tel:+97699031147" class="btn">Залгах: 9903 1147</a>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap split">
+    <div class="photo rv l">
+      <img src="assets/photos/tagscan-1200.webp" srcset="assets/photos/tagscan-640.webp 640w, assets/photos/tagscan-1200.webp 1200w"
+           sizes="(max-width:900px) 100vw, 50vw" alt="Малчин утсаа сарлагийн чихэн дэх YAK-TAG тагт ойртуулж байна" loading="lazy" width="1200" height="800">
+    </div>
+    <div>
+      <span class="eyebrow rv">Хэрхэн ажилладаг</span>
+      <h2 class="rv" style="font-size:clamp(1.8rem,3.4vw,2.5rem);margin:14px 0 22px">Гуравхан алхам.</h2>
+      <div class="steps">
+        <div class="step rv" style="--d:.05s"><div><h3>Таг зүүнэ</h3>
+          <p>Таг бүр дугаартай, NFC чиптэй ирнэ. Малын чихэнд зүүхэд л болно — батерей, цэнэглэлт хэрэггүй.</p></div></div>
+        <div class="step rv" style="--d:.15s"><div><h3>Утсаа ойртуулна</h3>
+          <p>Ямар ч NFC-тэй утсаар уншуулахад малын хуудас шууд нээгдэнэ. Апп суулгахгүй.</p></div></div>
+        <div class="step rv" style="--d:.25s"><div><h3>Бүх бүртгэл нэг дор</h3>
+          <p>Сүү, вакцин, хээл, төл, байршил автоматаар хадгалагдаж, самбарт харагдана.</p></div></div>
+      </div>
+      <a href="how.html" class="btn btn-ghost rv" style="margin-top:22px;--d:.3s">Дэлгэрэнгүй үзэх →</a>
+    </div>
+  </div>
+</section>
+
+<section class="sec sand">
+  <div class="wrap">
+    <div class="sechead">
+      <span class="eyebrow rv">Нэг таг — бүх бүртгэл</span>
+      <h2 class="rv" style="--d:.06s">Малчин, ферм, админд хэрэгтэй бүхэн нэг дор.</h2>
+      <p class="rv" style="--d:.12s">Өдөр тутмын бүртгэлээс эхлээд тайлан хүртэл — нэг системд.</p>
+    </div>
+    <div class="cards">
+      <article class="fcardx rv">
+        <div class="im"><img src="assets/photos/milk-640.webp" srcset="assets/photos/milk-640.webp 640w, assets/photos/milk-1200.webp 1200w"
+          sizes="(max-width:620px) 100vw, (max-width:960px) 50vw, 33vw" alt="Малчин эмэгтэй сарлаг саан сүү авч байна" loading="lazy" width="640" height="427"></div>
+        <div class="tx"><span class="tg">Сүү</span><h3>Өдөр бүрийн сүү</h3>
+          <p>Нэг товшилтоор бүртгэнэ. Сарын нийт, мал бүрийн түүх автоматаар гарна.</p></div>
+      </article>
+      <article class="fcardx rv" style="--d:.08s">
+        <div class="im"><img src="assets/photos/vaccine-640.webp" srcset="assets/photos/vaccine-640.webp 640w, assets/photos/vaccine-1200.webp 1200w"
+          sizes="(max-width:620px) 100vw, (max-width:960px) 50vw, 33vw" alt="Малын эмч үхэрт вакцин хийж байна" loading="lazy" width="640" height="427"></div>
+        <div class="tx"><span class="tg">Вакцин</span><h3>Тунг мартахгүй</h3>
+          <p>Хийсэн тун, дараагийн тунгийн огноо хадгалагдаж, хугацаа нь болсон мал самбарт тодорч харагдана.</p></div>
+      </article>
+      <article class="fcardx rv" style="--d:.16s">
+        <div class="im"><img src="assets/photos/calving-640.webp" srcset="assets/photos/calving-640.webp 640w, assets/photos/calving-1200.webp 1200w"
+          sizes="(max-width:620px) 100vw, (max-width:960px) 50vw, 33vw" alt="Сарлаг тугалынхаа хамт" loading="lazy" width="640" height="427"></div>
+        <div class="tx"><span class="tg">Хээл, төл</span><h3>Төллөх огноог урьдчилан</h3>
+          <p>Хээлтүүлгээс төллөлт хүртэл бүртгэж, төллөх огноог таамаглана. Төл эхтэйгээ автоматаар холбогдоно.</p></div>
+      </article>
+      <article class="fcardx rv">
+        <div class="im"><img src="assets/photos/lost-640.webp" srcset="assets/photos/lost-640.webp 640w, assets/photos/lost-1200.webp 1200w"
+          sizes="(max-width:620px) 100vw, (max-width:960px) 50vw, 33vw" alt="Үдшийн талд ганцаар зогсох сарлаг, алсад морьтой хүн" loading="lazy" width="640" height="427"></div>
+        <div class="tx"><span class="tg">Алга болбол</span><h3>Telegram-аар шууд мэдэгдэнэ</h3>
+          <p>Алга болсон малыг хэн нэгэн уншуулмагц хэзээ, хаана уншуулсныг газрын зургийн холбоостой мессежээр авна. Үнэгүй.</p></div>
+      </article>
+      <article class="fcardx solid rv" style="--d:.08s">
+        <div class="im"><span class="offline-ic" aria-hidden="true"><svg viewBox="0 0 48 48" width="54" height="54" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="13" y="5" width="22" height="38" rx="4"/><path d="M21 37h6"/><path d="M18.5 18a6.5 6.5 0 0 1 11-2.6"/><path d="M30.5 12v4.2h-4.2"/><path d="M29.5 24a6.5 6.5 0 0 1-11 2.6"/><path d="M17.5 30v-4.2h4.2"/></svg></span></div>
+        <div class="tx"><span class="tg">Сүлжээгүй газар</span><h3>Хөдөө ч ажиллана</h3>
+          <p>Уншуулалт, сүү, хээл төлийн бүртгэл утсанд хадгалагдаж, сүлжээ орохоор өөрөө илгээгдэнэ.</p></div>
+      </article>
+      <article class="fcardx rv" style="--d:.16s">
+        <div class="im"><img src="assets/photos/office-640.webp" srcset="assets/photos/office-640.webp 640w, assets/photos/office-1200.webp 1200w"
+          sizes="(max-width:620px) 100vw, (max-width:960px) 50vw, 33vw" alt="Гэрт зөөврийн компьютер дээр фермийн тайлан харж буй хүн" loading="lazy" width="640" height="427"></div>
+        <div class="tx"><span class="tg">Тайлан, түүх</span><h3>Excel тайлан нэг товчоор</h3>
+          <p>Мал сүрэг, сүү, вакцин, хээл төлийн бүртгэлийг Excel-ээр татна. Мал зарахад эзэмшлийн түүх үлдэнэ.</p></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap">
+    <div class="ctaband rv">
+      <img src="assets/tag-512.png" alt="" class="tagspin">
+      <div>
+        <h2>Сүргээ цахимжуулъя.</h2>
+        <p>Хэдэн таг хэрэгтэйгээ хэлээрэй — захиалга шууд бидэнд очно.</p>
+      </div>
+      <div class="btns">
+        <a href="order.html" class="btn btn-sun">Таг захиалах</a>
+        <a href="tel:+97699031147" class="btn btn-ghost">Залгах: 9903 1147</a>
+      </div>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <div class="fgrid" style="display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap">
+    <div class="fgrid">
       <div>
-        <a href="index.html" class="logo" style="margin-bottom:12px"><img src="assets/logo-256.png" alt="" class="marklogo">YAK-TAG</a>
-        <p style="max-width:28ch;font-size:.85rem">Мал бүрт цахим үнэмлэх.</p>
+        <a href="index.html" class="logo"><img src="assets/logo-256.png" alt="" width="34" height="34">YAK-TAG</a>
+        <p>Мал бүрт цахим үнэмлэх. Монголын малчдад зориулав.</p>
       </div>
       <div>
         <h4>Систем</h4>
@@ -136,86 +197,78 @@
         <a href="mailto:magna.astra.mn@gmail.com">magna.astra.mn@gmail.com</a>
       </div>
     </div>
-    <div class="fbot">
-      <span>© 2026 YAK-TAG</span>
-    </div>
+    <div class="fbot"><span>© 2026 YAK-TAG</span><span>Зургууд нь жишээ дүрслэл.</span></div>
   </div>
 </footer>
 
 <div class="tapmodal" id="tapModal">
-  <div class="tapsheet">
+  <div class="tapsheet" role="dialog" aria-modal="true" aria-labelledby="tapId">
     <button class="tapclose" id="tapClose" aria-label="Хаах">✕</button>
     <div class="taphead">
       <div class="tapbrand"><img src="assets/logo-64.png" alt="">YAK-TAG</div>
       <div class="tapid" id="tapId">—</div>
-      <div class="tapsub" id="tapSub">Ачаалж байна…</div>
+      <div class="tapsub" id="tapSub"></div>
     </div>
-    <div class="tapbody" id="tapBody"><div class="taploading">Ачаалж байна…</div></div>
+    <div class="tapbody" id="tapBody"></div>
     <div class="tapfoot">Жишээ. Жинхэнэ таг уншуулахад яг ийм хуудас нээгдэнэ.</div>
   </div>
 </div>
 
 <script>
-const io=new IntersectionObserver(es=>es.forEach(e=>{
-  if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
-}),{threshold:.1,rootMargin:'0px 0px -40px 0px'});
-document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
-
-const tb=document.getElementById('theme');
-if(localStorage.getItem('yt-theme')==='light') document.body.classList.add('light');
-tb.addEventListener('click',()=>{
-  document.body.classList.toggle('light');
-  localStorage.setItem('yt-theme',document.body.classList.contains('light')?'light':'dark');
-});
-addEventListener('scroll',()=>{
-  document.getElementById('nav').classList.toggle('on',scrollY>10);
-});
-// phone menu
+// ---- shared: nav, phone menu, scroll reveal ----
+const nav=document.getElementById('nav');
+addEventListener('scroll',()=>nav.classList.toggle('on',scrollY>8),{passive:true});
 const bg=document.getElementById('burger'), nm=document.getElementById('navmenu');
 const setMenu=o=>{nm.classList.toggle('open',o);bg.setAttribute('aria-expanded',o);bg.textContent=o?'✕':'☰';};
 bg.addEventListener('click',()=>setMenu(!nm.classList.contains('open')));
 nm.addEventListener('click',e=>{if(e.target.closest('a'))setMenu(false);});
-addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false);});
-</script>
+const io=!('IntersectionObserver' in window)?{observe:el=>el.classList.add('in'),unobserve(){}}:new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),
+  {threshold:.12,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
 
-<script>
-// Demo of the page a stranger sees when tapping a tag. Built-in sample
-// animals: it never reads real animals, so a visitor's click cannot
-// record a scan or send a lost-animal alert for a real herd.
+// ---- numbers count up when they come into view ----
+const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cio=('IntersectionObserver' in window)&&new IntersectionObserver(es=>es.forEach(e=>{
+  if(!e.isIntersecting) return; cio.unobserve(e.target);
+  const el=e.target, to=+el.dataset.count; if(calm||!to) return;
+  const t0=performance.now(), dur=1300;
+  const tick=t=>{const p=Math.min(1,(t-t0)/dur); el.textContent=Math.round(to*(1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(tick);};
+  requestAnimationFrame(tick);
+}),{threshold:.6});
+document.querySelectorAll('[data-count]').forEach(el=>cio&&cio.observe(el));
+
+// ---- demo of the page a stranger sees when tapping a tag ----
+// Built-in sample animals: it never reads real animals, so a visitor's
+// click cannot record a scan or send a lost-animal alert for a real herd.
 (function(){
   const modal=document.getElementById('tapModal');
   const DEMO={
-    'YT-008000':{sub:'Эм · 5 нас · Монгол сарлаг', photo:'assets/yak-760.webp', phone:true},
-    'YT-008001':{sub:'Эм · 7 нас · Монгол сарлаг', photo:'assets/yak-760.webp', phone:true, lost:true},
-    'YT-008002':{sub:'Эр · 4 нас', photo:null, phone:false},
+    'YT-008000':{sub:'Эм · 5 нас · Монгол сарлаг', photo:'assets/photos/calving-640.webp'},
+    'YT-008001':{sub:'Эм · 7 нас · Монгол сарлаг', photo:'assets/yak-760.webp', lost:true},
   };
   function show(tag){
-    const c=DEMO[tag]||DEMO['YT-008000'];
+    const c=DEMO[tag];
     document.getElementById('tapId').textContent=tag;
     document.getElementById('tapSub').textContent=c.sub;
     document.getElementById('tapBody').innerHTML=`
       ${c.lost ? `<div class="taplost">⚠ Энэ мал алга болсон гэж мэдэгдсэн. Эзэмшигч рүү залгана уу.</div>` : ''}
-      ${c.photo
-        ? `<img src="${c.photo}" alt="${tag}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;margin-bottom:14px">`
-        : `<div style="width:100%;aspect-ratio:4/3;background:#E4E8ED;border-radius:12px;
-             display:grid;place-items:center;margin-bottom:14px;color:#9AA6B8;font-size:.85rem">Зураг бүртгэгдээгүй</div>`}
-      ${c.phone
-        ? `<button class="tapcall" id="demoCall" style="width:100%;border:0;cursor:pointer">Эзэмшигч рүү залгах</button>`
-        : `<div class="tapcall" style="background:#DCE1E8;color:#8C99AB">Утасны дугаар бүртгэгдээгүй</div>`}
-      <div class="taprow" style="margin-top:14px;border-bottom:0">
-        <span class="tk">Уншуулсан байршил</span>
-        <span class="tv ok"><span class="tick">✓</span>${c.lost ? 'Эзэмшигчид мэдэгдлээ' : 'Бүртгэгдлээ'}</span></div>
+      <img src="${c.photo}" alt="${tag}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:14px">
+      <button class="tapcall" id="demoCall">Эзэмшигч рүү залгах</button>
+      <div class="taprow"><span class="tk">Уншуулсан байршил</span>
+        <span class="tv">✓ ${c.lost ? 'Эзэмшигчид мэдэгдлээ' : 'Бүртгэгдлээ'}</span></div>
       <p class="tapnote" id="demoNote" style="display:none">Жинхэнэ таг дээр энэ товч эзэмшигч рүү шууд залгана — дугаар нь харагдахгүй.</p>`;
-    const call=document.getElementById('demoCall');
-    if(call) call.addEventListener('click',()=>{document.getElementById('demoNote').style.display='block';});
+    document.getElementById('demoCall').addEventListener('click',()=>{document.getElementById('demoNote').style.display='block';});
     modal.classList.add('on');
+    document.getElementById('tapClose').focus();
   }
-  document.querySelectorAll('.cowspot').forEach(b=>b.addEventListener('click',()=>show(b.dataset.tag)));
+  const hp=document.getElementById('heroPhoto');
+  hp.addEventListener('click',()=>show('YT-008000'));
+  hp.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();show('YT-008000');}});
   document.getElementById('demoTap').addEventListener('click',()=>show('YT-008001'));
   const close=()=>modal.classList.remove('on');
   document.getElementById('tapClose').addEventListener('click',close);
   modal.addEventListener('click',e=>{if(e.target===modal)close();});
-  addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+  addEventListener('keydown',e=>{if(e.key==='Escape'){close();setMenu(false);}});
 })();
 </script>
 </body>

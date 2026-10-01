@@ -58,6 +58,20 @@ To continue, open this folder in Claude Code and say:
   - `noindex` was added to `cow.html` and `admin/index.html` (`t.html` already had it).
 - Removed the unused Noto Sans Mongolian font from the Google Fonts link.
 
+## 3c. Order form + new website design, 2026-10-01
+
+- **v41 order form → Telegram** (commit c824995): `db/schema_v41_order_requests.sql` stores website orders in `order_requests`. It has spam limits (a hidden field, 3 per visitor per hour, 30 per hour in total) and messages every linked super admin. **It must be run in Supabase before the order page goes live.** To see orders: `select * from order_requests order by id desc;`
+- **Style A "Тал нутаг"** (light, warm, steppe green), branch `feature/style-a`:
+  - **Pages and styles:** the 4 public pages are rebuilt on the new `assets/style-a.css`. `assets/site.css` is no longer used by them; it's kept only in case an old cached page asks for it.
+  - **Photos:** AI photos the owner generated are in `assets/photos/*.webp`, at 640/960/1200/1536 px (30–160 KB each); the source PNGs are on the owner's Desktop in `YAKTAG-PHOTOS`. In photo 6 (`tagscan`), the AI had drawn the **Soyombo state emblem** on the tag; it was replaced with the real `assets/tag-1024.png`. The footer says "Зургууд нь жишээ дүрслэл".
+  - **Animations:**
+    - the page tops use a CSS-only entrance (`.ani`), so they show even if scripts fail;
+    - lower content fades in on scroll (`.rv`), with a fallback for browsers without scroll detection;
+    - numbers count up, and tap rings pulse on the herder's phone;
+    - everything switches off under "reduce motion".
+  - **Unchanged on purpose:** the "how it works" demo map script is byte-for-byte the same, and the order form's script and element ids are unchanged.
+  - **Testing note:** the Claude browser pane freezes animations when its window is behind, so use headless Edge for screenshots (`msedge --headless=new --screenshot`; add `--force-prefers-reduced-motion` to see the final state).
+
 ### How the new parts work
 - **Telegram (v38)**
   - A tap of a lost animal (public page or app) sends a message to the owner, that farm's admins and super admins who have linked Telegram. It never goes to the person who tapped. At most 1 alert per animal per chat every 10 minutes.

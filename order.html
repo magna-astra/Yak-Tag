@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="mn">
+<html lang="mn" class="no-js">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,24 +18,22 @@
 <link rel="canonical" href="https://magna-astra.github.io/Yak-Tag/order.html">
 <link rel="icon" href="assets/favicon.ico">
 <link rel="apple-touch-icon" href="assets/logo-180.png">
-<meta name="theme-color" content="#0B1729">
+<meta name="theme-color" content="#FFFDF8">
+<script>document.documentElement.classList.remove('no-js')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/site.css?v=2026100104">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style-a.css?v=2026100104">
 </head>
 <body>
-<nav id="nav">
-  <div class="navin">
-    <a href="index.html" class="logo"><img src="assets/logo-256.png" alt="" class="marklogo">YAK-TAG</a>
-    <div class="navbtns">
-      <a href="how.html" class="navbtn">Хэрхэн ажилладаг</a>
-      <a href="faq.html" class="navbtn">Асуулт хариулт</a>
-      <a href="order.html" class="navbtn navorder">Захиалах</a>
-      <a href="admin/" class="navlogin">Нэвтрэх</a>
-      <button class="themebtn" id="theme" aria-label="Өнгө солих" title="Гэрэлт / бараан">◐</button>
-      <button class="navburger" id="burger" aria-label="Цэс" aria-expanded="false" aria-controls="navmenu">☰</button>
-    </div>
+<nav class="nav" id="nav">
+  <div class="wrap navin">
+    <a href="index.html" class="logo"><img src="assets/logo-256.png" alt="" width="34" height="34">YAK-TAG</a>
+    <a href="how.html" class="navlink">Хэрхэн ажилладаг</a>
+    <a href="faq.html" class="navlink">Асуулт хариулт</a>
+    <a href="admin/" class="navlogin">Нэвтрэх</a>
+    <a href="order.html" class="btn btn-green">Захиалах</a>
+    <button class="navburger" id="burger" aria-label="Цэс" aria-expanded="false" aria-controls="navmenu">☰</button>
   </div>
   <div class="navmenu" id="navmenu">
     <a href="how.html">Хэрхэн ажилладаг</a>
@@ -45,30 +43,29 @@
   </div>
 </nav>
 
-<div class="pagehead">
+<header class="pagehead">
   <div class="wrap">
-    <div class="eyebrow">Захиалга</div>
-    <h1>Тагаа захиалах.</h1>
-    <p class="lead">Таг бүр дээр малын дугаар сийлэгдэж, NFC чип бичигдсэн байдлаар хүрнэ. Та зөвхөн малдаа зүүнэ.</p>
+    <span class="eyebrow ani">Захиалга</span>
+    <h1 class="ani" style="--d:.06s">Тагаа захиалах.</h1>
+    <p class="lead ani" style="--d:.12s">Таг бүр дээр малын дугаар сийлэгдэж, NFC чип бичигдсэн байдлаар хүрнэ. Та зөвхөн малдаа зүүнэ.</p>
   </div>
-</div>
+</header>
 
-<div class="pagebody">
+<main class="sec" style="padding-top:20px">
   <div class="wrap">
     <div class="ordergrid">
-      <div class="reveal">
-        <div class="tagphoto" style="margin-top:0">
-          <img src="assets/tag-1024.png" alt="YAK-TAG NFC таг" width="360" height="360">
-          <div class="tagspec">
-            <div><b>Хэмжээ</b><span>Ø 32 мм</span></div>
-            <div><b>Төрөл</b><span>NFC таг</span></div>
-            <div><b>Батерей</b><span>Шаардлагагүй</span></div>
-            <div><b>Уншилт</b><span>Ямар ч NFC утсаар</span></div>
-          </div>
+      <div class="product rv l">
+        <div class="tagstage"><div class="rings" aria-hidden="true"><span></span><span></span><span></span></div>
+          <img src="assets/tag-1024.png" alt="YAK-TAG NFC таг"></div>
+        <div class="specs">
+          <div><b>Хэмжээ</b><span>Ø 32 мм</span></div>
+          <div><b>Төрөл</b><span>NFC таг</span></div>
+          <div><b>Батерей</b><span>Шаардлагагүй</span></div>
+          <div><b>Уншилт</b><span>Ямар ч NFC утсаар</span></div>
         </div>
       </div>
 
-      <div class="reveal">
+      <div class="rv r">
         <form class="ordercard" id="orderForm" novalidate>
           <h3>Хэдэн таг хэрэгтэй вэ?</h3>
           <div class="qrow">
@@ -93,7 +90,7 @@
           <textarea id="oNote" maxlength="600" rows="2" placeholder="Хэзээ хэрэгтэй, хүргэлт гэх мэт"></textarea>
           <div class="hp" aria-hidden="true"><label>Website <input type="text" id="oWebsite" tabindex="-1" autocomplete="off"></label></div>
           <div class="oerr" id="oErr" role="alert"></div>
-          <button type="submit" class="btn pri" id="oSubmit">Захиалга илгээх</button>
+          <button type="submit" class="btn btn-green" id="oSubmit">Захиалга илгээх</button>
           <p class="ohint">Захиалга шууд бидэнд очно. Таны мэдээллийг зөвхөн захиалгын талаар холбогдоход ашиглана.</p>
           <div class="contacts">
             <a href="tel:+97699031147"><span>Утсаар захиалах</span><b>9903 1147</b></a>
@@ -106,51 +103,46 @@
           <p>Баярлалаа, <b id="doneName"></b>. <b id="doneQty"></b> тагийн захиалгыг хүлээн авлаа.
             Бид тантай <b id="donePhone"></b> дугаараар удахгүй холбогдоно.</p>
           <p class="ohint">Яаралтай бол: <a href="tel:+97699031147">9903 1147</a></p>
-          <button type="button" class="btn" id="oAgain" style="margin-top:16px">Өөр захиалга илгээх</button>
+          <button type="button" class="btn btn-ghost" id="oAgain" style="margin-top:16px">Өөр захиалга илгээх</button>
         </div>
       </div>
     </div>
 
-    <div class="cmpwrap reveal">
-      <div class="eyebrow">Харьцуулалт</div>
-      <h3 style="font-size:1.35rem;margin-bottom:6px">Яагаад GPS хүзүүвч биш вэ?</h3>
-      <p style="font-size:.94rem">Хоёр шийдэл тус бүр давуу талтай. Шударгаар харьцуулъя.</p>
-      <div class="cmp">
-        <div class="cmpcol">
-          <h4>GPS хүзүүвч / ээмэг</h4>
-          <ul>
-            <li>Батерей цэнэглэх, солих шаардлагатай</li>
-            <li>Нэгж үнэ 120–150 ам.доллар</li>
-            <li>Олон толгойд өндөр өртөгтэй</li>
-            <li>Засвар үйлчилгээ тогтмол</li>
-          </ul>
-        </div>
-        <div class="cmpcol hi">
-          <h4>YAK-TAG · NFC таг</h4>
-          <ul>
-            <li>Батерейгүй, цэнэглэх шаардлагагүй</li>
-            <li>Нэгж өртөг олон дахин бага</li>
-            <li>Уншилт бүр байршлын мөр үүсгэнэ</li>
-            <li>Мал бүрийн бүрэн түүх хадгалагдана</li>
-            <li>Олон толгойд бодитоор хэрэгжинэ</li>
-          </ul>
-        </div>
-      </div>
+    <div class="sechead rv" style="margin:clamp(64px,8vw,96px) auto 0">
+      <span class="eyebrow">Харьцуулалт</span>
+      <h2>Яагаад GPS хүзүүвч биш вэ?</h2>
+      <p>Хоёр шийдэл тус бүр давуу талтай. Шударгаар харьцуулъя.</p>
     </div>
-
-    <div class="pagenext">
-      <a href="how.html" class="btn">Хэрхэн ажилладаг</a>
-      <a href="faq.html" class="btn">Асуулт хариулт</a>
+    <div class="cmp">
+      <div class="cmpcol rv">
+        <h4>GPS хүзүүвч / ээмэг</h4>
+        <ul>
+          <li>Батерей цэнэглэх, солих шаардлагатай</li>
+          <li>Нэгж үнэ 120–150 ам.доллар</li>
+          <li>Олон толгойд өндөр өртөгтэй</li>
+          <li>Засвар үйлчилгээ тогтмол</li>
+        </ul>
+      </div>
+      <div class="cmpcol hi rv" style="--d:.1s">
+        <h4>YAK-TAG · NFC таг</h4>
+        <ul>
+          <li>Батерейгүй, цэнэглэх шаардлагагүй</li>
+          <li>Нэгж өртөг олон дахин бага</li>
+          <li>Уншилт бүр байршлын мөр үүсгэнэ</li>
+          <li>Мал бүрийн бүрэн түүх хадгалагдана</li>
+          <li>Олон толгойд бодитоор хэрэгжинэ</li>
+        </ul>
+      </div>
     </div>
   </div>
-</div>
+</main>
 
 <footer>
   <div class="wrap">
-    <div class="fgrid" style="display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap">
+    <div class="fgrid">
       <div>
-        <a href="index.html" class="logo" style="margin-bottom:12px"><img src="assets/logo-256.png" alt="" class="marklogo">YAK-TAG</a>
-        <p style="max-width:28ch;font-size:.85rem">Мал бүрт цахим үнэмлэх.</p>
+        <a href="index.html" class="logo"><img src="assets/logo-256.png" alt="" width="34" height="34">YAK-TAG</a>
+        <p>Мал бүрт цахим үнэмлэх. Монголын малчдад зориулав.</p>
       </div>
       <div>
         <h4>Систем</h4>
@@ -165,34 +157,22 @@
         <a href="mailto:magna.astra.mn@gmail.com">magna.astra.mn@gmail.com</a>
       </div>
     </div>
-    <div class="fbot">
-      <span>© 2026 YAK-TAG</span>
-    </div>
+    <div class="fbot"><span>© 2026 YAK-TAG</span><span>Зургууд нь жишээ дүрслэл.</span></div>
   </div>
 </footer>
 <script>
-const io=new IntersectionObserver(es=>es.forEach(e=>{
-  if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
-}),{threshold:.1,rootMargin:'0px 0px -40px 0px'});
-document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
-
-const tb=document.getElementById('theme');
-if(localStorage.getItem('yt-theme')==='light') document.body.classList.add('light');
-tb.addEventListener('click',()=>{
-  document.body.classList.toggle('light');
-  localStorage.setItem('yt-theme',document.body.classList.contains('light')?'light':'dark');
-});
-addEventListener('scroll',()=>{
-  document.getElementById('nav').classList.toggle('on',scrollY>10);
-});
-// phone menu
+// ---- shared: nav, phone menu, scroll reveal ----
+const nav=document.getElementById('nav');
+addEventListener('scroll',()=>nav.classList.toggle('on',scrollY>8),{passive:true});
 const bg=document.getElementById('burger'), nm=document.getElementById('navmenu');
 const setMenu=o=>{nm.classList.toggle('open',o);bg.setAttribute('aria-expanded',o);bg.textContent=o?'✕':'☰';};
 bg.addEventListener('click',()=>setMenu(!nm.classList.contains('open')));
 nm.addEventListener('click',e=>{if(e.target.closest('a'))setMenu(false);});
 addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false);});
+const io=!('IntersectionObserver' in window)?{observe:el=>el.classList.add('in'),unobserve(){}}:new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),
+  {threshold:.12,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.rv').forEach(el=>io.observe(el));
 </script>
-
 <script>
 (function(){
   const qty=document.getElementById('oQty'), link=document.getElementById('oSend');
@@ -205,7 +185,8 @@ addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false);});
     link.href=`mailto:magna.astra.mn@gmail.com?subject=${encodeURIComponent('YAK-TAG захиалга — '+n+' таг')}&body=${body}`;
   }
   qty.addEventListener('input',refresh);
-  document.querySelectorAll('.qbtn').forEach(b=>b.addEventListener('click',()=>{qty.value=b.dataset.q;refresh();}));
+  document.querySelectorAll('.qbtn').forEach(b=>b.addEventListener('click',()=>{qty.value=b.dataset.q;refresh();
+    document.querySelectorAll('.qbtn').forEach(x=>x.classList.toggle('on',x===b));}));
   refresh();
 
   // Order form → database → the owner's Telegram (schema_v41). No login
