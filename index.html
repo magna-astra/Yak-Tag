@@ -176,7 +176,7 @@
       </div>
       <div class="btns">
         <a href="order.html" class="btn btn-sun">Таг захиалах</a>
-        <a href="tel:+97699031147" class="btn btn-ghost">Залгах: 9903 1147</a>
+        <a href="tel:+97699031147" class="btn btn-ghost" data-c-href="phone">Залгах: <span data-c-text="phone">9903 1147</span></a>
       </div>
     </div>
   </div>
@@ -198,8 +198,9 @@
       <div>
         <h4>Захиалга</h4>
         <a href="order.html">Таг захиалах</a>
-        <a href="tel:+97699031147">9903 1147</a>
-        <a href="mailto:magna.astra.mn@gmail.com">magna.astra.mn@gmail.com</a>
+        <a href="tel:+97699031147" data-c-href="phone" data-c-text="phone">9903 1147</a>
+        <a href="mailto:magna.astra.mn@gmail.com" data-c-href="email" data-c-text="email">magna.astra.mn@gmail.com</a>
+        <span class="faddr" data-c-show="address" data-c-text="address" hidden></span>
       </div>
     </div>
     <div class="fbot"><span>© 2026 YAK-TAG</span><span>Зургууд нь жишээ дүрслэл.</span></div>
@@ -309,5 +310,6 @@ document.querySelectorAll('[data-count]').forEach(el=>cio&&cio.observe(el));
   addEventListener('keydown',e=>{if(e.key==='Escape'){close();setMenu(false);}});
 })();
 </script>
+<script src="assets/contacts.js?v=1"></script>
 </body>
 </html>

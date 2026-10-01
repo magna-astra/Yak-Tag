@@ -112,6 +112,17 @@ To continue, open this folder in Claude Code and say:
 - **Stress (read-only):** 800 requests, 100% OK. API p95 under 0.7 s with 20 at once; tag lookup p95 0.36 s.
 - **Finding, fixed by v42:** `public_tag_lookup` had no per-visitor limit and returns the owner's phone, with sequential tag codes. That meant phone numbers could be harvested in minutes. `db/schema_v42_lookup_limit.sql` allows 120 lookups per visitor per hour, counted in its own `lookup_rate` table, and removes the ZZ- test rows from `lookup_attempts`. **It must be run in Supabase.**
 
+## 3g. Website contacts editable + "back to website" links (2026-10-01)
+- **v43** `db/schema_v43_site_contacts.sql` (**must be run in Supabase**) adds:
+  - `site_settings`: one row with phone, email and address. Visitors may read it, since it's public;
+  - `update_site_contacts()`: super admin only, with checked fields and every change in the "Түүх" audit tab;
+  - `submit_order` messages that show the current phone.
+- **Dashboard:** a "Холбоо барих" button (super admin only) opens the form.
+- **Website:** `assets/contacts.js` puts the current details into every spot marked `data-c-text` / `data-c-href` / `data-c-show`. The numbers written in the HTML stay as the fallback. It also updates the search-engine details and is cached in localStorage. The share image still has the phone printed in it, so it must be regenerated if the number changes.
+- **Back to the website:**
+  - **Dashboard:** a "← Вэб сайт" button and a clickable logo in the header, plus a link on the login card.
+  - **Cow page:** a clickable logo, a bottom link and a login link.
+
 ### How the new parts work
 - **Telegram (v38)**
   - A tap of a lost animal (public page or app) sends a message to the owner, that farm's admins and super admins who have linked Telegram. It never goes to the person who tapped. At most 1 alert per animal per chat every 10 minutes.

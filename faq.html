@@ -47,7 +47,7 @@
   <div class="wrap">
     <span class="eyebrow ani">Асуулт хариулт</span>
     <h1 class="ani" style="--d:.06s">Асуух гэж байсан зүйлс.</h1>
-    <p class="lead ani" style="--d:.12s">Хариулт олдохгүй бол <a href="tel:+97699031147" style="color:var(--green);font-weight:700">9903 1147</a> руу залгаарай.</p>
+    <p class="lead ani" style="--d:.12s">Хариулт олдохгүй бол <a href="tel:+97699031147" style="color:var(--green);font-weight:700" data-c-href="phone" data-c-text="phone">9903 1147</a> руу залгаарай.</p>
   </div>
 </header>
 
@@ -88,7 +88,7 @@
         <p>Мэдээлэл долоо хоног бүр тусдаа, хаалттай нөөцөд хуулагдана. Хэн, хэзээ, юуг өөрчилсөн нь "Түүх" хэсэгт үлдэх бөгөөд түүнийг хэн ч засаж, устгах боломжгүй.</p></details>
 
       <details class="q rv" style="--d:0.24s"><summary>Үнэ хэд вэ?</summary>
-        <p>Тагийн тоо, хүргэлтээс хамаарна. Захиалгын хүсэлт илгээвэл эсвэл <a href="tel:+97699031147" >9903 1147</a> руу залгавал тодорхой үнэ хэлнэ.</p></details>
+        <p>Тагийн тоо, хүргэлтээс хамаарна. Захиалгын хүсэлт илгээвэл эсвэл <a href="tel:+97699031147" data-c-href="phone" data-c-text="phone">9903 1147</a> руу залгавал тодорхой үнэ хэлнэ.</p></details>
     </div>
   </div>
 </main>
@@ -125,8 +125,9 @@
       <div>
         <h4>Захиалга</h4>
         <a href="order.html">Таг захиалах</a>
-        <a href="tel:+97699031147">9903 1147</a>
-        <a href="mailto:magna.astra.mn@gmail.com">magna.astra.mn@gmail.com</a>
+        <a href="tel:+97699031147" data-c-href="phone" data-c-text="phone">9903 1147</a>
+        <a href="mailto:magna.astra.mn@gmail.com" data-c-href="email" data-c-text="email">magna.astra.mn@gmail.com</a>
+        <span class="faddr" data-c-show="address" data-c-text="address" hidden></span>
       </div>
     </div>
     <div class="fbot"><span>© 2026 YAK-TAG</span><span>Зургууд нь жишээ дүрслэл.</span></div>
@@ -145,5 +146,6 @@ const io=!('IntersectionObserver' in window)?{observe:el=>el.classList.add('in')
   {threshold:.12,rootMargin:'0px 0px -40px 0px'});
 document.querySelectorAll('.rv').forEach(el=>io.observe(el));
 </script>
+<script src="assets/contacts.js?v=1"></script>
 </body>
 </html>

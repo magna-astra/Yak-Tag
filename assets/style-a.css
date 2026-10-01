@@ -508,3 +508,8 @@ html,body{overflow-x:hidden}
 .step > div{padding-right:54px}
 @media(prefers-reduced-motion:reduce){.tpin{opacity:1}.scene[data-scene=dash] tbody tr{opacity:1;transform:none}.dattn span{opacity:1;transform:none}
   .scene[data-scene=xl] table tr{opacity:1}.scene[data-scene=tg] .body{display:block}}
+
+/* contact details from the dashboard (assets/contacts.js) */
+.faddr:not([hidden]){display:block;color:var(--ink2);padding:4px 0;max-width:30ch}
+.contacts .crow:not([hidden]){display:flex;justify-content:space-between;gap:12px;font-size:.92rem}
+.contacts .crow span{color:var(--muted)} .contacts .crow b{color:var(--ink);text-align:right}

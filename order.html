@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Таг захиалах — YAK-TAG</title>
-<meta name="description" content="NFC таг захиалах. Утас 9903 1147.">
+<meta name="description" content="NFC таг захиалах — захиалгын хүсэлтээ шууд илгээнэ.">
 <meta property="og:title" content="Таг захиалах — YAK-TAG">
-<meta property="og:description" content="NFC таг захиалах. Утас 9903 1147.">
+<meta property="og:description" content="NFC таг захиалах — захиалгын хүсэлтээ шууд илгээнэ.">
 <meta property="og:image" content="https://magna-astra.github.io/Yak-Tag/assets/share-1200x630.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -93,8 +93,9 @@
           <button type="submit" class="btn btn-green" id="oSubmit">Захиалга илгээх</button>
           <p class="ohint">Захиалга шууд бидэнд очно. Таны мэдээллийг зөвхөн захиалгын талаар холбогдоход ашиглана.</p>
           <div class="contacts">
-            <a href="tel:+97699031147"><span>Утсаар захиалах</span><b>9903 1147</b></a>
-            <a href="#" id="oSend"><span>И-мэйлээр</span><b>magna.astra.mn@gmail.com</b></a>
+            <a href="tel:+97699031147" data-c-href="phone"><span>Утсаар захиалах</span><b data-c-text="phone">9903 1147</b></a>
+            <a href="#" id="oSend"><span>И-мэйлээр</span><b data-c-text="email">magna.astra.mn@gmail.com</b></a>
+            <div class="crow" data-c-show="address" hidden><span>Хаяг</span><b data-c-text="address"></b></div>
           </div>
         </form>
         <div class="ordercard odone" id="orderDone" hidden>
@@ -102,7 +103,7 @@
           <h3>Захиалга хүлээн авлаа</h3>
           <p>Баярлалаа, <b id="doneName"></b>. <b id="doneQty"></b> тагийн захиалгыг хүлээн авлаа.
             Бид тантай <b id="donePhone"></b> дугаараар удахгүй холбогдоно.</p>
-          <p class="ohint">Яаралтай бол: <a href="tel:+97699031147">9903 1147</a></p>
+          <p class="ohint">Яаралтай бол: <a href="tel:+97699031147" data-c-href="phone" data-c-text="phone">9903 1147</a></p>
           <button type="button" class="btn btn-ghost" id="oAgain" style="margin-top:16px">Өөр захиалга илгээх</button>
         </div>
       </div>
@@ -153,8 +154,9 @@
       <div>
         <h4>Захиалга</h4>
         <a href="order.html">Таг захиалах</a>
-        <a href="tel:+97699031147">9903 1147</a>
-        <a href="mailto:magna.astra.mn@gmail.com">magna.astra.mn@gmail.com</a>
+        <a href="tel:+97699031147" data-c-href="phone" data-c-text="phone">9903 1147</a>
+        <a href="mailto:magna.astra.mn@gmail.com" data-c-href="email" data-c-text="email">magna.astra.mn@gmail.com</a>
+        <span class="faddr" data-c-show="address" data-c-text="address" hidden></span>
       </div>
     </div>
     <div class="fbot"><span>© 2026 YAK-TAG</span><span>Зургууд нь жишээ дүрслэл.</span></div>
@@ -182,9 +184,11 @@ document.querySelectorAll('.rv').forEach(el=>io.observe(el));
     const body=encodeURIComponent(
       `Сайн байна уу,\n\nYAK-TAG таг захиалах хүсэлтэй байна.\n\n`+
       `Тагийн тоо: ${n}\nФерм / байгууллага: \nХолбоо барих утас: \nАймаг, сум: \n\nБаярлалаа.`);
-    link.href=`mailto:magna.astra.mn@gmail.com?subject=${encodeURIComponent('YAK-TAG захиалга — '+n+' таг')}&body=${body}`;
+    const mail=(window.ytContacts&&ytContacts.email)||'magna.astra.mn@gmail.com';
+    link.href=`mailto:${mail}?subject=${encodeURIComponent('YAK-TAG захиалга — '+n+' таг')}&body=${body}`;
   }
   qty.addEventListener('input',refresh);
+  addEventListener('yt:contacts',refresh);    // e-mail changed in the dashboard
   document.querySelectorAll('.qbtn').forEach(b=>b.addEventListener('click',()=>{qty.value=b.dataset.q;refresh();
     document.querySelectorAll('.qbtn').forEach(x=>x.classList.toggle('on',x===b));}));
   refresh();
@@ -221,7 +225,7 @@ document.querySelectorAll('.rv').forEach(el=>io.observe(el));
     }catch(ex){
       // the server's own message is already in Mongolian; anything else is a network problem
       show(/[А-Яа-яӨөҮү]/.test(ex.message) ? ex.message
-        : 'Илгээж чадсангүй. Сүлжээгээ шалгаад дахин оролдоно уу, эсвэл 9903 1147 руу залгана уу.');
+        : 'Илгээж чадсангүй. Сүлжээгээ шалгаад дахин оролдоно уу, эсвэл '+((window.ytContacts&&ytContacts.phone)||'9903 1147')+' руу залгана уу.');
     }finally{
       btn.disabled=false; btn.textContent='Захиалга илгээх';
     }
@@ -232,5 +236,6 @@ document.querySelectorAll('.rv').forEach(el=>io.observe(el));
   });
 })();
 </script>
+<script src="assets/contacts.js?v=1"></script>
 </body>
 </html>

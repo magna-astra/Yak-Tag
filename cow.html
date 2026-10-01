@@ -198,6 +198,9 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
 .milk-entry input,.phone-entry input{min-width:0;width:0}
 .milk-entry button,.phone-entry button{flex:0 0 auto}
 @media(max-width:360px){.cowhead .brand{display:none}.cowhead .out{padding:5px 9px}}
+.homelink{display:flex;align-items:center;gap:11px;color:inherit;text-decoration:none}
+.backsite{display:block;text-align:center;margin-top:16px;color:var(--ink-soft);font-size:.86rem;text-decoration:none}
+.sitefoot{display:block;text-align:center;margin:26px 0 6px;color:var(--ink-soft);font-size:.86rem;text-decoration:none}
 </style>
 </head>
 <body>
@@ -218,6 +221,7 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
       <input type="password" id="password" autocomplete="current-password">
     </div>
     <button class="btn-primary" id="loginBtn">Нэвтрэх</button>
+    <a class="backsite" href="index.html">← Вэб сайт руу буцах</a>
   </div>
 </div>
 
@@ -225,8 +229,7 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
 <div class="app" id="appView">
   <header class="cowhead">
     <div class="row1">
-      <img src="assets/logo-64.png" alt="">
-      <span class="brand">YAK-TAG</span>
+      <a href="index.html" class="homelink" title="Вэб сайт руу"><img src="assets/logo-64.png" alt=""><span class="brand">YAK-TAG</span></a>
       <button class="out" id="myPwBtn" style="margin-left:auto">Нууц үг</button>
       <button class="out" id="tgBtn" style="margin-left:8px;display:none">Telegram</button>
       <button class="out" id="signoutBtn" style="margin-left:8px">Гарах</button>
@@ -237,6 +240,7 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
   </header>
 
   <div id="cowBody"></div>
+  <a class="sitefoot" href="index.html">← YAK-TAG вэб сайт руу буцах</a>
 </div>
 
 <!-- Change own password. Forgot it? The admin sets a new one. -->

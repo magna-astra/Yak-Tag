@@ -287,6 +287,11 @@ tbody td{border-bottom-color:#F2ECDF}
 .pwbtn:hover,.minibtn:hover{border-color:var(--pri);color:var(--pri)}
 .modalbox{border-radius:22px}
 .modalbox input:focus,.modalbox select:focus,.modalbox textarea:focus{border-color:var(--pri)}
+#ctAddress{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;resize:vertical}
+.homelink{display:flex;align-items:center;gap:14px;color:inherit;text-decoration:none}
+a.signout{text-decoration:none;display:inline-flex;align-items:center}
+.backsite{display:block;text-align:center;margin-top:16px;color:var(--ink-soft);font-size:.86rem;text-decoration:none}
+.backsite:hover{color:var(--pri)}
 /* phones: the top bar wraps onto two lines instead of running off the screen */
 @media(max-width:700px){header.topbar{height:auto;flex-wrap:wrap;padding:10px 14px;row-gap:8px}
   .topbar .who{margin-left:0;flex:1 1 100%;flex-wrap:wrap;gap:6px}
@@ -313,17 +318,19 @@ tbody td{border-bottom-color:#F2ECDF}
       <input type="password" id="password" autocomplete="current-password">
     </div>
     <button class="btn-primary" id="loginBtn">Нэвтрэх</button>
+    <a class="backsite" href="../index.html">← Вэб сайт руу буцах</a>
   </div>
 </div>
 
 <!-- ============ APP ============ -->
 <div class="app" id="appView">
   <header class="topbar">
-    <img src="../assets/logo-64.png" alt="">
-    <span class="brand">YAK-TAG</span>
+    <a href="../index.html" class="homelink" title="Вэб сайт руу"><img src="../assets/logo-64.png" alt=""><span class="brand">YAK-TAG</span></a>
     <div class="who">
+      <a class="signout" href="../index.html">← Вэб сайт</a>
       <span><b id="userName">—</b></span>
       <span class="role-chip" id="userRole">—</span>
+      <button class="signout super-only" id="contactsBtn">Холбоо барих</button>
       <button class="signout" id="tgBtn" style="display:none">Telegram</button>
       <button class="signout" id="myPwBtn">Нууц үг солих</button>
       <button class="signout" id="signoutBtn">Гарах</button>
@@ -715,6 +722,24 @@ tbody td{border-bottom-color:#F2ECDF}
     <h3>Telegram мэдэгдэл</h3>
     <div id="tgBody"></div>
     <div class="mactions"><button class="mcancel" onclick="closeModal('tgModal')">Хаах</button></div>
+  </div>
+</div>
+
+<div class="modal" id="contactsModal">
+  <div class="modalbox">
+    <h3>Вэб сайтын холбоо барих мэдээлэл</h3>
+    <p class="msub">Вэб сайтын бүх хуудас, захиалгын хэсэгт харагдана. Хадгалмагц шууд солигдоно.</p>
+    <label for="ctPhone">Утас</label>
+    <input type="tel" id="ctPhone" maxlength="24" placeholder="9903 1147">
+    <label for="ctEmail">И-мэйл</label>
+    <input type="email" id="ctEmail" maxlength="120" placeholder="info@yaktag.mn">
+    <label for="ctAddress">Хаяг (заавал биш)</label>
+    <textarea id="ctAddress" rows="2" maxlength="200" placeholder="Улаанбаатар, … дүүрэг, … хороо"></textarea>
+    <div class="mnote" id="ctNote"></div>
+    <div class="mactions">
+      <button class="mcancel" onclick="closeModal('contactsModal')">Болих</button>
+      <button class="msave" id="ctSave">Хадгалах</button>
+    </div>
   </div>
 </div>
 
@@ -2092,14 +2117,14 @@ const AUDIT_ACT = {
   tag_recycle:'Тагийг дахин ашиглахаар сэргээв', tag_retire:'Тагийг хасав', tag_delete:'Таг устгав',
   admin_edit_profile:'Хэрэглэгчийн мэдээлэл засав', profile_delete:'Хэрэглэгч устгав',
   farm_create:'Ферм үүсгэв', farm_archive:'Фермийг архивлав', farm_restore:'Фермийг сэргээв', farm_delete:'Ферм устгав',
-  cattle_transfer:'Эзэмшигч солив', telegram_link:'Telegram холбов'
+  cattle_transfer:'Эзэмшигч солив', telegram_link:'Telegram холбов', site_contacts:'Вэб сайтын холбоо барих мэдээлэл засав'
 };
 const AUDIT_KIND = {
   cattle: ['register_cattle','admin_edit_cattle','cattle_delete','report_lost','report_found','tag_replace',
            'set_contact_phone','unlock_contact_phone','set_public_photo','photo_delete','photo_unlock','cattle_transfer'],
   records:['feeding_delete','vaccination_edit','repro_edit','repro_delete'],
   tags:   ['tags_create','tags_assign_farm','tag_write','tag_uid','tag_recycle','tag_retire','tag_delete'],
-  people: ['admin_edit_profile','profile_delete','farm_create','farm_archive','farm_restore','farm_delete','telegram_link'],
+  people: ['admin_edit_profile','profile_delete','farm_create','farm_archive','farm_restore','farm_delete','telegram_link','site_contacts'],
   deletes:['cattle_delete','photo_delete','feeding_delete','repro_delete','tag_delete','profile_delete','farm_delete']
 };
 const REPRO_KIND_MN = {insemination:'хээлтүүлэг', pregnancy_check:'хээл шалгалт', calving:'төллөлт', abortion:'хээл хаялт'};
@@ -2111,6 +2136,10 @@ function auditSummary(r){
   const add = (lbl, v) => { if(v!==null && v!==undefined && v!=='' && typeof v!=='object') out.push(`${lbl}: ${esc(String(v))}`); };
   if(d.old_tag || d.new_tag) out.push(`${esc(d.old_tag||'—')} → <b>${esc(d.new_tag||'—')}</b>`);
   if(typeof d.from==='string' && typeof d.to==='string') out.push(`${esc(d.from)} → <b>${esc(d.to)}</b>`);
+  if(r.action==='site_contacts'){
+    [['phone','Утас'],['email','И-мэйл'],['address','Хаяг']].forEach(([k,l])=>{ if((d['old_'+k]||'')!==(d[k]||'')) out.push(`${l}: ${esc(d['old_'+k]||'—')} → <b>${esc(d[k]||'—')}</b>`); });
+    return out.join(' · ') || '<span class="muted">өөрчлөлтгүй</span>';
+  }
   if(typeof d.to_farm==='string' && d.to_farm!==d.from_farm) out.push(`Ферм: ${esc(d.from_farm||'')} → ${esc(d.to_farm)}`);
   if(typeof d.kind==='string') add('Төрөл', REPRO_KIND_MN[d.kind] || d.kind);
   if(d.old_date && d.new_date && d.old_date!==d.new_date) out.push(`${fmtD(d.old_date)} → ${fmtD(d.new_date)}`);
@@ -2202,6 +2231,33 @@ function renderAudit(){
 
 ['aFarm','aKind','aFrom'].forEach(id=>document.getElementById(id).addEventListener('change',()=>loadAudit(true)));
 document.getElementById('auditMore').addEventListener('click',()=>loadAudit(false));
+
+// ---------- website contact details (super admin) — schema_v43 ----------
+// Phone, e-mail and address shown on every public page; saved through
+// update_site_contacts(), which only the super admin may call.
+document.getElementById('contactsBtn').addEventListener('click', async ()=>{
+  ['ctPhone','ctEmail','ctAddress'].forEach(id=>document.getElementById(id).value='');
+  const note=document.getElementById('ctNote');
+  note.textContent='Ачаалж байна…';
+  document.getElementById('contactsModal').classList.add('on');
+  const {data,error}=await sb.from('site_settings').select('phone,email,address,updated_at').eq('id',1).maybeSingle();
+  if(error||!data){ note.textContent = error ? 'Ачаалж чадсангүй: '+mnError(error.message) : 'Мэдээлэл олдсонгүй.'; return; }
+  document.getElementById('ctPhone').value=data.phone||'';
+  document.getElementById('ctEmail').value=data.email||'';
+  document.getElementById('ctAddress').value=data.address||'';
+  note.textContent='Сүүлд өөрчилсөн: '+fmtDT(data.updated_at);
+});
+document.getElementById('ctSave').addEventListener('click', async ()=>{
+  const v=id=>document.getElementById(id).value.trim();
+  if(v('ctPhone').replace(/\D/g,'').length<8){ toast('Утасны дугаар буруу (жишээ нь 9903 1147).',true); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(v('ctEmail'))){ toast('И-мэйл хаяг буруу.',true); return; }
+  const btn=document.getElementById('ctSave'); btn.disabled=true;
+  const {error}=await sb.rpc('update_site_contacts',{p_phone:v('ctPhone'), p_email:v('ctEmail'), p_address:v('ctAddress')||null});
+  btn.disabled=false;
+  if(error){ toast(error.message,true); return; }
+  closeModal('contactsModal');
+  toast('Хадгалагдлаа — вэб сайт дээр шууд харагдана');
+});
 
 // ---------- transfer / sell an animal (schema_v39) ----------
 // The one way to change an owner: kept as history with a reason and a
