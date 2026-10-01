@@ -72,6 +72,12 @@ To continue, open this folder in Claude Code and say:
   - **Unchanged on purpose:** the "how it works" demo map script is byte-for-byte the same, and the order form's script and element ids are unchanged.
   - **Testing note:** the Claude browser pane freezes animations when its window is behind, so use headless Edge for screenshots (`msedge --headless=new --screenshot`; add `--force-prefers-reduced-motion` to see the final state).
 
+## 3d. Hero: full-background photo + drifting clouds (2026-10-01)
+- The homepage hero photo fills the whole section. Text sits on a cream fade on the left; on phones the sky continues above the photo and the herder stands below.
+- **Clouds** (`assets/clouds/cloud-*.webp`) are the photo's **own clouds**, cut out by a script. They drift forever (CSS `drift`, 95–170 s per cloud) and appear only inside `assets/clouds/sky-mask.png`, a soft sky-only mask drawn on the photo and fitted exactly like it. So they pass behind the herder, the yak and the mountains, never over them.
+- The **tap rings and cards are pinned to the herder's phone** by JS (`PHONE={x:.685,y:.479}`, cover-fit maths). Cards avoid the intro text; on phones the alert card is hidden.
+- To add more cloud variety later: photos of clouds on a **pure black** background can be turned into transparent sprites the same way.
+
 ### How the new parts work
 - **Telegram (v38)**
   - A tap of a lost animal (public page or app) sends a message to the owner, that farm's admins and super admins who have linked Telegram. It never goes to the person who tapped. At most 1 alert per animal per chat every 10 minutes.

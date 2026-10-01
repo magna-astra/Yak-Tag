@@ -365,3 +365,48 @@ html,body{overflow-x:hidden}
 /* top-of-page content: CSS-only entrance, visible even if scripts fail */
 .ani{animation:fadeUp .8s cubic-bezier(.2,.7,.2,1) both;animation-delay:var(--d,0s)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+
+/* ================= HERO: photo as full background + drifting clouds ================= */
+.hero.hero-bg{min-height:min(94svh,880px);display:flex;align-items:center;padding:90px 0 150px;background:#8EC3F0}
+.hbg{position:absolute;inset:0;z-index:0;overflow:hidden;animation:kenburns 2.6s cubic-bezier(.2,.7,.2,1) both;transform-origin:68% 45%}
+.hbg picture,.hbg img#heroImg{position:absolute;inset:0;width:100%;height:100%}
+#heroImg{object-fit:cover;object-position:62% 38%}
+/* clouds drift only inside the sky: the mask is drawn on the photo and is
+   fitted exactly like the photo (cover + the same position) */
+.clouds{position:absolute;inset:0;pointer-events:none;
+  -webkit-mask-image:url(clouds/sky-mask.png);mask-image:url(clouds/sky-mask.png);
+  -webkit-mask-size:cover;mask-size:cover;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-position:62% 38%;mask-position:62% 38%}
+.cl{position:absolute;left:0;top:var(--t);width:var(--w);max-width:none;opacity:var(--o,.95);will-change:transform;
+  animation:drift var(--dur) linear infinite;animation-delay:var(--delay)}
+@keyframes drift{from{transform:translateX(-115%)}to{transform:translateX(105vw)}}
+.c1{--t:13%;--w:min(34vw,560px);--dur:95s;--delay:-30s;--rx:46vw}
+.c2{--t:4%;--w:min(15vw,240px);--dur:150s;--delay:-95s;--o:.8;--rx:24vw}
+.c3{--t:24%;--w:min(19vw,300px);--dur:115s;--delay:-60s;--o:.9;--rx:68vw}
+.c4{--t:6%;--w:min(28vw,460px);--dur:170s;--delay:-150s;--o:.75;--rx:8vw}
+.c5{--t:19%;--w:min(11vw,180px);--dur:130s;--delay:-20s;--o:.7;--rx:84vw}
+.hshade{position:absolute;inset:0;background:
+  linear-gradient(90deg,rgba(255,253,248,.95) 0%,rgba(255,253,248,.88) 30%,rgba(255,253,248,.5) 47%,rgba(255,253,248,0) 62%)}
+.herotext{position:relative;z-index:2;width:100%}
+.herotext > *{max-width:560px}
+.tapspot{position:absolute;z-index:3;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;border:0;background:transparent;cursor:pointer;padding:0}
+.tapspot .rings{left:50%;top:50%}
+.tapspot:focus-visible{outline:3px solid var(--sun);outline-offset:4px}
+.hero-bg .fcard{z-index:3}
+.hero-bg .fcard.info,.hero-bg .fcard.alert{right:auto;bottom:auto;left:0;top:0}
+@media(max-width:1000px){.hshade{background:linear-gradient(90deg,rgba(255,253,248,.95) 0%,rgba(255,253,248,.85) 45%,rgba(255,253,248,.35) 70%,rgba(255,253,248,0) 85%)}}
+
+/* phones: open sky above the photo; text sits on the sky, the herder stands below */
+@media(max-width:700px){
+  .hero.hero-bg{min-height:auto;display:block;padding:30px 0 0;background:linear-gradient(180deg,#68AEEF 0%,#7DB8F1 35%,#8EC3F0 60%)}
+  .hbg img#heroImg{top:auto;bottom:0;height:min(64%,560px);object-position:82% 100%;
+    -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 16%);mask-image:linear-gradient(to bottom,transparent 0,#000 16%)}
+  .clouds{-webkit-mask-image:linear-gradient(to bottom,#000 0,#000 50%,transparent 64%);mask-image:linear-gradient(to bottom,#000 0,#000 50%,transparent 64%);
+    -webkit-mask-size:100% 100%;mask-size:100% 100%}
+  .c1{--t:9%;--w:78vw;--dur:70s}.c2{--t:3%;--w:36vw;--dur:95s}.c3{--t:30%;--w:46vw;--dur:80s}
+  .c4{--t:18%;--w:64vw;--dur:110s}.c5{display:none}
+  .hshade{background:linear-gradient(180deg,rgba(255,253,248,.9) 0%,rgba(255,253,248,.82) 38%,rgba(255,253,248,.35) 50%,rgba(255,253,248,0) 60%)}
+  .herotext{padding-bottom:min(118vw,520px)}
+  .hero-bg .fcard.alert{display:none}
+}
+@media(prefers-reduced-motion:reduce){.cl{transform:translateX(var(--rx))}}

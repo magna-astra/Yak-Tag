@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style-a.css?v=2026100104">
+<link rel="stylesheet" href="assets/style-a.css?v=2026100106">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Organization","name":"YAK-TAG",
  "url":"https://magna-astra.github.io/Yak-Tag/","logo":"https://magna-astra.github.io/Yak-Tag/assets/logo-512.png",
@@ -49,34 +49,39 @@
   </div>
 </nav>
 
-<header class="hero">
-  <div class="wrap herogrid">
-    <div>
-      <span class="eyebrow ani">Мал аж ахуйн цахим бүртгэл</span>
-      <h1 class="ani" style="--d:.08s">Мал бүр<br><em>цахим үнэмлэхтэй.</em></h1>
-      <p class="lead ani" style="--d:.16s">NFC таг малыг таниулна. Малчин утсаа ойртуулахад л мал тодорхойлогдож, байршил, огноо, цаг автоматаар бүртгэгдэнэ. Сүү, вакцин, хээлтүүлэг, төллөлтийг нэг дор хөтөлж, төллөх огноог урьдчилан хэлнэ. Апп суулгах шаардлагагүй.</p>
-      <div class="herocta ani" style="--d:.24s">
-        <a href="order.html" class="btn btn-green">Таг захиалах</a>
-        <a href="how.html" class="btn btn-ghost">Хэрхэн ажилладаг</a>
-        <button class="btn btn-link" id="demoTap">▶ Жишээ таг уншуулах</button>
-      </div>
-      <div class="trust ani" style="--d:.32s">
-        <span><i>✓</i>Батерейгүй таг</span>
-        <span><i>✓</i>Апп суулгахгүй</span>
-        <span><i>✓</i>Сүлжээгүй газар ч</span>
-      </div>
+<header class="hero hero-bg" id="hero">
+  <div class="hbg" aria-hidden="true">
+    <picture>
+      <source media="(max-width:700px)" srcset="assets/photos/hero-960.webp">
+      <img id="heroImg" src="assets/photos/hero-1536.webp" alt="" width="1536" height="1024" fetchpriority="high">
+    </picture>
+    <div class="clouds">
+      <img class="cl c1" src="assets/clouds/cloud-1.webp" alt="">
+      <img class="cl c2" src="assets/clouds/cloud-2.webp" alt="">
+      <img class="cl c3" src="assets/clouds/cloud-3.webp" alt="">
+      <img class="cl c4" src="assets/clouds/cloud-4.webp" alt="">
+      <img class="cl c5" src="assets/clouds/cloud-2.webp" alt="">
     </div>
-    <div class="herophoto ani" id="heroPhoto" role="button" tabindex="0" aria-label="Жишээ таг уншуулах" style="--d:.15s">
-      <div class="ph">
-        <picture>
-          <source media="(max-width:700px)" srcset="assets/photos/hero-640.webp">
-          <source media="(max-width:1200px)" srcset="assets/photos/hero-960.webp">
-          <img src="assets/photos/hero-1536.webp" alt="Малчин утсаараа сарлагийн тагийг уншуулж байна" width="1536" height="1024" fetchpriority="high">
-        </picture>
-      </div>
-      <div class="rings" aria-hidden="true"><span></span><span></span><span></span></div>
-      <div class="fcard info" aria-hidden="true"><b>YT-008000</b><span class="sub">Эм · 5 нас · Монгол сарлаг</span><span class="ok">Байршил бүртгэгдлээ</span></div>
-      <div class="fcard alert" aria-hidden="true"><span class="ic">✈</span><span><b>Алга болсон мал олдлоо</b><small>Telegram · дөнгөж сая</small></span></div>
+    <div class="hshade"></div>
+  </div>
+
+  <button class="tapspot" id="tapSpot" aria-label="Жишээ таг уншуулах"><span class="rings"><span></span><span></span><span></span></span></button>
+  <div class="fcard info" id="cardInfo" aria-hidden="true"><b>YT-008000</b><span class="sub">Эм · 5 нас · Монгол сарлаг</span><span class="ok">Байршил бүртгэгдлээ</span></div>
+  <div class="fcard alert" id="cardAlert" aria-hidden="true"><span class="ic">✈</span><span><b>Алга болсон мал олдлоо</b><small>Telegram · дөнгөж сая</small></span></div>
+
+  <div class="wrap herotext">
+    <span class="eyebrow ani">Мал аж ахуйн цахим бүртгэл</span>
+    <h1 class="ani" style="--d:.08s">Мал бүр<br><em>цахим үнэмлэхтэй.</em></h1>
+    <p class="lead ani" style="--d:.16s">NFC таг малыг таниулна. Малчин утсаа ойртуулахад л мал тодорхойлогдож, байршил, огноо, цаг автоматаар бүртгэгдэнэ. Сүү, вакцин, хээлтүүлэг, төллөлтийг нэг дор хөтөлж, төллөх огноог урьдчилан хэлнэ. Апп суулгах шаардлагагүй.</p>
+    <div class="herocta ani" style="--d:.24s">
+      <a href="order.html" class="btn btn-green">Таг захиалах</a>
+      <a href="how.html" class="btn btn-ghost">Хэрхэн ажилладаг</a>
+      <button class="btn btn-link" id="demoTap">▶ Жишээ таг уншуулах</button>
+    </div>
+    <div class="trust ani" style="--d:.32s">
+      <span><i>✓</i>Батерейгүй таг</span>
+      <span><i>✓</i>Апп суулгахгүй</span>
+      <span><i>✓</i>Сүлжээгүй газар ч</span>
     </div>
   </div>
 </header>
@@ -237,6 +242,41 @@ const cio=('IntersectionObserver' in window)&&new IntersectionObserver(es=>es.fo
 }),{threshold:.6});
 document.querySelectorAll('[data-count]').forEach(el=>cio&&cio.observe(el));
 
+// ---- hero: pin the tap rings and cards to the herder's phone ----
+// The photo is "cover"-fitted, so where the phone lands depends on the
+// screen. PHONE is its spot in the photo (fractions of width/height).
+(function(){
+  const PHONE={x:.685,y:.479};
+  const hero=document.getElementById('hero'), img=document.getElementById('heroImg');
+  const spot=document.getElementById('tapSpot'), info=document.getElementById('cardInfo'), alertC=document.getElementById('cardAlert');
+  function place(){
+    const H=hero.getBoundingClientRect(), R=img.getBoundingClientRect();
+    const iw=img.naturalWidth||1536, ih=img.naturalHeight||1024;
+    const s=Math.max(R.width/iw, R.height/ih), w=iw*s, h=ih*s;
+    const pos=getComputedStyle(img).objectPosition.split(' ').map(v=>parseFloat(v)/100);
+    const ox=(R.width-w)*pos[0], oy=(R.height-h)*pos[1];
+    const px=R.left-H.left+ox+PHONE.x*w, py=R.top-H.top+oy+PHONE.y*h;
+    spot.style.left=px+'px'; spot.style.top=py+'px';
+    const narrow=H.width<700, clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+    const iW=info.offsetWidth, iH=info.offsetHeight;
+    // phones: down on the grass at the left; wider screens: beside the yak
+    // never over the intro text: if there is no room left of the yak, go under the phone
+    const textR=Math.max(...[...document.querySelectorAll('.herotext > *')].map(e=>e.getBoundingClientRect().right))-H.left;
+    let iL=px-iW-46, iT=py+56;
+    if(!narrow && iL<textR+16){ iL=Math.max(textR+16,px-iW*.35); iT=py+96; }
+    info.style.left=(narrow?12:clamp(iL,12,H.width-iW-12))+'px';
+    info.style.top=clamp(narrow?py+120:iT,12,H.height-iH-70)+'px';
+    const aW=alertC.offsetWidth;
+    // up in the sky to the right of the hat, never over the herder
+    alertC.style.left=clamp(px+Math.min(110,H.width*.07),12,H.width-aW-12)+'px';
+    alertC.style.top=clamp(py-Math.max(250,H.height*.33),80,H.height-120)+'px';
+  }
+  place();
+  img.complete ? place() : img.addEventListener('load',place);
+  addEventListener('resize',place,{passive:true});
+  if(document.fonts) document.fonts.ready.then(place);
+})();
+
 // ---- demo of the page a stranger sees when tapping a tag ----
 // Built-in sample animals: it never reads real animals, so a visitor's
 // click cannot record a scan or send a lost-animal alert for a real herd.
@@ -261,9 +301,7 @@ document.querySelectorAll('[data-count]').forEach(el=>cio&&cio.observe(el));
     modal.classList.add('on');
     document.getElementById('tapClose').focus();
   }
-  const hp=document.getElementById('heroPhoto');
-  hp.addEventListener('click',()=>show('YT-008000'));
-  hp.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();show('YT-008000');}});
+  document.getElementById('tapSpot').addEventListener('click',()=>show('YT-008000'));
   document.getElementById('demoTap').addEventListener('click',()=>show('YT-008001'));
   const close=()=>modal.classList.remove('on');
   document.getElementById('tapClose').addEventListener('click',close);
