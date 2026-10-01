@@ -99,6 +99,19 @@ To continue, open this folder in Claude Code and say:
   - the dashboard top bar ran off the screen on phones (it now wraps);
   - the cow header overflowed at 320 px.
 
+## 3f. Check, security test and stress test (2026-10-01)
+- **Live files:** 57/57 identical to the repo.
+- **Security (outside, no login):** 123/123 pass.
+  - **Tables:** visitors read nothing, and writes are refused.
+  - **Functions:** every admin and herder function is locked.
+  - **Telegram webhook:** refuses wrong or missing secrets and junk.
+  - **Order form:** refuses bad input before saving.
+  - **Storage:** visitors can't list or upload.
+  - **Login:** sign-up is off.
+  - **Secrets:** no keys or tokens in the repo or its history.
+- **Stress (read-only):** 800 requests, 100% OK. API p95 under 0.7 s with 20 at once; tag lookup p95 0.36 s.
+- **Finding, fixed by v42:** `public_tag_lookup` had no per-visitor limit and returns the owner's phone, with sequential tag codes. That meant phone numbers could be harvested in minutes. `db/schema_v42_lookup_limit.sql` allows 120 lookups per visitor per hour, counted in its own `lookup_rate` table, and removes the ZZ- test rows from `lookup_attempts`. **It must be run in Supabase.**
+
 ### How the new parts work
 - **Telegram (v38)**
   - A tap of a lost animal (public page or app) sends a message to the owner, that farm's admins and super admins who have linked Telegram. It never goes to the person who tapped. At most 1 alert per animal per chat every 10 minutes.
