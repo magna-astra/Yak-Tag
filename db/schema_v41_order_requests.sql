@@ -22,7 +22,16 @@
 -- Safe on the live project and safe to run twice.
 -- ============================================================
 
-create table if not exists order_requests (
+-- Stop at once if this is not the YAK-TAG database (wrong project open).
+do $$
+begin
+  if to_regprocedure('public.is_super()') is null or to_regclass('public.cattle') is null
+     or to_regprocedure('public.tg_send(bigint,text)') is null then
+    raise exception 'Wrong database: this is not the YAK-TAG project (oxfbxqclqfglpzgzizhq), or v38 (Telegram) has not been run here. Open the right project and run again.';
+  end if;
+end $$;
+
+create table if not exists public.order_requests (
   id          bigserial primary key,
   created_at  timestamptz not null default now(),
   name        text not null,
@@ -35,15 +44,15 @@ create table if not exists order_requests (
   status      text not null default 'new' check (status in ('new', 'contacted', 'done', 'spam')),
   notified    integer not null default 0     -- how many Telegram chats were sent the order
 );
-create index if not exists order_requests_recent on order_requests(created_at desc);
-alter table order_requests enable row level security;
-revoke all on table order_requests from anon, authenticated;
-drop policy if exists order_requests_read on order_requests;
-create policy order_requests_read on order_requests for select
-  using (coalesce(is_super(), false));
-grant select on table order_requests to authenticated;     -- the policy limits it to the super admin
+create index if not exists order_requests_recent on public.order_requests(created_at desc);
+alter table public.order_requests enable row level security;
+revoke all on table public.order_requests from anon, authenticated;
+drop policy if exists order_requests_read on public.order_requests;
+create policy order_requests_read on public.order_requests for select
+  using (coalesce(public.is_super(), false));
+grant select on table public.order_requests to authenticated;     -- the policy limits it to the super admin
 
-create or replace function submit_order(
+create or replace function public.submit_order(
   p_name    text,
   p_phone   text,
   p_qty     integer,
@@ -117,8 +126,8 @@ begin
   return true;
 end $$;
 
-revoke all on function submit_order(text, text, integer, text, text, text, text) from public;
-grant execute on function submit_order(text, text, integer, text, text, text, text) to anon, authenticated;
+revoke all on function public.submit_order(text, text, integer, text, text, text, text) from public;
+grant execute on function public.submit_order(text, text, integer, text, text, text, text) to anon, authenticated;
 
 notify pgrst, 'reload schema';
 
