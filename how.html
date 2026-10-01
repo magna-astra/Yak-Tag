@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style-a.css?v=2026100106">
+<link rel="stylesheet" href="assets/style-a.css?v=2026100107">
 </head>
 <body>
 <nav class="nav" id="nav">
@@ -62,9 +62,12 @@
       <p>Хүйтэн, шороо, чийгэнд ажиллана. Эвдэрч гэмтэх эд анги гэж байхгүй.</p>
       <div class="pills"><span class="pill g">NFC таг</span><span class="pill">Ø 32 мм</span><span class="pill">Батерейгүй</span></div>
     </div>
-    <div class="visual rv r">
+    <div class="visual rv r scene" data-scene="tag">
       <div class="tagstage"><div class="rings" aria-hidden="true"><span></span><span></span><span></span></div>
-        <img src="assets/tag-1024.png" alt="YAK-TAG таг"></div>
+        <img src="assets/tag-1024.png" alt="YAK-TAG таг">
+        <div class="nfcread" aria-hidden="true"><span class="st">📶 NFC уншиж байна<i class="dots"><b>.</b><b>.</b><b>.</b></i></span>
+          <span class="code mono"></span><span class="uid mono"></span></div>
+      </div>
     </div>
   </section>
 
@@ -77,13 +80,13 @@
       <p>Интерфэйс нь талбарын ажилтанд зориулагдсан: том бичиг, том товч, бээлийтэй дарж болно.</p>
       <div class="pills"><span class="pill g">Апп суулгахгүй</span><span class="pill">Том товчлуур</span><span class="pill">Ямар ч утсаар</span></div>
     </div>
-    <div class="visual rv l">
+    <div class="visual rv l scene" data-scene="milk">
       <div class="photo"><img src="assets/photos/tagscan-1200.webp" srcset="assets/photos/tagscan-640.webp 640w, assets/photos/tagscan-1200.webp 1200w" sizes="(max-width:900px) 100vw, 50vw" alt="Малчин утсаа сарлагийн чихэн дэх YAK-TAG тагт ойртуулж байна" loading="lazy" width="1200" height="800"></div>
-      <div class="fcard over br" aria-hidden="true" style="width:210px">
-        <b class="mono" style="font-size:1.05rem">YT-008000</b>
-        <div style="color:var(--muted);font-size:.78rem">Эм · 5 нас · Монгол сарлаг</div>
-        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:.84rem"><span>Өнөөдрийн сүү</span><b>9.4 л</b></div>
-        <div style="display:flex;justify-content:space-between;font-size:.84rem"><span>Байршил</span><b style="color:var(--green)">✓ Бүртгэгдлээ</b></div>
+      <div class="fcard over br app" aria-hidden="true">
+        <div class="apphd"><b class="mono">YT-008000</b><small>Эм · 5 нас · Монгол сарлаг</small></div>
+        <div class="applbl">Өнөөдрийн сүү</div>
+        <div class="appin"><span class="v mono">0.0</span><i class="caret"></i><span class="appbtn">Хадгалах</span></div>
+        <div class="appok">✓ Өнөөдөр 9.4 литр бүртгэгдсэн</div>
       </div>
     </div>
   </section>
@@ -97,20 +100,22 @@
       <p>Малчин зөвхөн өөрийн малыг, ферм админ фермийнхээ бүх малыг, ерөнхий админ бүх фермийг хардаг.</p>
       <div class="pills"><span class="pill">Малчин</span><span class="pill g">Ферм админ</span><span class="pill">Ерөнхий админ</span></div>
     </div>
-    <div class="visual rv r">
+    <div class="visual rv r scene" data-scene="dash">
       <div class="dash">
         <div class="bar"><i></i><i></i><i></i><span style="margin-left:8px">ФЕРМ #12 · НАРАН</span></div>
+        <div class="dtabs"><span class="on">Мал сүрэг</span><span>Төллөлт</span><span>Тагууд</span><span>Түүх</span></div>
         <div class="stats">
-          <div class="stat"><b>50</b><small>Бүртгэлтэй мал</small></div>
-          <div class="stat"><b>412</b><small>Сарын сүү, л</small></div>
-          <div class="stat"><b>3</b><small>Вакцин хийх</small></div>
+          <div class="stat"><b data-to="50">50</b><small>Нийт мал</small></div>
+          <div class="stat"><b data-to="412">412</b><small>Өнөөдрийн сүү, л</small></div>
+          <div class="stat"><b data-to="3">3</b><small>Вакцин хэтэрсэн</small></div>
         </div>
+        <div class="dattn"><span>⚠ 3 малын вакцины хугацаа хэтэрсэн</span></div>
         <table>
-          <thead><tr><th>Мал</th><th>Сүү</th><th>Төлөв</th></tr></thead>
+          <thead><tr><th>Мал</th><th>Сүү</th><th>Вакцин</th><th>Төлөв</th></tr></thead>
           <tbody>
-            <tr><td class="m">YT-008000</td><td class="m">9.4 л</td><td><span class="badge ok">Хэвийн</span></td></tr>
-            <tr><td class="m">YT-008001</td><td class="m">11.2 л</td><td><span class="badge ok">Хэвийн</span></td></tr>
-            <tr><td class="m">YT-008002</td><td class="m">—</td><td><span class="badge w">Вакцин</span></td></tr>
+            <tr><td class="m">YT-008000</td><td class="m">9.4 л</td><td class="m">2026/03/01</td><td><span class="badge ok">Хэвийн</span></td></tr>
+            <tr><td class="m">YT-008001</td><td class="m">11.2 л</td><td class="m">2026/06/12</td><td><span class="badge ok">Хэвийн</span></td></tr>
+            <tr class="live"><td class="m">YT-008002</td><td class="m milk">—</td><td class="m">хэтэрсэн</td><td><span class="badge w">Вакцин</span></td></tr>
           </tbody>
         </table>
       </div>
@@ -130,8 +135,13 @@
     <div class="visual rv l">
       <div class="mapbox">
         <div id="demoMap"></div>
-        <div class="mapoverlay" id="mapOverlay">
-          <img src="assets/logo-256.png" alt="">
+        <div class="mapoverlay scene" id="mapOverlay" data-scene="trail">
+          <svg class="trail" viewBox="0 0 400 300" aria-hidden="true">
+            <path class="tpath" d="M60 230 C120 200 150 150 200 160 S300 110 340 70" fill="none"/>
+            <g class="tpin p1" transform="translate(60 230)"><circle r="7"/><text x="12" y="-10">09/24 08:12</text></g>
+            <g class="tpin p2" transform="translate(200 160)"><circle r="7"/><text x="12" y="-10">09/25 17:40</text></g>
+            <g class="tpin p3" transform="translate(340 70)"><circle r="9"/><text x="-74" y="-14">09/26 14:32</text></g>
+          </svg>
           <span>Товч дарахад байршил энд гарч ирнэ</span>
         </div>
       </div>
@@ -147,13 +157,14 @@
       <p>Самбарт 7 болон 30 хоногт төллөх мал, хээлтүүлээгүй мал тусдаа жагсаалтаар харагдана. Төл таг зүүмэгц эхтэйгээ автоматаар холбогдоно.</p>
       <div class="pills"><span class="pill g">Төллөх огноо таамаглана</span><span class="pill">ICAR стандарт</span><span class="pill">Сарлаг · Үхэр · Адуу</span></div>
     </div>
-    <div class="visual rv r">
-      <div class="photo"><img src="assets/photos/calving-1200.webp" srcset="assets/photos/calving-640.webp 640w, assets/photos/calving-1200.webp 1200w" sizes="(max-width:900px) 100vw, 50vw" alt="Сарлаг тугалынхаа хамт" loading="lazy" width="1200" height="800"></div>
+    <div class="visual rv r scene" data-scene="preg">
+      <div class="photo"><img src="assets/photos/calving-1200.webp?v=2" srcset="assets/photos/calving-640.webp?v=2 640w, assets/photos/calving-1200.webp?v=2 1200w" sizes="(max-width:900px) 100vw, 50vw" alt="Сарлаг тугалынхаа хамт" loading="lazy" width="1200" height="800"></div>
       <div class="fcard over bl preg" aria-hidden="true">
-        <div class="ttl">YT-008000</div>
-        <div class="row"><span>Төлөв</span><b style="color:var(--green)">Хээлтэй</b></div>
+        <div class="ttl">YT-008000 <span class="badge ok">Хээлтэй</span> <span class="heart">♥</span></div>
         <div class="row"><span>Хээлтүүлсэн</span><b>2026/07/20</b></div>
+        <div class="prog"><i></i></div>
         <div class="row"><span>Төллөх</span><b>2027/04/04 ±7</b></div>
+        <div class="left"><b class="cnt">190</b> хоног үлдсэн</div>
       </div>
     </div>
   </section>
@@ -167,13 +178,17 @@
       <p>Олсон хүн эзэмшигч рүү нэг товчоор залгана — эзэмшигчийн дугаар ил харагдахгүй. Мал олдмогц "Олдсон" дарахад анхааруулга арилна.</p>
       <div class="pills"><span class="pill g">Telegram</span><span class="pill">Үнэгүй</span><span class="pill">Байршилтай</span></div>
     </div>
-    <div class="visual rv l">
+    <div class="visual rv l scene" data-scene="tg">
       <div class="photo"><img src="assets/photos/lost-1200.webp" srcset="assets/photos/lost-640.webp 640w, assets/photos/lost-1200.webp 1200w" sizes="(max-width:900px) 100vw, 50vw" alt="Үдшийн талд ганцаар зогсох сарлаг, алсад морьтой хүн" loading="lazy" width="1200" height="800"></div>
+      <span class="lostpin" aria-hidden="true"></span>
       <div class="tgmsg over br" aria-hidden="true">
         <div class="h"><i>✈</i>YAK-TAG · Telegram</div>
-        <b>⚠ АЛГА БОЛСОН МАЛ УНШУУЛАГДЛАА</b><br>
-        YT-008001 · Монгол сарлаг<br>Хэзээ: 2026/09/26 14:32<br>Хэн: танихгүй хүн<br>
-        Хаана: <u>maps.google.com/?q=47.91,106.91</u>
+        <div class="typing"><b></b><b></b><b></b></div>
+        <div class="body">
+          <b>⚠ АЛГА БОЛСОН МАЛ УНШУУЛАГДЛАА</b><br>
+          <span>YT-008001 · Монгол сарлаг</span><br><span>Хэзээ: 2026/09/26 14:32</span><br><span>Хэн: танихгүй хүн</span><br>
+          <span>Хаана: <u>maps.google.com/?q=47.91,106.91</u></span>
+        </div>
       </div>
     </div>
   </section>
@@ -187,16 +202,18 @@
       <p>Мал зарах, бэлэглэх, өвлүүлэхэд эзэмшлийн түүх хадгалагдана. Өөр ферм рүү шилжвэл бүх түүх нь хамт явна. Хэн, хэзээ, юуг өөрчилсөн нь "Түүх" хэсэгт үлдэнэ.</p>
       <div class="pills"><span class="pill g">Excel</span><span class="pill">Эзэмшлийн түүх</span><span class="pill">Өөрчлөлтийн түүх</span></div>
     </div>
-    <div class="visual rv r">
+    <div class="visual rv r scene" data-scene="xl">
       <div class="photo"><img src="assets/photos/office-1200.webp" srcset="assets/photos/office-640.webp 640w, assets/photos/office-1200.webp 1200w" sizes="(max-width:900px) 100vw, 50vw" alt="Гэрт зөөврийн компьютер дээр фермийн тайлан харж буй хүн" loading="lazy" width="1200" height="800"></div>
       <div class="xl over bl" aria-hidden="true">
         <div class="t">YAK-TAG_F12.xlsx</div>
+        <div class="dl"><span class="lbl">Татаж байна…</span><span class="pct mono">0%</span><i class="bar"><i></i></i></div>
         <table>
           <tr><th>Таг</th><th>Сар</th><th>Нийт, л</th></tr>
           <tr><td class="m">YT-008000</td><td class="m">2026/09</td><td class="m">281.5</td></tr>
           <tr><td class="m">YT-008001</td><td class="m">2026/09</td><td class="m">244.0</td></tr>
           <tr><td class="m">YT-008002</td><td class="m">2026/09</td><td class="m">198.2</td></tr>
         </table>
+        <div class="xtabs"><span class="on">Мал сүрэг</span><span>Сүү сараар</span><span>Вакцин</span><span>Хээл, төл</span></div>
       </div>
     </div>
   </section>
@@ -295,6 +312,62 @@ document.querySelectorAll('.rv').forEach(el=>io.observe(el));
       stat.className='geostat bad';
       btn.disabled=false; btn.textContent='Байршлыг харах';
     },{enableHighAccuracy:true,timeout:12000,maximumAge:30000});
+  });
+})();
+</script>
+<script>
+// ---- step scenes: each replays what the real system shows ----
+// Runs only while a scene is on screen; "reduce motion" shows the end state.
+(function(){
+  const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $=(r,q)=>r.querySelector(q), $$=(r,q)=>[...r.querySelectorAll(q)];
+  const sleep=(ms,run)=>new Promise(res=>{const t=setTimeout(res,ms); run.timers.push(t);});
+  const S={
+    async tag(el,run){ const st=$(el,'.st'), code=$(el,'.code'), uid=$(el,'.uid');
+      st.style.display=''; code.textContent=''; uid.textContent=''; el.classList.remove('done');
+      await sleep(1500,run); st.style.display='none'; el.classList.add('done');
+      for(const ch of 'YT-008000'){ code.textContent+=ch; await sleep(70,run); }
+      uid.textContent='UID 04:A1:B2:C3:D4:E5'; await sleep(2600,run); },
+    async milk(el,run){ const v=$(el,'.v'), ok=$(el,'.appok'), btn=$(el,'.appbtn');
+      el.classList.remove('saved'); v.textContent='0.0'; v.classList.add('ph'); await sleep(900,run);
+      v.classList.remove('ph'); v.textContent='';
+      for(const ch of '9.4'){ v.textContent+=ch; await sleep(330,run); }
+      await sleep(500,run); btn.classList.add('press'); await sleep(220,run); btn.classList.remove('press');
+      el.classList.add('saved'); await sleep(2800,run); },
+    async dash(el,run){ const nums=$$(el,'.stat b'), rows=$$(el,'tbody tr'), milk=$(el,'.live .milk');
+      el.classList.remove('rowsin','alert','arrived'); milk.textContent='—';
+      nums.forEach(b=>b.textContent='0'); await sleep(200,run);
+      const t0=performance.now(); while(true){ const p=Math.min(1,(performance.now()-t0)/1100);
+        nums.forEach(b=>b.textContent=Math.round(+b.dataset.to*(1-Math.pow(1-p,3)))); if(p>=1) break; await sleep(40,run); }
+      el.classList.add('rowsin'); await sleep(900,run); el.classList.add('alert'); await sleep(1600,run);
+      milk.textContent='8.1 л'; el.classList.add('arrived'); nums[1].textContent='420'; await sleep(2600,run); },
+    async trail(el,run){ el.classList.remove('go'); await sleep(300,run); el.classList.add('go'); await sleep(5200,run); },
+    async preg(el,run){ const bar=$(el,'.prog i'), cnt=$(el,'.cnt');
+      bar.style.width='0%'; cnt.textContent='258'; await sleep(400,run);
+      const t0=performance.now(); while(true){ const p=Math.min(1,(performance.now()-t0)/1800), e=1-Math.pow(1-p,3);
+        bar.style.width=(26*e)+'%'; cnt.textContent=Math.round(258-68*e); if(p>=1) break; await sleep(40,run); }
+      await sleep(3000,run); },
+    async tg(el,run){ el.classList.remove('shown'); el.classList.add('typing-on'); await sleep(1500,run);
+      el.classList.remove('typing-on'); el.classList.add('shown'); await sleep(4200,run); },
+    async xl(el,run){ const pct=$(el,'.pct'), bar=$(el,'.dl .bar i'), tabs=$$(el,'.xtabs span');
+      el.classList.remove('ready'); tabs.forEach((t,i)=>t.classList.toggle('on',i===0));
+      for(let p=0;p<=100;p+=5){ pct.textContent=p+'%'; bar.style.width=p+'%'; await sleep(45,run); }
+      el.classList.add('ready'); await sleep(1300,run);
+      for(let i=1;i<tabs.length;i++){ tabs.forEach((t,j)=>t.classList.toggle('on',j===i)); await sleep(900,run); }
+      await sleep(900,run); }
+  };
+  const END={ tag:el=>{ $(el,'.st').style.display='none'; $(el,'.code').textContent='YT-008000'; $(el,'.uid').textContent='UID 04:A1:B2:C3:D4:E5'; el.classList.add('done'); },
+    milk:el=>{ $(el,'.v').textContent='9.4'; el.classList.add('saved'); }, dash:el=>{ el.classList.add('rowsin','alert'); },
+    trail:el=>el.classList.add('go'), preg:el=>{ $(el,'.prog i').style.width='26%'; }, tg:el=>el.classList.add('shown'), xl:el=>el.classList.add('ready') };
+  document.querySelectorAll('.scene').forEach(el=>{
+    const name=el.dataset.scene; if(!S[name]) return;
+    if(calm||!('IntersectionObserver' in window)){ END[name](el); return; }
+    let run=null;
+    const loop=async r=>{ try{ while(run===r){ await S[name](el,r); } }catch(e){} };
+    new IntersectionObserver(es=>es.forEach(e=>{
+      if(e.isIntersecting && !run){ run={timers:[]}; loop(run); }
+      else if(!e.isIntersecting && run){ run.timers.forEach(clearTimeout); run=null; }
+    }),{threshold:.35}).observe(el);
   });
 })();
 </script>

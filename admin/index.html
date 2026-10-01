@@ -245,6 +245,52 @@ body.role-herder .admin-only{display:none !important}
 body.role-farm_admin .super-only{display:none !important}
 body.role-herder .super-only{display:none !important}
 body.role-herder .col-owner{display:none}
+
+/* ================= Website style A ("Тал нутаг") =================
+   Colours and shapes only, same as the public website. --khukh (blue)
+   is NOT changed: the map pins and the map legend use it. */
+:root{--bg:#F6F1E6;--ink:#14243B;--ink-soft:#5B6779;--line:#E9E2D3;
+  --pri:#2E7D46;--pri-d:#23633A;--pri-l:#E7F2E6;--cream:#FFFDF8}
+body{background:linear-gradient(var(--cream),var(--bg) 340px) var(--bg)}
+.login-wrap{background:radial-gradient(700px 380px at 80% 0%,rgba(242,179,61,.18),transparent 60%),linear-gradient(var(--cream),var(--bg))}
+.login-card{border:1px solid var(--line);border-radius:24px;box-shadow:0 24px 60px rgba(20,36,59,.12)}
+.btn-primary,.msave{background:var(--pri)}
+.btn-primary:hover,.msave:hover{background:var(--pri-d)}
+.field input:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-l)}
+header.topbar{background:rgba(255,253,248,.94);color:var(--ink);border-bottom:1px solid var(--line);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.topbar img{filter:none}
+.topbar .who{color:var(--ink-soft)}
+.topbar .who b{color:var(--ink)}
+.role-chip{background:var(--pri-l);color:var(--pri)}
+.signout{background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:6px 14px}
+.signout:hover{border-color:var(--pri);color:var(--pri)}
+.tabs{border-bottom:0;background:#fff;border:1px solid var(--line);border-radius:18px;padding:5px;
+  display:inline-flex;flex-wrap:wrap;gap:4px;box-shadow:0 6px 18px rgba(20,36,59,.05)}
+.tabs button{border-bottom:0;margin:0;border-radius:999px;padding:8px 16px;transition:background .2s,color .2s}
+.tabs button:hover{color:var(--ink);background:var(--bg)}
+.tabs button.on{background:var(--pri);color:#fff;border-bottom:0}
+.stat,.filters,.table-wrap{border-radius:16px;box-shadow:0 8px 22px rgba(20,36,59,.05)}
+.chip{border-radius:999px}
+.chip.on{border-color:var(--pri);background:var(--pri-l);color:var(--pri)}
+.filters input:focus,.filters select:focus{border-color:var(--pri)}
+.frow + .frow{border-top-color:#F1EBDD}
+thead th{background:#FBF8F1}
+#herdTable thead th{background:var(--pri-l);color:var(--pri)}
+#herdTable tbody tr:nth-child(even){background:#FFFCF6}
+tbody tr:hover{background:#FAF5EA}
+tbody td{border-bottom-color:#F2ECDF}
+.duegroup td{background:var(--bg)!important}
+.vbtn .add,.ghostlink{color:var(--pri)}
+.editpen:hover{color:var(--pri)}
+.pwbtn,.minibtn{border-radius:999px}
+.pwbtn:hover,.minibtn:hover{border-color:var(--pri);color:var(--pri)}
+.modalbox{border-radius:22px}
+.modalbox input:focus,.modalbox select:focus,.modalbox textarea:focus{border-color:var(--pri)}
+/* phones: the top bar wraps onto two lines instead of running off the screen */
+@media(max-width:700px){header.topbar{height:auto;flex-wrap:wrap;padding:10px 14px;row-gap:8px}
+  .topbar .who{margin-left:0;flex:1 1 100%;flex-wrap:wrap;gap:6px}
+  .signout{padding:5px 11px;font-size:.78rem}}
 </style>
 </head>
 <body>

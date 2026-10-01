@@ -180,6 +180,24 @@ header.cowhead{background:var(--ink);color:#fff;margin:0 -16px 18px;padding:18px
 .offbar{background:#F0F2F5;color:var(--ink-soft);padding:11px 14px;border-radius:12px;
   font-size:.84rem;font-weight:600;line-height:1.5;margin:14px 16px 0}
 .notfound h2{color:var(--ink);margin-bottom:8px}
+
+/* ================= Website style A ("Тал нутаг") =================
+   Same colours as the public website: steppe-green accents, warm sand
+   background, green header with white text (readable in sunlight). */
+:root{--bg:#F6F1E6;--ink:#14243B;--ink-soft:#5B6779;--line:#E9E2D3;
+  --khukh:#2E7D46;--khukh-light:#E7F2E6}
+.login-wrap{background:radial-gradient(600px 340px at 80% 0%,rgba(242,179,61,.2),transparent 60%),linear-gradient(#FFFDF8,var(--bg))}
+.login-card{border:1px solid var(--line);border-radius:24px;box-shadow:0 24px 60px rgba(20,36,59,.12)}
+header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 100%);box-shadow:0 10px 26px rgba(35,99,58,.22)}
+.cowmeta{color:rgba(255,255,255,.82)}
+.cowhead .out{border-color:rgba(255,255,255,.45)}
+.card{border-radius:18px;box-shadow:0 8px 22px rgba(20,36,59,.05)}
+.btn-primary:hover{background:#23633A}
+/* inputs in a row with a button must be allowed to shrink on phones
+   (they kept their natural width and pushed the button off the card) */
+.milk-entry input,.phone-entry input{min-width:0;width:0}
+.milk-entry button,.phone-entry button{flex:0 0 auto}
+@media(max-width:360px){.cowhead .brand{display:none}.cowhead .out{padding:5px 9px}}
 </style>
 </head>
 <body>

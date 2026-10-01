@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style-a.css?v=2026100106">
+<link rel="stylesheet" href="assets/style-a.css?v=2026100107">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Organization","name":"YAK-TAG",
  "url":"https://magna-astra.github.io/Yak-Tag/","logo":"https://magna-astra.github.io/Yak-Tag/assets/logo-512.png",
@@ -107,11 +107,11 @@
       <span class="eyebrow rv">Хэрхэн ажилладаг</span>
       <h2 class="rv" style="font-size:clamp(1.8rem,3.4vw,2.5rem);margin:14px 0 22px">Гуравхан алхам.</h2>
       <div class="steps">
-        <div class="step rv" style="--d:.05s"><div><h3>Таг зүүнэ</h3>
+        <div class="step rv" style="--d:.05s"><span class="mini mtag" aria-hidden="true"><i class="r"></i><i class="r r2"></i><i class="t"></i></span><div><h3>Таг зүүнэ</h3>
           <p>Таг бүр дугаартай, NFC чиптэй ирнэ. Малын чихэнд зүүхэд л болно — батерей, цэнэглэлт хэрэггүй.</p></div></div>
-        <div class="step rv" style="--d:.15s"><div><h3>Утсаа ойртуулна</h3>
+        <div class="step rv" style="--d:.15s"><span class="mini mtap" aria-hidden="true"><i class="t"></i><i class="p"></i></span><div><h3>Утсаа ойртуулна</h3>
           <p>Ямар ч NFC-тэй утсаар уншуулахад малын хуудас шууд нээгдэнэ. Апп суулгахгүй.</p></div></div>
-        <div class="step rv" style="--d:.25s"><div><h3>Бүх бүртгэл нэг дор</h3>
+        <div class="step rv" style="--d:.25s"><span class="mini mbars" aria-hidden="true"><i></i><i></i><i></i></span><div><h3>Бүх бүртгэл нэг дор</h3>
           <p>Сүү, вакцин, хээл, төл, байршил автоматаар хадгалагдаж, самбарт харагдана.</p></div></div>
       </div>
       <a href="how.html" class="btn btn-ghost rv" style="margin-top:22px;--d:.3s">Дэлгэрэнгүй үзэх →</a>
@@ -140,7 +140,7 @@
           <p>Хийсэн тун, дараагийн тунгийн огноо хадгалагдаж, хугацаа нь болсон мал самбарт тодорч харагдана.</p></div>
       </article>
       <article class="fcardx rv" style="--d:.16s">
-        <div class="im"><img src="assets/photos/calving-640.webp" srcset="assets/photos/calving-640.webp 640w, assets/photos/calving-1200.webp 1200w"
+        <div class="im"><img src="assets/photos/calving-640.webp?v=2" srcset="assets/photos/calving-640.webp?v=2 640w, assets/photos/calving-1200.webp?v=2 1200w"
           sizes="(max-width:620px) 100vw, (max-width:960px) 50vw, 33vw" alt="Сарлаг тугалынхаа хамт" loading="lazy" width="640" height="427"></div>
         <div class="tx"><span class="tg">Хээл, төл</span><h3>Төллөх огноог урьдчилан</h3>
           <p>Хээлтүүлгээс төллөлт хүртэл бүртгэж, төллөх огноог таамаглана. Төл эхтэйгээ автоматаар холбогдоно.</p></div>
@@ -283,7 +283,7 @@ document.querySelectorAll('[data-count]').forEach(el=>cio&&cio.observe(el));
 (function(){
   const modal=document.getElementById('tapModal');
   const DEMO={
-    'YT-008000':{sub:'Эм · 5 нас · Монгол сарлаг', photo:'assets/photos/calving-640.webp'},
+    'YT-008000':{sub:'Эм · 5 нас · Монгол сарлаг', photo:'assets/photos/calving-640.webp?v=2'},
     'YT-008001':{sub:'Эм · 7 нас · Монгол сарлаг', photo:'assets/yak-760.webp', lost:true},
   };
   function show(tag){

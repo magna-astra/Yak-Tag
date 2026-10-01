@@ -78,6 +78,27 @@ To continue, open this folder in Claude Code and say:
 - The **tap rings and cards are pinned to the herder's phone** by JS (`PHONE={x:.685,y:.479}`, cover-fit maths). Cards avoid the intro text; on phones the alert card is hidden.
 - To add more cloud variety later: photos of clouds on a **pure black** background can be turned into transparent sprites the same way.
 
+## 3e. Clouds high, new calving photo, step animations, app pages restyled (2026-10-01)
+- **Clouds** stay in a high band of the sky (`sky-mask.png`: full above 15% of the photo, gone by 22%; the hat is at about 29%). They're smaller and slower, so they read as far away.
+- **Calving photo:** the owner's real photo of a yak mother and calf (`assets/photos/calving-*.webp`). The links carry `?v=2` because the file name didn't change.
+- **how.html: an animated scene per step** (`.scene[data-scene]`; the JS runs a scene only while it's on screen, and "reduce motion" shows the end state):
+  - **tag:** the NFC read and tag code;
+  - **milk:** the cow-page milk entry;
+  - **dash:** the dashboard counts, rows and a live milk entry;
+  - **trail:** the map-overlay pins (the map script is untouched);
+  - **preg:** the gestation bar, 258 → 190 days;
+  - **tg:** typing, then the Telegram alert;
+  - **xl:** the download, rows and sheet tabs.
+
+  The homepage's 3 steps have small animated icons.
+- **App pages in website style A:** a theme block is appended at the end of the `<style>` in `admin/index.html`, `cow.html` and `t.html`. These are additions only, with no scripts changed.
+  - **Dashboard:** `--khukh` (blue) is left unchanged on purpose, because the **map pins and legend use it**; the new green is `--pri`.
+  - **Cow page and tap page:** `--khukh` is re-pointed to green, with a green header.
+- **Fixed older phone bugs:**
+  - the cow page's milk and phone inputs couldn't shrink, which pushed "Хадгалах" off the card on every phone;
+  - the dashboard top bar ran off the screen on phones (it now wraps);
+  - the cow header overflowed at 320 px.
+
 ### How the new parts work
 - **Telegram (v38)**
   - A tap of a lost animal (public page or app) sends a message to the owner, that farm's admins and super admins who have linked Telegram. It never goes to the person who tapped. At most 1 alert per animal per chat every 10 minutes.
