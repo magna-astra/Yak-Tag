@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/site.css?v=2026100103">
+<link rel="stylesheet" href="assets/site.css?v=2026100104">
 </head>
 <body>
 <nav id="nav">
@@ -69,22 +69,44 @@
       </div>
 
       <div class="reveal">
-        <div class="ordercard">
+        <form class="ordercard" id="orderForm" novalidate>
           <h3>Хэдэн таг хэрэгтэй вэ?</h3>
           <div class="qrow">
-            <button class="qbtn" data-q="10">10</button>
-            <button class="qbtn" data-q="50">50</button>
-            <button class="qbtn" data-q="100">100</button>
-            <button class="qbtn" data-q="500">500</button>
+            <button type="button" class="qbtn" data-q="10">10</button>
+            <button type="button" class="qbtn" data-q="50">50</button>
+            <button type="button" class="qbtn" data-q="100">100</button>
+            <button type="button" class="qbtn" data-q="500">500</button>
           </div>
           <label for="oQty">Тагийн тоо</label>
-          <input type="number" id="oQty" min="1" value="10">
-          <a href="#" class="btn pri" id="oSend" style="width:100%;justify-content:center;margin-top:18px">Захиалгын хүсэлт илгээх (и-мэйл)</a>
-          <a href="tel:+97699031147" class="btn" style="width:100%;justify-content:center;margin-top:10px;text-align:center">Утсаар захиалах: 9903 1147</a>
-          <div class="contacts">
-            <a href="tel:+97699031147"><span>Утас</span><b>9903 1147</b></a>
-            <a href="mailto:magna.astra.mn@gmail.com"><span>И-мэйл</span><b>magna.astra.mn@gmail.com</b></a>
+          <input type="number" id="oQty" min="1" max="100000" value="10" inputmode="numeric">
+          <div class="ofields">
+            <div><label for="oName">Нэр *</label>
+              <input type="text" id="oName" maxlength="80" autocomplete="name" required></div>
+            <div><label for="oPhone">Утас *</label>
+              <input type="tel" id="oPhone" maxlength="24" autocomplete="tel" inputmode="tel" placeholder="9911 2233" required></div>
+            <div><label for="oFarm">Ферм / байгууллага</label>
+              <input type="text" id="oFarm" maxlength="120" autocomplete="organization"></div>
+            <div><label for="oPlace">Аймаг, сум</label>
+              <input type="text" id="oPlace" maxlength="120" placeholder="Архангай, Цэнхэр"></div>
           </div>
+          <label for="oNote">Тэмдэглэл</label>
+          <textarea id="oNote" maxlength="600" rows="2" placeholder="Хэзээ хэрэгтэй, хүргэлт гэх мэт"></textarea>
+          <div class="hp" aria-hidden="true"><label>Website <input type="text" id="oWebsite" tabindex="-1" autocomplete="off"></label></div>
+          <div class="oerr" id="oErr" role="alert"></div>
+          <button type="submit" class="btn pri" id="oSubmit">Захиалга илгээх</button>
+          <p class="ohint">Захиалга шууд бидэнд очно. Таны мэдээллийг зөвхөн захиалгын талаар холбогдоход ашиглана.</p>
+          <div class="contacts">
+            <a href="tel:+97699031147"><span>Утсаар захиалах</span><b>9903 1147</b></a>
+            <a href="#" id="oSend"><span>И-мэйлээр</span><b>magna.astra.mn@gmail.com</b></a>
+          </div>
+        </form>
+        <div class="ordercard odone" id="orderDone" hidden>
+          <div class="okmark">✓</div>
+          <h3>Захиалга хүлээн авлаа</h3>
+          <p>Баярлалаа, <b id="doneName"></b>. <b id="doneQty"></b> тагийн захиалгыг хүлээн авлаа.
+            Бид тантай <b id="donePhone"></b> дугаараар удахгүй холбогдоно.</p>
+          <p class="ohint">Яаралтай бол: <a href="tel:+97699031147">9903 1147</a></p>
+          <button type="button" class="btn" id="oAgain" style="margin-top:16px">Өөр захиалга илгээх</button>
         </div>
       </div>
     </div>
@@ -185,6 +207,48 @@ addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false);});
   qty.addEventListener('input',refresh);
   document.querySelectorAll('.qbtn').forEach(b=>b.addEventListener('click',()=>{qty.value=b.dataset.q;refresh();}));
   refresh();
+
+  // Order form → database → the owner's Telegram (schema_v41). No login
+  // and no library: one request to the public API with the public key
+  // (the same one as in config.js).
+  const API='https://oxfbxqclqfglpzgzizhq.supabase.co/rest/v1/rpc/submit_order';
+  const KEY='sb_publishable_W3WMWLP28Czb2_5VTDQUlg_--3vfY71';
+  const form=document.getElementById('orderForm'), done=document.getElementById('orderDone');
+  const err=document.getElementById('oErr'), btn=document.getElementById('oSubmit');
+  const val=id=>document.getElementById(id).value.trim();
+  const show=m=>{err.textContent=m;err.style.display='block';};
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    err.style.display='none';
+    const n=parseInt(val('oQty'));
+    if(!n||n<1||n>100000) return show('Тагийн тоогоо оруулна уу.');
+    if(val('oName').length<2) return show('Нэрээ оруулна уу.');
+    if(val('oPhone').replace(/\D/g,'').length<8) return show('Утасны дугаараа зөв оруулна уу (8 оронтой).');
+    btn.disabled=true; btn.textContent='Илгээж байна…';
+    try{
+      const r=await fetch(API,{method:'POST',
+        headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+KEY},
+        body:JSON.stringify({p_name:val('oName'),p_phone:val('oPhone'),p_qty:n,
+          p_farm:val('oFarm')||null,p_place:val('oPlace')||null,p_note:val('oNote')||null,
+          p_website:document.getElementById('oWebsite').value||null})});
+      if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.message||('HTTP '+r.status));}
+      document.getElementById('doneName').textContent=val('oName');
+      document.getElementById('doneQty').textContent=n;
+      document.getElementById('donePhone').textContent=val('oPhone');
+      form.hidden=true; done.hidden=false;
+      done.scrollIntoView({behavior:'smooth',block:'center'});
+    }catch(ex){
+      // the server's own message is already in Mongolian; anything else is a network problem
+      show(/[А-Яа-яӨөҮү]/.test(ex.message) ? ex.message
+        : 'Илгээж чадсангүй. Сүлжээгээ шалгаад дахин оролдоно уу, эсвэл 9903 1147 руу залгана уу.');
+    }finally{
+      btn.disabled=false; btn.textContent='Захиалга илгээх';
+    }
+  });
+  document.getElementById('oAgain').addEventListener('click',()=>{
+    ['oName','oPhone','oFarm','oPlace','oNote'].forEach(id=>document.getElementById(id).value='');
+    done.hidden=true; form.hidden=false;
+  });
 })();
 </script>
 </body>

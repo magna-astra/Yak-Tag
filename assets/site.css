@@ -751,3 +751,27 @@ body.light section.feats{background:linear-gradient(#FBF9F4,#F4F0E6)}
 .xltabs span.on{background:rgba(29,111,66,.25);color:var(--bone)}
 body.light .xlmock td{color:#101927;border-color:rgba(16,25,39,.1)}
 body.light .tgmsg{background:#1E2C3F}
+
+/* Order form → Telegram */
+.ofields{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;margin-top:16px}
+@media(max-width:560px){.ofields{grid-template-columns:1fr}}
+.ordercard .ofields label,.ordercard label[for=oNote]{margin-top:12px}
+.ordercard input[type=text],.ordercard input[type=tel],.ordercard textarea{
+  font-family:var(--body);font-size:1rem;font-weight:500}
+.ordercard textarea{width:100%;padding:12px 15px;background:rgba(255,255,255,.05);
+  border:1px solid var(--line);border-radius:11px;color:var(--bone);resize:vertical;min-height:70px}
+.ordercard textarea:focus{outline:none;border-color:var(--gold)}
+.ordercard input::placeholder,.ordercard textarea::placeholder{color:var(--mist);opacity:.6;font-weight:400}
+#oSubmit{width:100%;margin-top:18px;padding:14px 20px;font-size:.95rem;text-align:center}
+#oSubmit:disabled{opacity:.6;cursor:wait}
+.oerr{display:none;margin-top:14px;padding:11px 13px;border-radius:10px;font-size:.86rem;
+  background:rgba(224,91,60,.12);color:#F2A08C;border:1px solid rgba(224,91,60,.35)}
+.ohint{font-size:.78rem;color:var(--mist);margin-top:10px;line-height:1.5}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.odone{text-align:center}
+.odone p{color:var(--mist);font-size:.95rem;line-height:1.6}
+.odone b{color:var(--bone)}
+.okmark{width:58px;height:58px;border-radius:50%;margin:4px auto 14px;display:grid;place-items:center;
+  background:rgba(95,158,98,.18);color:#7CC383;font-size:1.7rem;font-weight:800}
+body.light .oerr{background:#FCEAE7;color:#B3341F;border-color:#E8B4AA}
+body.light .ordercard textarea{color:#101927;background:#fff}
