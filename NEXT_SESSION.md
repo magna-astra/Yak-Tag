@@ -1,6 +1,6 @@
 # YAK-TAG: where we stopped
 
-Last updated **2026-09-26 (Sat)**. The live site and repo are at commit **c41e05c**.
+Last updated **2026-10-01**. Website improvements are on local `main` (see section 3b), waiting for a push.
 This file has no passwords or tokens. It is safe to commit, but note that the repo is public.
 
 To continue, open this folder in Claude Code and say:
@@ -17,6 +17,7 @@ To continue, open this folder in Claude Code and say:
 - Edit files with **exact-text replacements**, never line-range slicing. A slicing edit once silently deleted all the dashboard row buttons.
 - After any dashboard edit, **click-test every row button**.
 - If `config.js` or `offline.js` change, bump `?v=` in every page (currently `?v=20260928`).
+- If `assets/site.css` changes, bump its `?v=` in the 4 public pages (currently `?v=2026100103`). Without it, browsers mix the new pages with the old stylesheet.
 
 ## 2. Where things are
 
@@ -40,6 +41,23 @@ To continue, open this folder in Claude Code and say:
 | baa38ea | **Backup fix**: it now saves 16 tables. Before, it missed milk, pregnancy, calving, breeds and strangers' taps, and pages could repeat or skip rows. |
 | c41e05c | **v38 Telegram alerts**, **v39 sell/transfer an animal**, **v40 Excel report**. |
 
+## 3b. Website improvements, 2026-10-01 (public pages only: `index`, `how`, `faq`, `order`, `assets/site.css`)
+
+- **Phone menu (☰):** before, phones showed only "Захиалах". An old `.burger{display:none !important}` rule hid any menu, so the new button uses the class `navburger`.
+- **Phone intro text** now uses the full width. A later `.herogrid` rule had kept it at 48%, about 159 px.
+- **Homepage:** new 6-card features section (milk, vaccine, pregnancy/calving, lost → Telegram, offline, Excel/history) with call-to-action buttons. It's kept compact on purpose, since the Sep 11 rebuild made the homepage short.
+- **Homepage tag demo** now uses built-in sample animals. Before, it read real tags from the database and linked to the real `t.html`, so a visitor's click could record a scan, or even send a lost alert, for a real animal. The page no longer loads supabase-js.
+- **how.html:** "Долоон алхмаар" with new section 06 (lost-animal Telegram alert) and 07 (Excel report and history).
+- **faq.html:** 4 new questions (Telegram cost, selling/transfer, reports, data safety). The lost-animal answer now mentions Telegram.
+- **order.html:** a "call to order" button next to the email button (many phones have no email app).
+- **Sharing and search:**
+  - `assets/share-1200x630.jpg` is the new preview image for Facebook and Telegram (built by a Pillow script);
+  - each page has its own canonical address, `og:url` and twitter card tags;
+  - `index.html` has organisation details for search engines;
+  - `sitemap.xml` is new;
+  - `noindex` was added to `cow.html` and `admin/index.html` (`t.html` already had it).
+- Removed the unused Noto Sans Mongolian font from the Google Fonts link.
+
 ### How the new parts work
 - **Telegram (v38)**
   - A tap of a lost animal (public page or app) sends a message to the owner, that farm's admins and super admins who have linked Telegram. It never goes to the person who tapped. At most 1 alert per animal per chat every 10 minutes.
@@ -57,14 +75,16 @@ To continue, open this folder in Claude Code and say:
 
 ## 4. To do next
 
-1. **Sunday 2026-09-27 at about 11:00 Ulaanbaatar time:** the weekly backup runs. Check that GitHub → Actions → "Weekly database backup" shows **`Exported 16/16 tables`**.
+1. ~~Check the Sunday backup~~ **Done 2026-09-28:** the run of 2026-09-27 succeeded with no warnings, so all 16 tables were saved.
 2. **Real lost-animal test (optional):**
    - Mark a test cow lost.
    - Tap its tag with a phone that isn't logged in.
    - A Telegram alert with a map link should arrive.
    - Then press "Олдсон".
 3. Ask **farm admins and herders to link Telegram**.
-4. **Marketing pages** (`how.html`, `faq.html`, `index.html`) don't yet mention the Telegram alerts, selling/transferring, or the Excel report. Claude offered to add short sections.
+4. ~~Marketing pages~~ **Done 2026-10-01** (section 3b). **Push it**, then open the live site on a phone and press ☰.
+5. Optional: add the site to **Google Search Console** (free) and submit `https://magna-astra.github.io/Yak-Tag/sitemap.xml`.
+6. Idea: an **order form → Telegram** (free). Website orders would arrive in the owner's Telegram through the existing bot, instead of relying on email. It needs a small SQL function with a spam limit.
 
 ## 5. Idea list (not started)
 

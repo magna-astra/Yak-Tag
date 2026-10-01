@@ -7,15 +7,28 @@
 <meta name="description" content="NFC таг малыг таниулна. Утсаа ойртуулахад л ямар мал, хэний мал, хаана байсан нь харагдана.">
 <meta property="og:title" content="YAK-TAG — Мал бүрт цахим үнэмлэх">
 <meta property="og:description" content="NFC таг малыг таниулна. Утсаа ойртуулахад л ямар мал, хэний мал, хаана байсан нь харагдана.">
-<meta property="og:image" content="https://magna-astra.github.io/Yak-Tag/assets/logo-512.png">
+<meta property="og:image" content="https://magna-astra.github.io/Yak-Tag/assets/share-1200x630.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://magna-astra.github.io/Yak-Tag/">
+<meta property="og:site_name" content="YAK-TAG">
+<meta property="og:locale" content="mn_MN">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://magna-astra.github.io/Yak-Tag/">
 <link rel="icon" href="assets/favicon.ico">
 <link rel="apple-touch-icon" href="assets/logo-180.png">
 <meta name="theme-color" content="#0B1729">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Mongolian&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/site.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css?v=2026100103">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"YAK-TAG",
+ "url":"https://magna-astra.github.io/Yak-Tag/","logo":"https://magna-astra.github.io/Yak-Tag/assets/logo-512.png",
+ "description":"Малын NFC таг, цахим бүртгэл: сүү, вакцин, хээл төл, алга болсон малын мэдэгдэл.",
+ "contactPoint":{"@type":"ContactPoint","telephone":"+976-9903-1147","email":"magna.astra.mn@gmail.com","contactType":"sales","areaServed":"MN","availableLanguage":"mn"}}
+</script>
 </head>
 <body>
 <nav id="nav">
@@ -27,7 +40,14 @@
       <a href="order.html" class="navbtn navorder">Захиалах</a>
       <a href="admin/" class="navlogin">Нэвтрэх</a>
       <button class="themebtn" id="theme" aria-label="Өнгө солих" title="Гэрэлт / бараан">◐</button>
+      <button class="navburger" id="burger" aria-label="Цэс" aria-expanded="false" aria-controls="navmenu">☰</button>
     </div>
+  </div>
+  <div class="navmenu" id="navmenu">
+    <a href="how.html">Хэрхэн ажилладаг</a>
+    <a href="faq.html">Асуулт хариулт</a>
+    <a href="order.html">Таг захиалах</a>
+    <a href="admin/">Нэвтрэх</a>
   </div>
 </nav>
 
@@ -59,6 +79,7 @@
       <div class="herocta">
         <a href="order.html" class="btn pri">Захиалах</a>
         <a href="how.html" class="btn">Хэрхэн ажилладаг</a>
+        <button class="btn demotap" id="demoTap">Жишээ таг уншуулах</button>
       </div>
       <div class="trustrow">
         <span>Батерейгүй таг</span>
@@ -68,6 +89,32 @@
     </div>
   </div>
 </header>
+
+<section class="feats">
+  <div class="wrap">
+    <div class="eyebrow">Нэг таг — бүх бүртгэл</div>
+    <h2 class="sech">Малчин, ферм, админд хэрэгтэй бүхэн нэг дор.</h2>
+    <div class="grid3 featgrid">
+      <div class="card reveal"><span class="num">01 · СҮҮ</span><h3>Өдөр бүрийн сүү</h3>
+        <p>Нэг товшилтоор бүртгэнэ. Сарын нийт, мал бүрийн түүх автоматаар гарна.</p></div>
+      <div class="card reveal"><span class="num">02 · ВАКЦИН</span><h3>Тунг мартахгүй</h3>
+        <p>Хийсэн тун, дараагийн тунгийн огноо хадгалагдаж, хугацаа нь болсон мал самбарт тодорч харагдана.</p></div>
+      <div class="card reveal"><span class="num">03 · ХЭЭЛ, ТӨЛ</span><h3>Төллөх огноог урьдчилан</h3>
+        <p>Хээлтүүлгээс төллөлт хүртэл бүртгэж, төллөх огноог таамаглана. Төл эхтэйгээ автоматаар холбогдоно.</p></div>
+      <div class="card reveal"><span class="num">04 · АЛГА БОЛБОЛ</span><h3>Telegram-аар шууд мэдэгдэнэ</h3>
+        <p>Алга болсон малыг хэн нэгэн уншуулмагц хэзээ, хаана уншуулсныг газрын зургийн холбоостой мессежээр авна. Үнэгүй.</p></div>
+      <div class="card reveal"><span class="num">05 · СҮЛЖЭЭГҮЙ ГАЗАР</span><h3>Хөдөө ч ажиллана</h3>
+        <p>Уншуулалт, сүү, хээл төлийн бүртгэл утсанд хадгалагдаж, сүлжээ орохоор өөрөө илгээгдэнэ.</p></div>
+      <div class="card reveal"><span class="num">06 · ТАЙЛАН, ТҮҮХ</span><h3>Excel тайлан нэг товчоор</h3>
+        <p>Мал сүрэг, сүү, вакцин, хээл төлийн бүртгэлийг Excel-ээр татна. Мал зарахад эзэмшлийн түүх үлдэнэ.</p></div>
+    </div>
+    <div class="featcta">
+      <a href="order.html" class="btn pri">Таг захиалах</a>
+      <a href="how.html" class="btn">Дэлгэрэнгүй үзэх</a>
+      <a href="tel:+97699031147" class="btn">Залгах: 9903 1147</a>
+    </div>
+  </div>
+</section>
 
 <footer>
   <div class="wrap">
@@ -104,12 +151,10 @@
       <div class="tapsub" id="tapSub">Ачаалж байна…</div>
     </div>
     <div class="tapbody" id="tapBody"><div class="taploading">Ачаалж байна…</div></div>
-    <div class="tapfoot">Энэ бол жинхэнэ таг уншуулахад нээгддэг хуудас.</div>
+    <div class="tapfoot">Жишээ. Жинхэнэ таг уншуулахад яг ийм хуудас нээгдэнэ.</div>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
-<script src="config.js?v=20260928"></script>
 <script>
 const io=new IntersectionObserver(es=>es.forEach(e=>{
   if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
@@ -125,55 +170,48 @@ tb.addEventListener('click',()=>{
 addEventListener('scroll',()=>{
   document.getElementById('nav').classList.toggle('on',scrollY>10);
 });
+// phone menu
+const bg=document.getElementById('burger'), nm=document.getElementById('navmenu');
+const setMenu=o=>{nm.classList.toggle('open',o);bg.setAttribute('aria-expanded',o);bg.textContent=o?'✕':'☰';};
+bg.addEventListener('click',()=>setMenu(!nm.classList.contains('open')));
+nm.addEventListener('click',e=>{if(e.target.closest('a'))setMenu(false);});
+addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false);});
 </script>
 
 <script>
+// Demo of the page a stranger sees when tapping a tag. Built-in sample
+// animals: it never reads real animals, so a visitor's click cannot
+// record a scan or send a lost-animal alert for a real herd.
 (function(){
   const modal=document.getElementById('tapModal');
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  async function load(tag){
-    try{
-      const {data,error}=await sb.rpc('public_tag_lookup',{p_tag_code:tag});
-      if(error||!data||!data.length) throw 0;
-      const c=data[0];
-
-      let photoUrl=null;
-      if(c.photo_path){
-        const {data:pu}=sb.storage.from('cattle-public').getPublicUrl(c.photo_path);
-        photoUrl=pu&&pu.publicUrl;
-      }
-
-      document.getElementById('tapSub').textContent = c.is_lost ? 'Алга болсон' : '';
-
-      document.getElementById('tapBody').innerHTML=`
-        ${photoUrl
-          ? `<img src="${photoUrl}" alt="${esc(c.tag_code)}"
-               style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;margin-bottom:14px">`
-          : `<div style="width:100%;aspect-ratio:4/3;background:#E4E8ED;border-radius:12px;
-               display:grid;place-items:center;margin-bottom:14px;color:#9AA6B8;font-size:.85rem">
-               Зураг бүртгэгдээгүй</div>`}
-        ${c.has_phone
-          ? `<a class="tapcall" href="tel:${esc(c.phone).replace(/\s/g,'')}">Эзэмшигч рүү залгах</a>`
-          : `<div class="tapcall" style="background:#DCE1E8;color:#8C99AB">Утасны дугаар бүртгэгдээгүй</div>`}
-        <div class="taprow" style="margin-top:14px;border-bottom:0">
-          <span class="tk">Уншуулсан байршил</span>
-          <span class="tv ok"><span class="tick">✓</span>Бүртгэгдлээ</span></div>
-        <p style="font-size:.78rem;color:#5A6880;margin-top:6px;text-align:center">
-          <a href="t.html?tag=${encodeURIComponent(tag)}" style="color:#1B4FA8;font-weight:600">Бүтэн хуудсыг нээх →</a></p>`;
-    }catch(e){
-      document.getElementById('tapSub').textContent='';
-      document.getElementById('tapBody').innerHTML=
-        `<div class="taperr">Энэ таг одоогоор бүртгэлгүй байна.<br>
-         <a href="t.html?tag=${encodeURIComponent(tag)}" style="color:#1B4FA8;font-weight:600">Хуудсыг нээх →</a></div>`;
-    }
+  const DEMO={
+    'YT-008000':{sub:'Эм · 5 нас · Монгол сарлаг', photo:'assets/yak-760.webp', phone:true},
+    'YT-008001':{sub:'Эм · 7 нас · Монгол сарлаг', photo:'assets/yak-760.webp', phone:true, lost:true},
+    'YT-008002':{sub:'Эр · 4 нас', photo:null, phone:false},
+  };
+  function show(tag){
+    const c=DEMO[tag]||DEMO['YT-008000'];
+    document.getElementById('tapId').textContent=tag;
+    document.getElementById('tapSub').textContent=c.sub;
+    document.getElementById('tapBody').innerHTML=`
+      ${c.lost ? `<div class="taplost">⚠ Энэ мал алга болсон гэж мэдэгдсэн. Эзэмшигч рүү залгана уу.</div>` : ''}
+      ${c.photo
+        ? `<img src="${c.photo}" alt="${tag}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;margin-bottom:14px">`
+        : `<div style="width:100%;aspect-ratio:4/3;background:#E4E8ED;border-radius:12px;
+             display:grid;place-items:center;margin-bottom:14px;color:#9AA6B8;font-size:.85rem">Зураг бүртгэгдээгүй</div>`}
+      ${c.phone
+        ? `<button class="tapcall" id="demoCall" style="width:100%;border:0;cursor:pointer">Эзэмшигч рүү залгах</button>`
+        : `<div class="tapcall" style="background:#DCE1E8;color:#8C99AB">Утасны дугаар бүртгэгдээгүй</div>`}
+      <div class="taprow" style="margin-top:14px;border-bottom:0">
+        <span class="tk">Уншуулсан байршил</span>
+        <span class="tv ok"><span class="tick">✓</span>${c.lost ? 'Эзэмшигчид мэдэгдлээ' : 'Бүртгэгдлээ'}</span></div>
+      <p class="tapnote" id="demoNote" style="display:none">Жинхэнэ таг дээр энэ товч эзэмшигч рүү шууд залгана — дугаар нь харагдахгүй.</p>`;
+    const call=document.getElementById('demoCall');
+    if(call) call.addEventListener('click',()=>{document.getElementById('demoNote').style.display='block';});
+    modal.classList.add('on');
   }
-
-  document.querySelectorAll('.cowspot').forEach(b=>b.addEventListener('click',()=>{
-    document.getElementById('tapId').textContent=b.dataset.tag;
-    document.getElementById('tapSub').textContent='Ачаалж байна…';
-    document.getElementById('tapBody').innerHTML='<div class="taploading">Ачаалж байна…</div>';
-    modal.classList.add('on'); load(b.dataset.tag);
-  }));
+  document.querySelectorAll('.cowspot').forEach(b=>b.addEventListener('click',()=>show(b.dataset.tag)));
+  document.getElementById('demoTap').addEventListener('click',()=>show('YT-008001'));
   const close=()=>modal.classList.remove('on');
   document.getElementById('tapClose').addEventListener('click',close);
   modal.addEventListener('click',e=>{if(e.target===modal)close();});

@@ -694,3 +694,60 @@ body.light .navorder{color:#0B1729 !important}
 /* Page-to-page footer nav */
 .pagenext{display:flex;gap:12px;flex-wrap:wrap;margin-top:44px;padding-top:30px;
   border-top:1px solid var(--line)}
+
+
+/* ================= 2026-10 IMPROVEMENTS ================= */
+/* Phone menu: links hidden on small screens open from the ☰ button */
+.navburger{display:none;width:36px;height:36px;border-radius:100px;border:1px solid var(--line);
+  background:none;color:var(--bone);font-size:1rem;line-height:1;cursor:pointer;place-items:center;
+  flex:0 0 auto;margin:0;padding:0}
+.navmenu{display:none}
+@media(max-width:900px){
+  .navburger{display:grid}
+  .navmenu.open{display:flex;flex-direction:column;position:absolute;top:100%;left:0;right:0;
+    padding:6px var(--gutter) 14px;background:#0A111C;border-bottom:1px solid var(--line)}
+  .navmenu a{padding:13px 2px;font-size:1rem;font-weight:600;color:var(--bone);text-decoration:none;
+    border-bottom:1px solid var(--line)}
+  .navmenu a:last-child{border-bottom:0;color:var(--mist)}
+}
+body.light .navburger{color:#101927}
+body.light .navmenu.open{background:#FBF9F4}
+body.light .navmenu a{color:#101927}
+
+/* Phone hero: full-width text (a later .herogrid rule kept it at 48%) */
+.demotap{display:none}
+@media(max-width:960px){
+  .herogrid{grid-template-columns:1fr;min-height:0}
+  .heroPhoto::after{background:linear-gradient(180deg,rgba(11,23,41,.90) 0%,rgba(11,23,41,.76) 50%,rgba(11,23,41,.50) 100%)}
+  .cowspots{display:none}
+  .demotap{display:inline-block}
+}
+
+/* Home: features */
+section.feats{padding:clamp(56px,8vw,104px) 0;border-top:1px solid var(--line);
+  background:linear-gradient(#0B1A2E,#080F1C)}
+.sech{font-size:clamp(1.55rem,3.2vw,2.3rem);margin-bottom:clamp(24px,3.5vw,40px);max-width:26ch}
+.featgrid .card h3{font-size:1.06rem}
+.featcta{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
+body.light section.feats{background:linear-gradient(#FBF9F4,#F4F0E6)}
+
+/* Demo tap card */
+.taplost{background:#FCEAE7;color:#B3341F;border:1.5px solid #B3341F;border-radius:12px;
+  padding:11px 13px;font-size:.86rem;font-weight:700;margin-bottom:14px}
+.tapnote{font-size:.78rem;color:#5A6880;margin-top:8px;text-align:center}
+
+/* How: Telegram message and Excel mock */
+.tgmsg{background:#1E2C3F;border-radius:14px 14px 14px 4px;padding:12px 14px;font-size:.78rem;
+  line-height:1.6;color:#E6ECF4;display:flex;flex-direction:column;gap:1px}
+.tgmsg b{color:#F5C26B;font-size:.76rem;margin-bottom:6px}
+.tgmsg u{color:#6FA0E8;text-decoration:none}
+.xlbar{background:#1D6F42;color:#fff;font-family:var(--mono);font-size:.72rem;padding:10px 14px;letter-spacing:.04em}
+.xlmock table{width:100%;border-collapse:collapse;font-size:.78rem}
+.xlmock th{background:#1B4FA8;color:#fff;text-align:left;padding:8px 10px;font-weight:600}
+.xlmock td{padding:8px 10px;border-bottom:1px solid var(--line)}
+.xlmock td.m{font-family:var(--mono)}
+.xltabs{display:flex;gap:2px;padding:8px 10px;font-size:.66rem;color:var(--mist);flex-wrap:wrap}
+.xltabs span{padding:4px 8px;border-radius:6px 6px 0 0;background:rgba(255,255,255,.04)}
+.xltabs span.on{background:rgba(29,111,66,.25);color:var(--bone)}
+body.light .xlmock td{color:#101927;border-color:rgba(16,25,39,.1)}
+body.light .tgmsg{background:#1E2C3F}

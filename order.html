@@ -7,15 +7,22 @@
 <meta name="description" content="NFC таг захиалах. Утас 9903 1147.">
 <meta property="og:title" content="Таг захиалах — YAK-TAG">
 <meta property="og:description" content="NFC таг захиалах. Утас 9903 1147.">
-<meta property="og:image" content="https://magna-astra.github.io/Yak-Tag/assets/logo-512.png">
+<meta property="og:image" content="https://magna-astra.github.io/Yak-Tag/assets/share-1200x630.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://magna-astra.github.io/Yak-Tag/order.html">
+<meta property="og:site_name" content="YAK-TAG">
+<meta property="og:locale" content="mn_MN">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://magna-astra.github.io/Yak-Tag/order.html">
 <link rel="icon" href="assets/favicon.ico">
 <link rel="apple-touch-icon" href="assets/logo-180.png">
 <meta name="theme-color" content="#0B1729">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+Mongolian&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/site.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css?v=2026100103">
 </head>
 <body>
 <nav id="nav">
@@ -27,7 +34,14 @@
       <a href="order.html" class="navbtn navorder">Захиалах</a>
       <a href="admin/" class="navlogin">Нэвтрэх</a>
       <button class="themebtn" id="theme" aria-label="Өнгө солих" title="Гэрэлт / бараан">◐</button>
+      <button class="navburger" id="burger" aria-label="Цэс" aria-expanded="false" aria-controls="navmenu">☰</button>
     </div>
+  </div>
+  <div class="navmenu" id="navmenu">
+    <a href="how.html">Хэрхэн ажилладаг</a>
+    <a href="faq.html">Асуулт хариулт</a>
+    <a href="order.html">Таг захиалах</a>
+    <a href="admin/">Нэвтрэх</a>
   </div>
 </nav>
 
@@ -65,7 +79,8 @@
           </div>
           <label for="oQty">Тагийн тоо</label>
           <input type="number" id="oQty" min="1" value="10">
-          <a href="#" class="btn pri" id="oSend" style="width:100%;justify-content:center;margin-top:18px">Захиалгын хүсэлт илгээх</a>
+          <a href="#" class="btn pri" id="oSend" style="width:100%;justify-content:center;margin-top:18px">Захиалгын хүсэлт илгээх (и-мэйл)</a>
+          <a href="tel:+97699031147" class="btn" style="width:100%;justify-content:center;margin-top:10px;text-align:center">Утсаар захиалах: 9903 1147</a>
           <div class="contacts">
             <a href="tel:+97699031147"><span>Утас</span><b>9903 1147</b></a>
             <a href="mailto:magna.astra.mn@gmail.com"><span>И-мэйл</span><b>magna.astra.mn@gmail.com</b></a>
@@ -148,6 +163,12 @@ tb.addEventListener('click',()=>{
 addEventListener('scroll',()=>{
   document.getElementById('nav').classList.toggle('on',scrollY>10);
 });
+// phone menu
+const bg=document.getElementById('burger'), nm=document.getElementById('navmenu');
+const setMenu=o=>{nm.classList.toggle('open',o);bg.setAttribute('aria-expanded',o);bg.textContent=o?'✕':'☰';};
+bg.addEventListener('click',()=>setMenu(!nm.classList.contains('open')));
+nm.addEventListener('click',e=>{if(e.target.closest('a'))setMenu(false);});
+addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false);});
 </script>
 
 <script>
