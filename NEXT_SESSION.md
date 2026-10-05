@@ -23,7 +23,7 @@ To continue, open this folder in Claude Code and say:
 
 | What | Where |
 |---|---|
-| Live site | https://magna-astra.github.io/Yak-Tag/ |
+| Live site | https://yaktag.org/ (old https://magna-astra.github.io/Yak-Tag/ forwards here) |
 | Repo | `magna-astra/Yak-Tag` (public, GitHub Pages) |
 | Database | Supabase project `oxfbxqclqfglpzgzizhq` |
 | Dashboard | `admin/index.html` |
@@ -148,7 +148,7 @@ To continue, open this folder in Claude Code and say:
    - Then press "Олдсон".
 3. Ask **farm admins and herders to link Telegram**.
 4. ~~Marketing pages~~ **Done 2026-10-01** (section 3b). **Push it**, then open the live site on a phone and press ☰.
-5. Optional: add the site to **Google Search Console** (free) and submit `https://magna-astra.github.io/Yak-Tag/sitemap.xml`.
+5. Optional: add the site to **Google Search Console** (free) and submit `https://yaktag.org/sitemap.xml`.
 6. Idea: an **order form → Telegram** (free). Website orders would arrive in the owner's Telegram through the existing bot, instead of relying on email. It needs a small SQL function with a spam limit.
 
 ## 5. Idea list (not started)
@@ -176,7 +176,7 @@ If the token ever leaks, get a new one in @BotFather: `/mybots` → the bot → 
 
 **Check that the live site matches the repo (Git Bash)**
 ```bash
-for f in admin/index.html cow.html t.html config.js; do L=$(curl -s "https://magna-astra.github.io/Yak-Tag/$f?nc=$RANDOM" | md5sum | cut -c1-32); R=$(git show HEAD:$f | md5sum | cut -c1-32); [ "$L" = "$R" ] && echo "same $f" || echo "DIFF $f"; done
+for f in admin/index.html cow.html t.html config.js; do L=$(curl -s "https://yaktag.org/$f?nc=$RANDOM" | md5sum | cut -c1-32); R=$(git show HEAD:$f | md5sum | cut -c1-32); [ "$L" = "$R" ] && echo "same $f" || echo "DIFF $f"; done
 ```
 
 **Test SQL safely before running it on live.** Use a throwaway local Postgres 18 on port 55432. The base setup script was in the Claude scratchpad (`v28_setup.sql`) and will need rebuilding:

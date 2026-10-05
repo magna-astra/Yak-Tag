@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://magna-astra.github.io/Yak-Tag/</loc><lastmod>2026-10-01</lastmod><priority>1.0</priority></url>
-  <url><loc>https://magna-astra.github.io/Yak-Tag/how.html</loc><lastmod>2026-10-01</lastmod><priority>0.8</priority></url>
-  <url><loc>https://magna-astra.github.io/Yak-Tag/faq.html</loc><lastmod>2026-10-01</lastmod><priority>0.7</priority></url>
-  <url><loc>https://magna-astra.github.io/Yak-Tag/order.html</loc><lastmod>2026-10-01</lastmod><priority>0.8</priority></url>
+  <url><loc>https://yaktag.org/</loc><lastmod>2026-10-01</lastmod><priority>1.0</priority></url>
+  <url><loc>https://yaktag.org/how.html</loc><lastmod>2026-10-01</lastmod><priority>0.8</priority></url>
+  <url><loc>https://yaktag.org/faq.html</loc><lastmod>2026-10-01</lastmod><priority>0.7</priority></url>
+  <url><loc>https://yaktag.org/order.html</loc><lastmod>2026-10-01</lastmod><priority>0.8</priority></url>
 </urlset>
