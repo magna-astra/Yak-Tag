@@ -138,6 +138,18 @@ To continue, open this folder in Claude Code and say:
   - "⬇ Excel тайлан" on the herd tab builds a 4-sheet `.xlsx` in the browser, with no library.
   - Milk is added up per month by `export_milk_monthly`.
 
+## 3h. Own domain yaktag.org (2026-10-05)
+
+- **Domain:** `yaktag.org`, bought at **Cloudflare** (registrar + DNS). Paid until **2027-10-05**; keep **auto-renew ON**.
+- **DNS (Cloudflare):** 4 × A `@` → `185.199.108–111.153`, CNAME `www` → `magna-astra.github.io`, TXT `_github-pages-challenge-magna-astra` (GitHub verified domain). **All "DNS only" (grey cloud). Never turn the orange proxy on** — GitHub's HTTPS certificate depends on it.
+- **GitHub Pages:** custom domain `yaktag.org`, Enforce HTTPS on (Let's Encrypt). The `CNAME` file in the repo holds the domain — **never delete it**.
+- **Old address:** `magna-astra.github.io/Yak-Tag/…` forwards with 301 to `yaktag.org/…`, keeping `?tag=`. Tags printed before keep working **as long as the GitHub repo and Pages exist**. New tags are written with `https://yaktag.org/t.html?tag=` (`tools/nfc_write.py`, `tools/nfc_tag.py`).
+- **v44** (`db/schema_v44_site_url.sql`): Telegram alert links use `https://yaktag.org`.
+- Search/share links, `sitemap.xml` and the new `robots.txt` use the new address.
+- `admin/index.html` and `cow.html` refuse to show inside another site's frame (click-jacking guard).
+- Logins are kept per address: everyone logged in once more after the move.
+- Live check after the move (2026-10-05): forwards, HTTPS, tag lookup and bad input, visitor access to 24 tables, 14 admin functions, sign-up off, storage, spam trap, load test (240 page loads 30 at once; 25 simultaneous tag lookups) — all passed.
+
 ## 4. To do next
 
 1. ~~Check the Sunday backup~~ **Done 2026-09-28:** the run of 2026-09-27 succeeded with no warnings, so all 16 tables were saved.
@@ -149,6 +161,7 @@ To continue, open this folder in Claude Code and say:
 3. Ask **farm admins and herders to link Telegram**.
 4. ~~Marketing pages~~ **Done 2026-10-01** (section 3b). **Push it**, then open the live site on a phone and press ☰.
 5. Optional: add the site to **Google Search Console** (free) and submit `https://yaktag.org/sitemap.xml`.
+7. **Domain safety (Cloudflare, free):** turn on **DNSSEC**; add TXT `@` `v=spf1 -all` and TXT `_dmarc` `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s` so nobody can send e-mail pretending to be @yaktag.org (replace the SPF if Email Routing is set up later).
 6. Idea: an **order form → Telegram** (free). Website orders would arrive in the owner's Telegram through the existing bot, instead of relying on email. It needs a small SQL function with a spam limit.
 
 ## 5. Idea list (not started)
