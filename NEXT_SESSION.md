@@ -150,11 +150,14 @@ To continue, open this folder in Claude Code and say:
 - Logins are kept per address: everyone logged in once more after the move.
 - Live check after the move (2026-10-05): forwards, HTTPS, tag lookup and bad input, visitor access to 24 tables, 14 admin functions, sign-up off, storage, spam trap, load test (240 page loads 30 at once; 25 simultaneous tag lookups) — all passed.
 
-## 3i. Website orders by e-mail too (2026-10-06)
+## 3i. Orders arrive by Telegram; e-mail only as a contact link (2026-10-06)
+
+**Decision:** website orders are received in **Telegram only**. Visitors who prefer e-mail press the address on the site (`mailto:` links filled in by `assets/contacts.js` from the dashboard setting), which opens their own e-mail app to `contact@yaktag.org`. **`email_setup()` is NOT run**, so v45's e-mail part stays switched off; keep it that way unless the owner asks for order e-mails.
+
 
 - **Zoho Mail** (Forever Free, web + app only) hosts `admin@` (super admin), `contact@`, `test@yaktag.org`. Zoho set its DNS itself through Cloudflare: MX `mx/mx2/mx3.zoho.com`, SPF `v=spf1 include:zohomail.com ~all`, DKIM `zmail._domainkey`. DMARC `p=reject` unchanged.
 - The website shows `contact@yaktag.org` (dashboard → "Холбоо барих").
-- **v45** (`db/schema_v45_order_email.sql`): every website order is ALSO e-mailed (Telegram unchanged) through **Resend** (free: 3 000/month, 100/day), to `app_secrets.order_email` or else the e-mail shown on the website. Capped at 90 e-mails a day. Its last statement lists the latest 5 orders with `telegram_chats` (0 = no super admin has linked Telegram).
+- **v45** (`db/schema_v45_order_email.sql`, optional, dormant): if ever switched on, every website order is ALSO e-mailed (Telegram unchanged) through **Resend** (free: 3 000/month, 100/day), to `app_secrets.order_email` or else the e-mail shown on the website. Capped at 90 e-mails a day. Its last statement lists the latest 5 orders with `telegram_chats` (0 = no super admin has linked Telegram).
 - Setup once in the SQL Editor: `select public.email_setup('re_…');` (key from Resend → API Keys; never paste it in chat). It sends a test e-mail. Problems: `select * from public.email_check();` shows Resend's answers.
 - Resend DNS lives on `send.yaktag.org` + `resend._domainkey` only; it must not touch the root MX/SPF (Zoho).
 
