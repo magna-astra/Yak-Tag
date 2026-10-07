@@ -9,6 +9,7 @@ Auto-detects NTAG213 / NTAG215 / NTAG216 and uses the right memory map.
     python nfc_tag.py wipe                   erase user memory
     python nfc_tag.py write YT-008000        write the tap URL
     python nfc_tag.py rewrite YT-008000      wipe + write onto a used tag
+    python nfc_tag.py setpass                choose YOUR secret tag password (once)
     python nfc_tag.py protect                set write password (REVERSIBLE)
     python nfc_tag.py unprotect              remove the write password
     python nfc_tag.py verify YT-008000
@@ -26,10 +27,17 @@ USE `protect`, NOT A PERMANENT LOCK:
     anyone — it becomes waste the moment the animal is sold or the
     data was wrong.
 
-CHANGE TAG_PASSWORD BELOW before writing production tags.
+THE TAG PASSWORD IS NOT IN THIS FILE (the repo is public). `setpass`
+saves it in tag_password.txt next to this script, which git ignores.
+Or set the environment variable YT_TAG_PASSWORD (4 characters).
+Keep a copy somewhere safe: without it, protected tags cannot be
+rewritten.
 """
 
+import os
 import sys
+from getpass import getpass
+from pathlib import Path
 
 try:
     from smartcard.System import readers
@@ -43,7 +51,11 @@ except ImportError:
 # ============================================================
 BASE_URL = "https://yaktag.org/t.html?tag="
 
-TAG_PASSWORD = b"YKTG"          # exactly 4 bytes
+# The write password: 4 characters, never stored in this public file.
+# Source: YT_TAG_PASSWORD environment variable, else tag_password.txt
+# next to this script (created by `setpass`, ignored by git).
+PASSWORD_FILE   = Path(__file__).with_name("tag_password.txt")
+LEGACY_PASSWORD = b"YKTG"       # old default, public on GitHub: never protect with it
 TAG_PACK     = b"\x59\x41"      # 2 bytes
 
 # ============================================================
@@ -126,8 +138,27 @@ def detect_profile(conn):
     return profile
 
 
-def authenticate(conn, password=TAG_PASSWORD):
+def load_password():
+    raw = os.environ.get("YT_TAG_PASSWORD")
+    if raw is None and PASSWORD_FILE.exists():
+        raw = PASSWORD_FILE.read_text(encoding="utf-8").strip()
+    if raw is None:
+        return None
+    pw = raw.encode("ascii", errors="replace")
+    if len(pw) != 4:
+        print(f"Tag password must be exactly 4 characters ({PASSWORD_FILE.name} / YT_TAG_PASSWORD).")
+        sys.exit(1)
+    return pw
+
+
+TAG_PASSWORD = load_password()   # None until `setpass` has been run
+
+
+def authenticate(conn, password=None):
     """PWD_AUTH via ACR pseudo-APDU. Returns True on success."""
+    password = password or TAG_PASSWORD
+    if password is None:
+        return False
     apdu = [0xFF, 0x00, 0x00, 0x00, 0x07, 0xD4, 0x42, 0x1B] + list(password)
     try:
         data, sw1, sw2 = conn.transmit(apdu)
@@ -413,9 +444,18 @@ def cmd_protect():
         print("Already password protected.")
         return
 
+    if TAG_PASSWORD is None:
+        print("No tag password yet. Run first:  python nfc_tag.py setpass")
+        return
+    if TAG_PASSWORD == LEGACY_PASSWORD:
+        print("YKTG is the old default and is public on GitHub — anyone could")
+        print("rewrite your tags. Choose your own:  python nfc_tag.py setpass")
+        return
+
     print(f"Tag type: {prof['name']}")
     print("Setting write password. REVERSIBLE via `unprotect`.\n")
-    print(f"Password in this script: {TAG_PASSWORD.decode()}")
+    where = "YT_TAG_PASSWORD" if os.environ.get("YT_TAG_PASSWORD") else PASSWORD_FILE.name
+    print(f"Password: your own, from {where}")
     if input("Proceed? Type PROTECT: ").strip() != "PROTECT":
         print("Aborted.")
         return
@@ -423,13 +463,15 @@ def cmd_protect():
     write_page(conn, prof["pwd"], TAG_PASSWORD)
     write_page(conn, prof["pack"], TAG_PACK + b"\x00\x00")
 
-    cfg0 = bytearray(read_pages(conn, prof["cfg0"], 1))
-    cfg0[3] = prof["first_page"]        # protect from first user page onward
-    write_page(conn, prof["cfg0"], bytes(cfg0))
-
+    # CFG1 before CFG0: once AUTH0 is set, every page from the first user
+    # page on (CFG1 included) refuses writes without the password.
     cfg1 = bytearray(read_pages(conn, prof["cfg1"], 1))
     cfg1[0] = cfg1[0] & 0x7F            # PROT=0: write-protect only, stays readable
     write_page(conn, prof["cfg1"], bytes(cfg1))
+
+    cfg0 = bytearray(read_pages(conn, prof["cfg0"], 1))
+    cfg0[3] = prof["first_page"]        # protect from first user page onward (last step)
+    write_page(conn, prof["cfg0"], bytes(cfg0))
 
     print("Protected. Still readable by any phone; writes need the password.")
 
@@ -455,6 +497,31 @@ def cmd_unprotect():
     print("Protection removed.")
 
 
+def cmd_setpass():
+    print("Choose the secret password that protects your tags from rewriting.")
+    print("Exactly 4 characters (letters/digits), e.g. k7Qm. Not YKTG.\n")
+    if PASSWORD_FILE.exists():
+        print(f"{PASSWORD_FILE.name} already exists. Tags protected with the OLD")
+        print("password need the old one to be rewritten — keep a copy of it.\n")
+        if input("Replace it? Type REPLACE: ").strip() != "REPLACE":
+            print("Aborted — nothing changed.")
+            return
+    pw = getpass("New tag password (hidden): ").strip()
+    if pw != getpass("Again: ").strip():
+        print("The two entries differ. Nothing saved.")
+        return
+    if len(pw) != 4 or not pw.isascii() or not pw.isalnum():
+        print("Must be exactly 4 letters/digits. Nothing saved.")
+        return
+    if pw.encode() == LEGACY_PASSWORD:
+        print("YKTG is public on GitHub. Choose another. Nothing saved.")
+        return
+    PASSWORD_FILE.write_text(pw, encoding="utf-8")
+    print(f"Saved in {PASSWORD_FILE}")
+    print("Write it down and keep it somewhere safe (not on GitHub, not in chat).")
+    print("Every computer that writes your tags needs this same file.")
+
+
 def cmd_verify(tag_code):
     conn = get_connection()
     s = tag_state(conn)
@@ -476,6 +543,7 @@ def main():
         elif cmd == "wipe": cmd_wipe()
         elif cmd == "write" and len(sys.argv) == 3: cmd_write(sys.argv[2])
         elif cmd == "rewrite" and len(sys.argv) == 3: cmd_rewrite(sys.argv[2])
+        elif cmd == "setpass": cmd_setpass()
         elif cmd == "protect": cmd_protect()
         elif cmd == "unprotect": cmd_unprotect()
         elif cmd == "verify" and len(sys.argv) == 3: cmd_verify(sys.argv[2])

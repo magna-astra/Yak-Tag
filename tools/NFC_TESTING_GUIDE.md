@@ -1,3 +1,7 @@
+> **Outdated (2026-10-07).** Use `tools/nfc_tag.py`, not `nfc_tool.py` / `nfc_write.py`.
+> Protect tags with `python nfc_tag.py setpass` once, then `protect` (reversible).
+> Do **not** use the permanent `lock`: a locked tag can never be reused.
+
 # YAK-TAG — Phase 1: NFC tag testing with the ACR1552U
 
 Goal of this phase: prove you can reliably **write a tag_code to a blank

@@ -6,3 +6,9 @@ Thumbs.db
 node_modules/
 __pycache__/
 backups/
+
+# secret NFC tag password (tools/nfc_tag.py setpass) - never commit
+tag_password.txt
+
+# built business kit
+dist/
