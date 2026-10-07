@@ -911,7 +911,7 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
 
 <div class="toast" id="toast"></div>
 
-<script src="../config.js?v=20260928"></script>
+<script src="../config.js?v=20261007"></script>
 <script>
 let allCattle = [], farms = [], users = [], myRole = null, myId = null;
 let map = null, markers = [];
@@ -931,7 +931,6 @@ function closeModal(id){document.getElementById(id).classList.remove('on');}
 function isToday(d){return d === mnDate();}
 function fmtD(ts){return fmtDate(ts);}          // Mongolian numbered months (config.js)
 function fmtDT(ts){return fmtDateTime(ts);}
-function daysUntil(d){if(!d)return null;return Math.ceil((new Date(d)-new Date())/86400000);}
 // A plain Google Maps URL — not the paid Maps API. No key, no billing,
 // no quota. On a phone it opens the Google Maps app with navigation,
 // which is what a herder actually needs when an animal is 8km away.
@@ -949,7 +948,12 @@ async function doLogin(){
   loginBtn.disabled=true; loginBtn.textContent='Нэвтэрч байна…';
   const {error} = await sb.auth.signInWithPassword({email: loginEmail(email), password});
   loginBtn.disabled=false; loginBtn.textContent='Нэвтрэх';
-  if(error){showErr('Утас/и-мэйл эсвэл нууц үг буруу байна.');return;}
+  if(error){
+    // No signal is not a wrong password.
+    const net = !navigator.onLine || error.name==='AuthRetryableFetchError' || /fetch|network|load failed|timeout|abort/i.test(error.message||'');
+    showErr(net ? 'Сүлжээ муу байна. Дахин оролдоно уу.' : 'Утас/и-мэйл эсвэл нууц үг буруу байна.');
+    return;
+  }
   boot();
 }
 function showErr(m){const e=document.getElementById('loginErr');e.textContent=m;e.style.display='block';}
@@ -1181,9 +1185,12 @@ async function delFarm(id,name,nCattle,nUsers){
   if(!confirm(`"${name}" фермийг УСТГАХ уу?`)) return;
   let {error} = await sb.rpc('delete_farm',{p_farm_id:id,p_force:false});
   if(error){
+    // Only "this would delete records" may lead to the forced delete —
+    // never a network or permission error.
+    if(!/pass force/i.test(error.message||'')){toast(mnError(error.message),true);return;}
     if(!confirm(`${mnError(error.message)}\n\nБүгдийг УСТГАХ уу? Энэ үйлдлийг буцаах боломжгүй.`)) return;
     ({error} = await sb.rpc('delete_farm',{p_farm_id:id,p_force:true}));
-    if(error){toast(error.message,true);return;}
+    if(error){toast(mnError(error.message),true);return;}
   }
   toast('Ферм устгагдлаа'); loadFarms(); loadAdminFarms(); loadCattle();
 }
@@ -1192,9 +1199,10 @@ async function delCattle(id,tag){
   if(!confirm(`${tag} малыг устгах уу?`)) return;
   let {error} = await sb.rpc('delete_cattle',{p_cattle_id:id,p_force:false});
   if(error){
+    if(!/pass force/i.test(error.message||'')){toast(mnError(error.message),true);return;}
     if(!confirm(`${mnError(error.message)}\n\nБүгдийг УСТГАХ уу? Энэ үйлдлийг буцаах боломжгүй.`)) return;
     ({error} = await sb.rpc('delete_cattle',{p_cattle_id:id,p_force:true}));
-    if(error){toast(error.message,true);return;}
+    if(error){toast(mnError(error.message),true);return;}
   }
   toast('Мал устгагдлаа'); loadCattle();
 }
@@ -1204,9 +1212,10 @@ async function delUser(id){
   if(!confirm(`"${u.full_name}" хэрэглэгчийг устгах уу?`)) return;
   let {error} = await sb.rpc('delete_profile',{p_profile_id:id,p_force:false});
   if(error){
+    if(!/pass force/i.test(error.message||'')){toast(mnError(error.message),true);return;}
     if(!confirm(`${mnError(error.message)}\n\nБүгдийг УСТГАХ уу? Энэ үйлдлийг буцаах боломжгүй.`)) return;
     ({error} = await sb.rpc('delete_profile',{p_profile_id:id,p_force:true}));
-    if(error){toast(error.message,true);return;}
+    if(error){toast(mnError(error.message),true);return;}
   }
   toast('Хэрэглэгч устгагдлаа'); loadUsers();
 }
@@ -1794,15 +1803,18 @@ function openMilk(cattleId, tagCode){
 document.getElementById('milkModalSave').addEventListener('click', async ()=>{
   const liters = parseFloat(document.getElementById('milkModalVal').value);
   if(isNaN(liters)||liters<0){toast('Зөв тоо оруулна уу.',true);return;}
-  const {data:{user}} = await sb.auth.getUser();
+  // From this browser's login (no network call). getUser() asks the
+  // server, and with no signal its null user crashed this silently.
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){toast('Нэвтрэх хугацаа дууссан. Дахин нэвтэрнэ үү.',true);return;}
   const c = allCattle.find(x=>x.id===milkTarget.cattleId);
 
   const {error} = await sb.from('milk_yield').upsert({
-    farm_id:c.farm_id, cattle_id:c.id, recorded_by:user.id,
+    farm_id:c.farm_id, cattle_id:c.id, recorded_by:session.user.id,
     liters, yield_date:filterDate
   },{onConflict:'cattle_id,yield_date'});
 
-  if(error){toast('Хадгалж чадсангүй: '+error.message,true);return;}
+  if(error){toast('Хадгалж чадсангүй: '+mnError(error.message),true);return;}
   closeModal('milkModal');
   toast(`${liters.toFixed(1)} литр хадгалагдлаа`);
   await loadCattle();                       // reloads milk for the date too
@@ -1873,10 +1885,18 @@ document.getElementById('vaccSave').addEventListener('click', async ()=>{
   const given = document.getElementById('vaccGiven').value;
   const next = document.getElementById('vaccNext').value;
   if(!name||!given){toast('Нэр болон огноог оруулна уу.',true);return;}
-  const {error} = vaccMode==='edit'
-    ? await sb.rpc('admin_update_vaccination',{p_cattle_id:vaccTarget, p_vaccine:name, p_given_on:given, p_next_due:next||null})
-    : await sb.rpc('log_vaccination',{p_cattle_id:vaccTarget, p_vaccine:name, p_given_on:given, p_next_due:next||null, p_note:null});
-  if(error){toast('Хадгалж чадсангүй: '+error.message,true);return;}
+  // A double click would log the dose twice (admins skip the duplicate check).
+  const saveBtn = document.getElementById('vaccSave');
+  if(saveBtn.disabled) return;
+  saveBtn.disabled = true;
+  let error;
+  try {
+    ({error} = vaccMode==='edit'
+      ? await sb.rpc('admin_update_vaccination',{p_cattle_id:vaccTarget, p_vaccine:name, p_given_on:given, p_next_due:next||null})
+      : await sb.rpc('log_vaccination',{p_cattle_id:vaccTarget, p_vaccine:name, p_given_on:given, p_next_due:next||null, p_note:null}));
+  } catch(e) { error = e; }
+  finally { saveBtn.disabled = false; }
+  if(error){toast('Хадгалж чадсангүй: '+mnError(error.message||error),true);return;}
   closeModal('vaccModal');
   toast(vaccMode==='edit' ? 'Вакцин засагдлаа' : 'Вакцин бүртгэгдлээ');
   loadCattle();

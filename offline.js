@@ -48,6 +48,8 @@ const ytQueue = (() => {
       const req = fn(t.objectStore(STORE));
       t.oncomplete = () => resolve(req && req.result);
       t.onerror = () => reject(t.error);
+      // Phone storage full: the transaction aborts without an error event.
+      t.onabort = () => reject(t.error || new Error('IndexedDB transaction aborted'));
     });
   }
   const put = item => run('readwrite', s => s.put(item));
@@ -185,14 +187,22 @@ const ytQueue = (() => {
       const res = await senders[kind](payload, item).catch(err => ({ error: err }));
       return { sent: !res.error, queued: false, result: res.data, error: res.error };
     }
-    if (flushing) await flushing;              // don't race a running flush
+    // don't race a running flush — it may also have sent this item
+    const earlier = flushing ? await flushing : null;
     const done = await flush();
-    const mine = (done || []).find(i => i.id === item.id);
+    const both = [...(earlier || []), ...(done || [])];
+    const mine = both.find(i => i.id === item.id && i.sent) || both.find(i => i.id === item.id);
     const sent = !!(mine && mine.sent);
-    // queued = waiting for signal. Not sent AND not queued = the
-    // server refused it (e.g. unknown tag); retried a few times anyway.
-    return { sent, queued: !sent && (stoppedOffline || !navigator.onLine),
-             result: mine && mine.result, error: mine && mine.lastError };
+    const queued = !sent && (stoppedOffline || !navigator.onLine);
+    // Not sent AND not queued = the server refused it (e.g. unknown tag).
+    // Milk and pregnancy/calving entries were typed by someone who now
+    // sees the error and can fix and resend — don't also retry the old
+    // copy behind their back. Scans are automatic: retried a few times.
+    if (mine && mine.lastError && !sent && !queued && (kind === 'milk' || kind === 'repro')) {
+      try { await del(item.id); } catch (e) {}
+      notify();
+    }
+    return { sent, queued, result: mine && mine.result, error: mine && mine.lastError };
   }
 
   function onChange(fn) { listeners.push(fn); notify(); }

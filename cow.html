@@ -14,7 +14,9 @@
 <meta name="theme-color" content="#0E1929">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- Fonts load without holding up the page: with bars but no data a
+     blocking stylesheet kept the scripts (and the scan) waiting. -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
 <style>
 :root{
@@ -276,8 +278,8 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
 <div class="toast" id="toast"></div>
 <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
 
-<script src="config.js?v=20260928"></script>
-<script src="offline.js?v=20260928"></script>
+<script src="config.js?v=20261007"></script>
+<script src="offline.js?v=20261007"></script>
 <script>
 let cow = null;
 let myProf = null;          // role / farm of the signed-in user
@@ -315,7 +317,10 @@ async function doLogin() {
   loginBtn.disabled = false; loginBtn.textContent = 'Нэвтрэх';
   if (error) {
     const e = document.getElementById('loginErr');
-    e.textContent = 'Утас/и-мэйл эсвэл нууц үг буруу байна.';
+    // No signal is not a wrong password.
+    e.textContent = (isOffline(error) || error.name === 'AuthRetryableFetchError')
+      ? 'Сүлжээ муу байна. Дахин оролдоно уу.'
+      : 'Утас/и-мэйл эсвэл нууц үг буруу байна.';
     e.style.display = 'block';
     return;
   }
@@ -409,7 +414,19 @@ document.getElementById('mpSave').addEventListener('click', async () => {
 });
 
 document.getElementById('signoutBtn').addEventListener('click', async () => {
-  await sb.auth.signOut(); location.reload();
+  // Entries waiting on this phone are sent with this login. After
+  // signing out they can no longer be sent.
+  let waiting = 0;
+  try { waiting = await ytQueue.count(); } catch (e) {}
+  if (waiting && !confirm(`${waiting} бүртгэл илгээгдээгүй байна. Сүлжээ ороход автоматаар илгээгдэнэ.\n\nОдоо гарвал эдгээр бүртгэл хадгалагдахгүй байж магадгүй. Гарах уу?`)) return;
+  try { await sb.auth.signOut(); } catch (e) {}
+  // This user's animals and profile don't stay on the phone for the next person.
+  try {
+    Object.keys(localStorage)
+      .filter(k => /^yt-(uid|prof|cow:|extra:|repro:)/.test(k))
+      .forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+  location.reload();
 });
 
 // ---------- GPS ----------
@@ -463,13 +480,16 @@ function cacheGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch
 function cacheSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
 async function boot() {
-  let session = null;
-  try { ({ data: { session } } = await sb.auth.getSession()); } catch (e) {}
+  let session = null, sErr = null;
+  try { ({ data: { session }, error: sErr } = await sb.auth.getSession()); } catch (e) { sErr = e; }
 
   // No signal and the login token needs refreshing: getSession() gives
   // nothing. Open from the saved copy if this phone has one — the
   // queued scan is sent with a fresh token once the network is back.
-  if (!session && !navigator.onLine && cacheGet('yt-uid')) {
+  // "No signal" includes bars-but-no-data, where the phone says it is
+  // online but the token refresh failed on the network.
+  const noNet = !navigator.onLine || (sErr && (isOffline(sErr) || sErr.name === 'AuthRetryableFetchError'));
+  if (!session && noNet && cacheGet('yt-uid')) {
     offlineMode = true;
   } else if (!session) {
     document.getElementById('loginView').style.display = 'grid';
@@ -878,10 +898,15 @@ async function loadRepro() {
 
 // ev = an existing entry to edit (prefilled); without it, a new entry.
 let reproEditing = null;
+// One id per opened form: pressing Хадгалах again after an error resends
+// the same entry, and the server returns the copy it already has instead
+// of saving it twice.
+let reproUuid = null;
 function openReproForm(kind, ev) {
   const f = document.getElementById('reproForm');
   const today = mnDate();
   reproEditing = ev || null;
+  reproUuid = ytUuid();
   let body = `<label class="hint" style="display:block;margin-top:12px">Огноо</label>
     <input type="date" id="rfDate" value="${today}" max="${today}" style="${inp}">`;
   if ((kind === 'insemination' || kind === 'pregnancy_check') && !cowExtra.breed_code) body += `
@@ -971,7 +996,7 @@ async function saveReproEvent(kind) {
   const err = document.getElementById('rfErr');
   const show = m => { err.textContent = m; err.style.display = 'block'; };
   const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-  const args = { p_client_uuid: ytUuid(), p_cattle_id: cow.id, p_kind: kind, p_date: val('rfDate'), p_note: val('rfNote') || null,
+  const args = { p_client_uuid: reproUuid || ytUuid(), p_cattle_id: cow.id, p_kind: kind, p_date: val('rfDate'), p_note: val('rfNote') || null,
                  p_expected_date: val('rfExpected') || null };
   if (!args.p_date) return show('Огноо оруулна уу.');
   if (args.p_expected_date && args.p_expected_date <= args.p_date) return show('Төллөх огноо үйл явдлын огнооноос хойш байх ёстой.');

@@ -26,7 +26,7 @@ const SHELL = [
 ];
 const LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js';
 
-const scope = self.registration.scope;                  // …/Yak-Tag/
+const scope = self.registration.scope;                  // https://yaktag.org/
 const shellUrls = new Set(SHELL.map(p => new URL(p, scope).href));
 
 self.addEventListener('install', event => {
@@ -62,28 +62,58 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  const key = url.origin + url.pathname;                // t.html?tag=… → t.html
+  const path = url.origin + url.pathname;               // t.html?tag=… → t.html
 
-  // Pinned library: the file at this exact version never changes.
+  // Pinned library: the file at this exact version never changes. If it
+  // could not be stored at install (no signal then), store it the first
+  // time it loads — without it the pages can't open offline at all.
   if (req.url === LIB) {
-    event.respondWith(caches.match(LIB).then(hit => hit || fetch(req)));
+    event.respondWith(caches.match(LIB).then(hit => hit || fetch(req).then(res => {
+      if (res.ok) {
+        const copy = res.clone();
+        caches.open(VERSION).then(c => c.put(LIB, copy)).catch(() => {});
+      }
+      return res;
+    })));
     return;
   }
 
-  if (!shellUrls.has(key)) return;                      // not ours — untouched
+  if (!shellUrls.has(path)) return;                     // not ours — untouched
+
+  // Pages are kept under their path (one copy for every ?tag=). Scripts
+  // are kept under their full address, ?v= included, so a slow network
+  // never pairs a new page with an old config.js / offline.js. Another
+  // version is used only when there is no network at all.
+  const isPage = url.pathname.endsWith('.html');
+  const key = isPage ? path : req.url;
 
   event.respondWith((async () => {
     const cache = await caches.open(VERSION);
     const net = fetch(req).then(res => {
-      if (res.ok) cache.put(key, res.clone());
+      if (res.ok) {
+        cache.put(key, res.clone()).then(() => isPage ? null : cache.keys().then(keys => {
+          // keep only the newest version of this script
+          for (const k of keys) {
+            const u = new URL(k.url);
+            if (u.origin + u.pathname === path && k.url !== key) cache.delete(k);
+          }
+        })).catch(() => {});
+      }
       return res;
     });
+    net.catch(() => {});                                // handled below
     try {
       return await withTimeout(net, 4000);
     } catch (e) {
       const hit = await cache.match(key);
       if (hit) return hit;
-      return net;            // nothing cached (first visit): wait for the slow network
+      try {
+        return await net;    // nothing stored for this version: wait for the slow network
+      } catch (err) {
+        const any = await cache.match(path, { ignoreSearch: true });
+        if (any) return any; // no network at all: any stored version beats nothing
+        throw err;
+      }
     }
   })());
 });

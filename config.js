@@ -75,7 +75,23 @@ const MAPBOX_TOKEN = '';
 // ============================================================
 const USE_GOOGLE_TILES_TESTING = true;
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Bars but no data: a request can hang for minutes before the browser
+// gives up, keeping buttons disabled and the offline queue waiting.
+// Give up after 20 s instead — the "aborted" error counts as no network
+// everywhere (isOffline / the queue), so the offline paths take over.
+// Photo uploads (storage) may legitimately take longer and are left alone.
+function ytFetch(input, init) {
+  init = init || {};
+  const url = String((input && input.url) || input || '');
+  if (init.signal || /\/storage\/v1\//.test(url) || typeof AbortController === 'undefined') {
+    return fetch(input, init);
+  }
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 20000);
+  return fetch(input, { ...init, signal: ctl.signal }).finally(() => clearTimeout(timer));
+}
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: ytFetch } });
 
 // ---------- shared helpers ----------
 
@@ -189,8 +205,10 @@ function mnError(msg) {
   return s;
 }
 
+// Whole days from today (Mongolia) to a YYYY-MM-DD date: 0 = today.
+// new Date('YYYY-MM-DD') is midnight UTC = 08:00 here, so the old
+// version counted one day too many before 08:00.
 function daysUntil(dateStr) {
   if (!dateStr) return null;
-  const diff = new Date(dateStr) - new Date();
-  return Math.ceil(diff / 86400000);
+  return Math.round((Date.parse(String(dateStr).slice(0, 10)) - Date.parse(mnDate())) / 86400000);
 }
