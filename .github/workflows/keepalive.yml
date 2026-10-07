@@ -15,9 +15,13 @@ on:
     - cron: '0 6 */2 * *'    # every 2 days, 06:00 UTC
   workflow_dispatch:
 
+permissions:
+  actions: write             # only for the last step: keep the schedules switched on
+
 jobs:
   ping:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Check secrets are present
         env:
@@ -72,3 +76,18 @@ jobs:
 
           [ "$code" = "200" ] || { echo "::error::Read failed with HTTP $code"; exit 1; }
           echo "Read OK."
+
+      # GitHub switches off scheduled workflows in a public repo after 60
+      # days without a commit — then this keep-alive stops, Supabase's free
+      # plan pauses the database a week later, and tag taps fail. Enabling
+      # them again on every run resets that clock (same method as the
+      # gh-workflow-keepalive action). Last step on purpose: the heartbeat
+      # above has already run even if this one fails.
+      - name: Keep scheduled workflows switched on
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for wf in keepalive.yml backup.yml; do
+            gh api --method PUT "repos/${{ github.repository }}/actions/workflows/$wf/enable"
+            echo "$wf: enabled"
+          done

@@ -35,6 +35,7 @@ rewritten.
 """
 
 import os
+import re
 import sys
 from getpass import getpass
 from pathlib import Path
@@ -537,6 +538,13 @@ def main():
     if len(sys.argv) < 2:
         print(__doc__); return
     cmd = sys.argv[1]
+    if cmd in ("write", "rewrite", "verify") and len(sys.argv) == 3:
+        # Same shape the dashboard makes (YT-008000): a typo such as
+        # "yt-8000" must not end up on a tag nobody can look up.
+        sys.argv[2] = sys.argv[2].strip().upper()
+        if not re.fullmatch(r"[A-Z]{1,6}-\d{6}", sys.argv[2]):
+            print(f"Tag code '{sys.argv[2]}' is not valid. Use the code from the dashboard, e.g. YT-008000.")
+            return
     try:
         if cmd == "status": cmd_status()
         elif cmd == "diag": cmd_diag()

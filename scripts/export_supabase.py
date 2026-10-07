@@ -6,8 +6,9 @@ Why not pg_dump: Supabase's direct database connection is IPv6-only and
 GitHub Actions runners are IPv4-only, so psql can never connect from CI.
 The REST API works over IPv4.
 
-Together with db/schema.sql (structure) these JSON files are a full
-restore path.
+This is the table DATA. The full copy (structure, rules, functions and
+logins too) is database.dump, made by the workflow's pg_dump job through
+Supabase's IPv4 session pooler once the SUPABASE_DB_URL secret is set.
 
 Env: SUPABASE_URL, SUPABASE_SERVICE_KEY
 Usage: python3 scripts/export_supabase.py backups/2026-09-25
@@ -29,6 +30,8 @@ TABLES = [
     # website orders and contact details (v41, v43). app_secrets is left
     # out on purpose: the Telegram token must never land in a backup.
     "order_requests", "site_settings",
+    # who gets Telegram alerts (v38) — otherwise everyone re-links after a restore
+    "telegram_links",
 ]
 
 PAGE = 1000
@@ -47,31 +50,46 @@ def fetch(table, offset, order):
             "apikey": KEY,
             "Authorization": f"Bearer {KEY}",
             "Accept": "application/json",
+            # the server also says how many rows the table has in total
+            "Prefer": "count=exact",
         },
     )
     with urllib.request.urlopen(req, timeout=60) as r:
-        return json.loads(r.read().decode())
+        total = None
+        cr = r.headers.get("Content-Range") or ""      # e.g. "0-999/4321"
+        if "/" in cr and cr.rsplit("/", 1)[1].isdigit():
+            total = int(cr.rsplit("/", 1)[1])
+        return json.loads(r.read().decode()), total
 
 
 def export(table, outdir):
-    rows, offset, order = [], 0, "id"
+    rows, offset, order, total = [], 0, "id", None
     while True:
         try:
-            page = fetch(table, offset, order)
+            page, t = fetch(table, offset, order)
         except urllib.error.HTTPError as e:
             if e.code == 400 and order and offset == 0:
                 order = None          # table has no "id" column: read unsorted, as before
                 continue
-            print(f"::warning::{table} HTTP {e.code} — skipped")
+            print(f"::error::{table} HTTP {e.code} — not backed up")
             return None
         except Exception as e:
-            print(f"::warning::{table} failed: {e}")
+            print(f"::error::{table} failed: {e}")
             return None
 
+        if t is not None:
+            total = t
         rows.extend(page)
-        if len(page) < PAGE:
+        # Stop on an empty page or once the count is reached. Not on a short
+        # page: if the API's "Max rows" setting were ever lowered below
+        # PAGE, every page would be short and the rest silently skipped.
+        if not page or (total is not None and len(rows) >= total) or (total is None and len(page) < PAGE):
             break
-        offset += PAGE
+        offset += len(page)
+
+    if total is not None and len(rows) != total:
+        print(f"::error::{table}: got {len(rows)} of {total} rows — not a complete copy")
+        return None
 
     path = os.path.join(outdir, f"{table}.json.gz")
     with gzip.open(path, "wt", encoding="utf-8") as f:
@@ -104,14 +122,21 @@ def main():
             f"Tables exported: {ok} of {len(TABLES)}\n"
             f"Total rows: {total}\n\n"
             f"Restore:\n"
-            f"  1. Run db/schema.sql on a fresh Supabase project\n"
-            f"  2. Import each .json.gz into its matching table\n"
+            f"  If database.dump is in this folder (full copy, made when the\n"
+            f"  SUPABASE_DB_URL secret is set): pg_restore it into a new\n"
+            f"  project — structure, rules and data in one go.\n"
+            f"  Otherwise the rebuild is manual: the *.sql files here are the\n"
+            f"  change history (schema.sql, then schema_v3 … in number order —\n"
+            f"  some of them add or remove demo animals, so read each first),\n"
+            f"  then import each .json.gz into its table. Logins (auth.users)\n"
+            f"  are not in the .json.gz files: everyone gets a new password.\n"
         )
 
     print(f"\nExported {ok}/{len(TABLES)} tables, {total} rows total.")
 
-    if failed > 3:
-        print(f"::error::{failed} tables failed")
+    # Any table missing makes the run red, so the failure e-mail goes out.
+    if failed:
+        print(f"::error::{failed} of {len(TABLES)} tables failed")
         sys.exit(1)
 
 

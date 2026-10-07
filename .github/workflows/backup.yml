@@ -1,24 +1,35 @@
-name: Weekly database backup
+name: Daily database backup
 
-# v3 — exports over REST, pushes into a SEPARATE PRIVATE repo.
+# v4 — daily (was weekly), red on ANY missing table, optional full copy.
 #
+# Exports over REST and pushes into a SEPARATE PRIVATE repo.
 # The main Yak-Tag repo is public so GitHub Pages can serve the site.
 # Backups contain real farm and herder data, so they must not live there.
 #
 # Requires:
 #   - a private repo:  magna-astra/Yak-Tag-backups
 #   - secret BACKUP_TOKEN: a fine-grained PAT with Contents: Read and write
-#     on that backup repo only
+#     on that backup repo only (check its expiry date — when it expires the
+#     backup stops at "Checkout backup repo")
 #   - secrets SUPABASE_URL, SUPABASE_SERVICE_KEY
+# Optional:
+#   - secret SUPABASE_DB_URL: Supabase → Connect → Session pooler URI with
+#     the database password in it. Turns on the full copy (database.dump:
+#     structure, rules, functions, data). The session pooler works over
+#     IPv4, unlike the direct db.xxx.supabase.co address.
 
 on:
   schedule:
-    - cron: '0 3 * * 0'     # Sundays 03:00 UTC
+    - cron: '7 3 * * *'     # every day 03:07 UTC (11:07 Ulaanbaatar)
   workflow_dispatch:
+
+permissions:
+  contents: read            # this repo is only read; the backup repo uses BACKUP_TOKEN
 
 jobs:
   export:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       # the public repo — only to get the export script and schema
       - name: Checkout Yak-Tag
@@ -44,11 +55,13 @@ jobs:
           cp src/db/*.sql "store/backups/$STAMP/" 2>/dev/null || true
           du -sh "store/backups/$STAMP"
 
-      - name: Keep only the last 12 backups
+      # Older days stay in the backup repo's git history; this only keeps
+      # the folder list short. Folder names are dates, so sort by name.
+      - name: Keep only the last 30 backups
         working-directory: store
         run: |
           mkdir -p backups && cd backups
-          ls -1dt */ 2>/dev/null | tail -n +13 | xargs -r rm -rf --
+          ls -1d */ 2>/dev/null | sort -r | tail -n +31 | xargs -r rm -rf --
           ls -1d */ 2>/dev/null || true
 
       - name: Commit to the private repo
@@ -56,6 +69,69 @@ jobs:
         run: |
           git config user.name  "yaktag-backup"
           git config user.email "actions@github.com"
-          git add backups/
+          git add -A backups/
           git diff --staged --quiet || git commit -m "Backup $(date -u +%Y-%m-%d)"
+          git push
+
+  # Full copy through pg_dump. Runs after the table export is saved, so a
+  # problem here never costs the day's export — but it turns the run red,
+  # and GitHub e-mails about it.
+  full-copy:
+    needs: export
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Is SUPABASE_DB_URL set?
+        id: check
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB_URL" ]; then
+            echo "SUPABASE_DB_URL is not set — full copy skipped (the table export ran)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # pg_dump must be at least the server's version; 17 covers 15 and 17.
+      - name: Install pg_dump 17
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Checkout backup repo
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/checkout@v5
+        with:
+          repository: magna-astra/Yak-Tag-backups
+          token: ${{ secrets.BACKUP_TOKEN }}
+          path: store
+
+      - name: Dump the database
+        if: steps.check.outputs.skip != 'true'
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          STAMP=$(date -u +%Y-%m-%d)
+          DIR="store/backups/$STAMP"; mkdir -p "$DIR"
+          PGDUMP=/usr/lib/postgresql/17/bin/pg_dump
+          # Everything in public: tables, data, rules (RLS), functions,
+          # triggers and grants. Restore: pg_restore --no-owner -d <new db> database.dump
+          "$PGDUMP" "$DB_URL" --format=custom --no-owner --schema=public --file="$DIR/database.dump"
+          # Logins, so nobody needs a new password after a restore.
+          # (Supabase manages the auth schema itself; only its rows are copied.)
+          "$PGDUMP" "$DB_URL" --format=custom --no-owner --data-only \
+            --table=auth.users --table=auth.identities --file="$DIR/logins.dump" \
+            || echo "::warning::Logins (auth.users) could not be copied; database.dump is fine."
+          ls -la "$DIR"/*.dump
+
+      - name: Commit to the private repo
+        if: steps.check.outputs.skip != 'true'
+        working-directory: store
+        run: |
+          git config user.name  "yaktag-backup"
+          git config user.email "actions@github.com"
+          git add -A backups/
+          git diff --staged --quiet || git commit -m "Full copy $(date -u +%Y-%m-%d)"
           git push

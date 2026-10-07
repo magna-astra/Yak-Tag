@@ -218,8 +218,11 @@ def cmd_lock():
     write_page(conn, DYNAMIC_LOCK_PAGE, bytes(dyn))
 
     print("Lock bytes written. Verifying...")
+    # Test write with the page's OWN bytes: if the lock did not take, the
+    # tag must still hold its URL (writing zeros here used to erase it).
+    page_now = read_pages(conn, FIRST_USER_PAGE, 1)
     try:
-        write_page(conn, FIRST_USER_PAGE, b"\x00\x00\x00\x00")
+        write_page(conn, FIRST_USER_PAGE, page_now)
         print("WARNING: write still succeeded — lock did NOT take effect.")
     except RuntimeError:
         print("Confirmed: tag is now permanently read-only.")
