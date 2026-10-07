@@ -1,6 +1,6 @@
 # YAK-TAG: where we stopped
 
-Last updated **2026-10-01**. Website improvements are on local `main` (see section 3b), waiting for a push.
+Last updated **2026-10-07** (full system check, section 3k). Branch `fix/system-check-2026-10-07` waits for the owner: run `db/schema_v46_write_permissions.sql` in Supabase first, then merge and push.
 This file has no passwords or tokens. It is safe to commit, but note that the repo is public.
 
 To continue, open this folder in Claude Code and say:
@@ -16,8 +16,9 @@ To continue, open this folder in Claude Code and say:
 - The owner pushes with **GitHub Desktop**. Claude commits locally only.
 - Edit files with **exact-text replacements**, never line-range slicing. A slicing edit once silently deleted all the dashboard row buttons.
 - After any dashboard edit, **click-test every row button**.
-- If `config.js` or `offline.js` change, bump `?v=` in every page (currently `?v=20260928`).
-- If `assets/site.css` changes, bump its `?v=` in the 4 public pages (currently `?v=2026100103`). Without it, browsers mix the new pages with the old stylesheet.
+- If `config.js` or `offline.js` change, bump `?v=` in `t.html`, `cow.html` and `admin/index.html` (currently `?v=20261007`).
+- If `assets/style-a.css` changes, bump its `?v=` in the 4 public pages (currently `?v=2026100701`); same for `assets/contacts.js` (currently `?v=2`). Without it, browsers mix the new pages with the old file. (`assets/site.css` is no longer used.)
+- **Testing without the live database:** the Claude browser preview of a local server was blocked on 2026-10-07, so the app logic was tested in Node with stubs (fake IndexedDB, fake server, fake caches). The test scripts were temporary. For screenshots, headless Edge's `--window-size=375,…` renders wider and crops; use DevTools phone emulation (`Emulation.setDeviceMetricsOverride`) for real phone widths.
 
 ## 2. Where things are
 
@@ -30,8 +31,9 @@ To continue, open this folder in Claude Code and say:
 | Owner / herder page | `cow.html` |
 | Public tap page | `t.html` |
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
-| Database changes | `db/schema_v*.sql`. v21 to v40 are **all run on live**. |
-| Weekly backup | `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups` |
+| Database changes | `db/schema_v*.sql`. v21 to v45 are **run on live** (v45's e-mail part stays dormant). **v46 must still be run** (section 3k). |
+| Daily backup | `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups` (+ `database.dump` once `SUPABASE_DB_URL` is set) |
+| Not on the website | `_config.yml` keeps `*.md`, `db/`, `tools/`, `scripts/`, `supabase/` off yaktag.org (they stay in the public repo) |
 
 ## 3. Done on 2026-09-26 (all live and checked)
 
@@ -169,19 +171,49 @@ To continue, open this folder in Claude Code and say:
 - **Backup** now also saves `order_requests` and `site_settings`. `app_secrets` stays out on purpose.
 - Re-using a tag from a sold/dead animal is **not** in the dashboard (`recycle_tag` exists in SQL but the old animal keeps the tag_code, so the tag would not show as "Шинэ таг"). The guides say: retire it, use a new tag.
 
+## 3k. Full system check, 2026-10-07 (branch `fix/system-check-2026-10-07`)
+
+Four parallel checks: website, app pages, database security, operations (backups, workflows, DNS). Map code untouched.
+
+**Database — `db/schema_v46_write_permissions.sql` (run in Supabase; tested twice on a local Postgres):**
+- **Critical, fixed:** the old `profiles_admin` rule (schema.sql) let a **farm admin make themselves super admin** with one hand-made request. Dropped; browsers can no longer write `profiles` directly.
+- **Fixed:** anyone could write `public_scans` directly with `was_lost = true` → **fake lost-animal Telegram alerts**. Direct writes revoked (only `record_public_scan()` writes), and the alert trigger now checks the animal itself.
+- **Fixed:** herders could PATCH `cattle` (phone past the lock, another animal's tag code, another farm), `tags`, `health_events` directly. Revoked — every app path already goes through security-definer functions (checked one by one).
+- **Fixed:** the milk 3-edit lock could be reset by sending `edit_count = 0`; the server now ignores those fields.
+- Photo buckets: images only, 10 MB.
+- Its CHECK section lists super admins (anyone unexpected = abused loophole) and the write rules that remain.
+
+**App pages (Node tests with stubs: 32/32 pass):**
+- `t.html`: a stranger who never answers the location prompt left **no scan and no lost alert** — now saved without position after 25 s (40 s offline).
+- `cow.html`: bars-but-no-data + expired login showed the login screen; now opens the saved copy. Login says "Сүлжээ муу" instead of "wrong password" on network errors. Logout warns about unsent entries and clears that user's cached animals. Pregnancy/calving form keeps one id per opened form (no doubles on re-save).
+- `config.js`: every database request gives up after 20 s (uploads excepted), so the offline paths take over instead of hanging. `daysUntil` was one day off before 08:00 (UTC parsing); admin's copy removed.
+- `offline.js`: no hang when phone storage is full; an entry the server refuses at once is shown and not retried behind the user's back (scans still retry); an entry sent by a parallel flush is no longer reported as failed.
+- `sw.js`: scripts cached under their `?v=` (no old config.js with a new page on slow networks); supabase-js cached on first load if install missed it.
+- Fonts no longer block `t.html` / `cow.html`.
+- Dashboard: a network error during delete no longer offers "delete everything"; vaccine save can't double-click; milk window no longer fails silently. Row buttons verified wired (unchanged).
+
+**Website:** `hero3d.html` noindex; `_config.yml` stops publishing notes/SQL/tools; old gmail fallback → `contact@yaktag.org` (7 places); grey text contrast 3.3–3.7 → 5.0+; order-form field borders visible; number cards and the how.html sample table no longer overflow on phones (CSS only — **not visually checked**, look on a phone after deploy); tag image 227 KB → 34 KB WebP; sitemap dates.
+
+**Operations:** backup is now **daily**, turns red if ANY table fails or a row count doesn't match, backs up `telegram_links`, and has an optional full `pg_dump` job (needs `SUPABASE_DB_URL`). Keep-alive re-enables both scheduled workflows every run (GitHub's 60-day switch-off). `nfc_write.py lock` no longer erases the URL if the lock fails; `nfc_tag.py` refuses malformed tag codes. README rewritten.
+
+**Found, not changed (decide later):**
+- `public_tag_lookup` visitor limit trusts the first `X-Forwarded-For` entry if `cf-connecting-ip` is missing; changing `scan_caller_hash()` blind could lock out all visitors at once — measure first.
+- `submit_order` allows 30/hour (≈720/day) of attacker text through the Telegram bot; a daily cap (~100) would help.
+- Photos (`cattle-photos`, `cattle-public`) are not in any backup.
+- Old password `YKTG` is in public git history: any tag still protected with it can be rewritten.
+- ~2.2 MB of unused images in `assets/` (herd-*, yak-*, logo-yak.png, tag-raw.png …).
+- Leaflet on how.html loads from unpkg without integrity, on every visit (MAP — hands off).
+
 ## 4. To do next
 
-1. ~~Check the Sunday backup~~ **Done 2026-09-28:** the run of 2026-09-27 succeeded with no warnings, so all 16 tables were saved.
-2. **Real lost-animal test (optional):**
-   - Mark a test cow lost.
-   - Tap its tag with a phone that isn't logged in.
-   - A Telegram alert with a map link should arrive.
-   - Then press "Олдсон".
-3. Ask **farm admins and herders to link Telegram**.
-4. ~~Marketing pages~~ **Done 2026-10-01** (section 3b). **Push it**, then open the live site on a phone and press ☰.
-5. Optional: add the site to **Google Search Console** (free) and submit `https://yaktag.org/sitemap.xml`.
-7. **Domain safety (Cloudflare, free):** turn on **DNSSEC**; add TXT `@` `v=spf1 -all` and TXT `_dmarc` `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s` so nobody can send e-mail pretending to be @yaktag.org (replace the SPF if Email Routing is set up later).
-6. Idea: an **order form → Telegram** (free). Website orders would arrive in the owner's Telegram through the existing bot, instead of relying on email. It needs a small SQL function with a spam limit.
+1. **Run `db/schema_v46_write_permissions.sql`** in Supabase → SQL Editor, read its CHECK output, then merge `fix/system-check-2026-10-07` and push.
+2. **BACKUP_TOKEN expiry:** GitHub → Settings → Developer settings → Fine-grained tokens → open the backup token → read "Expires". If it's near, Regenerate (longest expiry) and update the repo secret.
+3. Optional **full backup:** add secret `SUPABASE_DB_URL` (Supabase → Connect → Session pooler URI with the database password), then Actions → Daily database backup → Run workflow → both jobs green.
+4. **Re-protect field tags** that still use the old `YKTG` password (`tools/nfc_tag.py`, section 3j).
+5. **Real lost-animal test (optional):** mark a test cow lost, tap its tag with a phone that isn't logged in, a Telegram alert with a map link should arrive, then press "Олдсон".
+6. Ask **farm admins and herders to link Telegram**.
+7. Google Search Console: submit `https://yaktag.org/sitemap.xml` if it isn't listed. "Page with redirect" (http://, www.) is expected — don't validate it.
+8. Done earlier: Sunday backup check (2026-09-28), marketing pages (2026-10-01), order form → Telegram (v41), DNSSEC + SPF/DMARC (verified on 2026-10-07).
 
 ## 5. Idea list (not started)
 
