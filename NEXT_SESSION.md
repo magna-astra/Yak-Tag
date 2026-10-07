@@ -161,6 +161,14 @@ To continue, open this folder in Claude Code and say:
 - Setup once in the SQL Editor: `select public.email_setup('re_…');` (key from Resend → API Keys; never paste it in chat). It sends a test e-mail. Problems: `select * from public.email_check();` shows Resend's answers.
 - Resend DNS lives on `send.yaktag.org` + `resend._domainkey` only; it must not touch the root MX/SPF (Zoho).
 
+## 3j. Business kit + tag password out of the repo (2026-10-07)
+
+- **Business kit:** `python dist/build_kit.py` builds `dist/YAK-TAG_Business_Kit_<date>.zip` — 8 step-by-step guides (tag production, farm setup, herder guide + Mongolian card, orders, sell/replace, website/domain/e-mail, database/backup/security, launch checklist), the files each step uses, and the full committed project. The guide sources are in `dist/kit_src/`. `dist/` is git-ignored (not public). The build refuses to zip if it finds anything secret-looking.
+- **`tools/nfc_tag.py`:** the tag password is no longer in the (public) code. `setpass` saves the owner's 4-character password in `tools/tag_password.txt` (git-ignored) or use `YT_TAG_PASSWORD`. `protect` refuses the old public `YKTG`. Old YKTG test tags: `set YT_TAG_PASSWORD=YKTG` → `unprotect` → new window → `protect`.
+- **`protect` now writes CFG1 before CFG0 (AUTH0)** — the old order could fail half-way once AUTH0 took effect. Tested on a simulated NTAG215 (22/22); **a real ACR1552U test is still needed** (guide 01, "First time only").
+- **Backup** now also saves `order_requests` and `site_settings`. `app_secrets` stays out on purpose.
+- Re-using a tag from a sold/dead animal is **not** in the dashboard (`recycle_tag` exists in SQL but the old animal keeps the tag_code, so the tag would not show as "Шинэ таг"). The guides say: retire it, use a new tag.
+
 ## 4. To do next
 
 1. ~~Check the Sunday backup~~ **Done 2026-09-28:** the run of 2026-09-27 succeeded with no warnings, so all 16 tables were saved.
