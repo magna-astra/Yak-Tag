@@ -26,6 +26,9 @@ TABLES = [
     "health_events", "audit_log", "heartbeat",
     # added later: milk, pregnancy / calving, breeds, strangers' taps
     "milk_yield", "repro_events", "repro_calves", "breeds", "public_scans",
+    # website orders and contact details (v41, v43). app_secrets is left
+    # out on purpose: the Telegram token must never land in a backup.
+    "order_requests", "site_settings",
 ]
 
 PAGE = 1000
