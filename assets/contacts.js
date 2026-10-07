@@ -13,7 +13,7 @@
     if(!c||!c.phone||!c.email) return;
     window.ytContacts=c;
     document.querySelectorAll('[data-c-text]').forEach(function(el){ var v=c[el.getAttribute('data-c-text')]; if(v) el.textContent=v; });
-    document.querySelectorAll('[data-c-href]').forEach(function(el){ el.href = el.getAttribute('data-c-href')==='phone' ? tel(c.phone) : 'mailto:'+c.email; });
+    document.querySelectorAll('[data-c-href]').forEach(function(el){ el.href = el.getAttribute('data-c-href')==='phone' ? tel(c.phone) : 'mailto:'+encodeURIComponent(String(c.email||'').trim()).replace('%40','@'); });
     document.querySelectorAll('[data-c-show]').forEach(function(el){ el.hidden=!c[el.getAttribute('data-c-show')]; });
     var ld=document.querySelector('script[type="application/ld+json"]');
     if(ld){ try{ var j=JSON.parse(ld.textContent); if(j.contactPoint){ j.contactPoint.telephone=tel(c.phone).slice(4); j.contactPoint.email=c.email; ld.textContent=JSON.stringify(j); } }catch(e){} }

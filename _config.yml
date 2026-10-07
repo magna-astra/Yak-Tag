@@ -1,0 +1,16 @@
+# GitHub Pages builds the site with Jekyll. These files stay in the
+# (public) repo but are NOT published on yaktag.org: notes, database
+# scripts and tools are for the owner, not for visitors or search engines.
+# Without this list, yaktag.org/NEXT_SESSION.html, /db/*.sql and /tools/
+# were all reachable. The website pages, app pages and assets are unchanged.
+exclude:
+  - README.md
+  - NEXT_SESSION.md
+  - DEMO_SCRIPT.md
+  - SWITCH_MAPS_BEFORE_LAUNCH.md
+  - heartbeat.sql
+  - db/
+  - tools/
+  - scripts/
+  - supabase/
+  - dist/

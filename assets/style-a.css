@@ -5,7 +5,7 @@
    ============================================================ */
 :root{
   --bg:#FFFDF8; --bg2:#F6F1E6; --card:#FFFFFF;
-  --ink:#14243B; --ink2:#46556B; --muted:#7A8597; --line:#E9E2D3;
+  --ink:#14243B; --ink2:#46556B; --muted:#5E6878; --line:#E9E2D3;
   --green:#2E7D46; --green-d:#23633A; --green-l:#E7F2E6;
   --sky:#1B4FA8; --sky-l:#E8EFFB;
   --sun:#F2B33D; --sun-l:#FDF3DC;
@@ -281,7 +281,7 @@ section{position:relative}
 .qbtn{padding:12px 6px;border:1.5px solid var(--line);background:var(--bg);border-radius:14px;font-weight:800;font-size:.98rem;cursor:pointer;transition:.18s;color:var(--ink)}
 .qbtn:hover,.qbtn.on{border-color:var(--green);color:var(--green);background:var(--green-l)}
 .ordercard label{display:block;font-size:.82rem;font-weight:700;color:var(--ink2);margin:14px 0 6px}
-.ordercard input,.ordercard textarea{width:100%;padding:13px 15px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg);
+.ordercard input,.ordercard textarea{width:100%;padding:13px 15px;border:1.5px solid #8F887A;border-radius:14px;background:var(--bg);
   font:500 1rem var(--font);color:var(--ink);transition:border-color .2s,box-shadow .2s}
 .ordercard input:focus,.ordercard textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px var(--green-l);background:#fff}
 .ordercard input#oQty{font-weight:800;font-size:1.15rem}
@@ -538,3 +538,19 @@ html,body{overflow-x:hidden}
 .fact.in .fic .tick{animation:tickdraw 1s .6s both}
 @keyframes tickdraw{from{stroke-dashoffset:12}to{stroke-dashoffset:0}}
 @media(prefers-reduced-motion:reduce){.fic *{animation:none !important}}
+
+/* ---------- phones (2026-10-07) ----------
+   Number cards: the big number sat beside the icon and ran past the
+   card edge below ~420px ("24/7", "258"); it now goes under the icon.
+   how.html step 03 sample table: four columns were wider than a phone,
+   cutting off the "Төлөв" badges — the vaccine-date column is hidden
+   there (the badge still says "Вакцин") and the cells are tighter. */
+@media(max-width:420px){
+  .fact{grid-template-columns:1fr}
+  .fact b{grid-column:1;grid-row:2}
+}
+@media(max-width:480px){
+  .dash th:nth-child(3),.dash td:nth-child(3){display:none}
+  .dash th,.dash td{padding:8px 10px}
+  .dash td.m{white-space:nowrap}
+}
