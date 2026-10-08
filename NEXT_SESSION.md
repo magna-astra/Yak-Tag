@@ -204,6 +204,12 @@ Four parallel checks: website, app pages, database security, operations (backups
 - ~2.2 MB of unused images in `assets/` (herd-*, yak-*, logo-yak.png, tag-raw.png …).
 - Leaflet on how.html loads from unpkg without integrity, on every visit (MAP — hands off).
 
+## 3l. Full-copy backup failed on its first day (2026-10-08)
+
+- Run 37722620558: `export` ✅ (the day's tables are saved), `full-copy` ❌ at "Dump the database" — GitHub showed only "exit code 1" (step logs need a login; annotations are public).
+- `scripts/check_db_url.py` now runs before pg_dump: it explains the usual SUPABASE_DB_URL mistakes as a red annotation (direct IPv6 host, transaction pooler 6543, `[YOUR-PASSWORD]` left in, `@ / ? # %` in the password, pooler user without `.project-ref`, wrong password, unreachable host) and never prints the password. It also reads the server version; a server newer than 17 gets a matching `postgresql-client-NN`. pg_dump's own error is shown as an annotation too.
+- Read the reason without a login: `https://api.github.com/repos/magna-astra/Yak-Tag/check-runs/<job id>/annotations`.
+
 ## 4. To do next
 
 1. **Run `db/schema_v46_write_permissions.sql`** in Supabase → SQL Editor, read its CHECK output, then merge `fix/system-check-2026-10-07` and push.

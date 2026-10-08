@@ -100,6 +100,29 @@ jobs:
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y -qq postgresql-client-17
 
+      # only for scripts/check_db_url.py
+      - name: Checkout Yak-Tag
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/checkout@v5
+        with:
+          path: src
+
+      # Plain-words reason on the run page (wrong URI type, placeholder,
+      # bad characters, wrong password …) instead of a bare "exit code 1".
+      # Never prints the password. Also reads the server's version.
+      - name: Check the connection
+        id: conn
+        if: steps.check.outputs.skip != 'true'
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PSQL: /usr/lib/postgresql/17/bin/psql
+        run: python3 src/scripts/check_db_url.py
+
+      # pg_dump refuses a server newer than itself.
+      - name: Newer pg_dump for a newer server
+        if: steps.check.outputs.skip != 'true' && steps.conn.outputs.major > 17
+        run: sudo apt-get install -y -qq "postgresql-client-${{ steps.conn.outputs.major }}"
+
       - name: Checkout backup repo
         if: steps.check.outputs.skip != 'true'
         uses: actions/checkout@v5
@@ -112,13 +135,19 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          MAJOR: ${{ steps.conn.outputs.major }}
         run: |
           STAMP=$(date -u +%Y-%m-%d)
           DIR="store/backups/$STAMP"; mkdir -p "$DIR"
-          PGDUMP=/usr/lib/postgresql/17/bin/pg_dump
+          V=17; [ "${MAJOR:-0}" -gt 17 ] && V=$MAJOR
+          PGDUMP=/usr/lib/postgresql/$V/bin/pg_dump
           # Everything in public: tables, data, rules (RLS), functions,
           # triggers and grants. Restore: pg_restore --no-owner -d <new db> database.dump
-          "$PGDUMP" "$DB_URL" --format=custom --no-owner --schema=public --file="$DIR/database.dump"
+          if ! "$PGDUMP" "$DB_URL" --format=custom --no-owner --schema=public --file="$DIR/database.dump" 2> dump_err.txt; then
+            cat dump_err.txt
+            echo "::error title=pg_dump failed::$(head -c 600 dump_err.txt | tr '\n' ' ')"
+            exit 1
+          fi
           # Logins, so nobody needs a new password after a restore.
           # (Supabase manages the auth schema itself; only its rows are copied.)
           "$PGDUMP" "$DB_URL" --format=custom --no-owner --data-only \
