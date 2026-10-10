@@ -207,6 +207,14 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
 .homelink{display:flex;align-items:center;gap:11px;color:inherit;text-decoration:none}
 .backsite{display:block;text-align:center;margin-top:16px;color:var(--ink-soft);font-size:.86rem;text-decoration:none}
 .sitefoot{display:block;text-align:center;margin:26px 0 6px;color:var(--ink-soft);font-size:.86rem;text-decoration:none}
+/* phone header on ONE line (2026-10-10): at 390 px the logo, "YAK-TAG" and
+   three buttons needed ~361 px of 350, so "Нууц үг" and the brand wrapped */
+.cowhead .row1{gap:6px}
+.cowhead .brand,.cowhead .out{white-space:nowrap}
+.cowhead .out{flex:none}
+.cowhead .row1 .out + .out{margin-left:0 !important}
+@media(max-width:430px){.cowhead .out{padding:5px 9px}.cowhead .homelink{gap:8px}}
+@media(max-width:370px){.cowhead .brand{display:none}}
 </style>
 </head>
 <body>
