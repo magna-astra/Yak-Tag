@@ -210,6 +210,13 @@ Four parallel checks: website, app pages, database security, operations (backups
 - `scripts/check_db_url.py` now runs before pg_dump: it explains the usual SUPABASE_DB_URL mistakes as a red annotation (direct IPv6 host, transaction pooler 6543, `[YOUR-PASSWORD]` left in, `@ / ? # %` in the password, pooler user without `.project-ref`, wrong password, unreachable host) and never prints the password. It also reads the server version; a server newer than 17 gets a matching `postgresql-client-NN`. pg_dump's own error is shown as an annotation too.
 - Read the reason without a login: `https://api.github.com/repos/magna-astra/Yak-Tag/check-runs/<job id>/annotations`.
 
+## 3m. Launch check + screenshot walkthrough (2026-10-10)
+
+- **Live check, all green:** forwards + HTTPS (cert to 2027-01-03); 59 published files = repo, notes/SQL/tools 404 (`_config.yml`); tag lookup + attack inputs; visitors read/write nothing; **v46 confirmed active live** (direct `public_scans` insert → permission denied); admin functions refuse visitors; sign-up off; spam trap; daily backup + keep-awake green; 150 page loads / 20 simultaneous taps OK. `nfc_tag.py` 22/22 on the simulated chip.
+- **Full-copy backup:** `SUPABASE_DB_URL` secret removed by the owner → the job skips (green). The check script reported "must start with postgresql://".
+- **Walkthrough:** `dist/make_shots.py` (sample-data copies of the real pages → `dist/walkthrough/img/`, phones in a 390-px frame, **headless Chrome** — Edge 155 was stuck mid-update) and `dist/build_walkthrough.py` → `dist/walkthrough/YAK-TAG_Walkthrough.html` (single file, ~0.7 MB). `dist/build_kit.py` puts it in the kit as `00_WALKTHROUGH.html`. All in git-ignored `dist/`.
+- Seen in the screenshots, not changed: on a 390-px phone the cow-page header wraps ("YAK-/TAG", "Нууц/үг"). Cosmetic.
+
 ## 4. To do next
 
 1. **Run `db/schema_v46_write_permissions.sql`** in Supabase → SQL Editor, read its CHECK output, then merge `fix/system-check-2026-10-07` and push.
