@@ -215,7 +215,9 @@ Four parallel checks: website, app pages, database security, operations (backups
 - **Live check, all green:** forwards + HTTPS (cert to 2027-01-03); 59 published files = repo, notes/SQL/tools 404 (`_config.yml`); tag lookup + attack inputs; visitors read/write nothing; **v46 confirmed active live** (direct `public_scans` insert → permission denied); admin functions refuse visitors; sign-up off; spam trap; daily backup + keep-awake green; 150 page loads / 20 simultaneous taps OK. `nfc_tag.py` 22/22 on the simulated chip.
 - **Full-copy backup:** `SUPABASE_DB_URL` secret removed by the owner → the job skips (green). The check script reported "must start with postgresql://".
 - **Walkthrough:** `dist/make_shots.py` (sample-data copies of the real pages → `dist/walkthrough/img/`, phones in a 390-px frame, **headless Chrome** — Edge 155 was stuck mid-update) and `dist/build_walkthrough.py` → `dist/walkthrough/YAK-TAG_Walkthrough.html` (single file, ~0.7 MB). `dist/build_kit.py` puts it in the kit as `00_WALKTHROUGH.html`. All in git-ignored `dist/`.
-- Seen in the screenshots, not changed: on a 390-px phone the cow-page header wraps ("YAK-/TAG", "Нууц/үг"). Cosmetic.
+- **Fixed:** the cow-page header wrapped on 375–390-px phones ("YAK-/TAG", "Нууц/үг") — now one line (buttons nowrap, tighter gaps, logo only below 370 px); checked 360–430 px.
+- **Fixed:** `t.html` footer said "Энэ мал YAK-TAG системд бүртгэлтэй" even for a new/unknown tag; now neutral ("YAK-TAG · Мал бүрт цахим үнэмлэх") until an animal is rendered (5/5 states checked).
+- **Live first-tap screenshots:** `dist/first_tap.py [TAG]` (Chrome DevTools via `dist/cdp_shot.py`, true 390-px phone) shoots the LIVE tap page + login for a produced tag with no animal (70 such tags live, YT-008005…; opening them records nothing) and the after-login pages from sample copies → `dist/walkthrough/first_tap_storyboard.png`. Run it after `make_shots.py` (it overwrites h1–h4).
 
 ## 4. To do next
 

@@ -96,7 +96,7 @@ main{flex:1;max-width:460px;width:100%;margin:0 auto;padding:22px 18px 34px}
 </div></div>
 
 <main id="main"><div class="skel">Ачаалж байна…</div></main>
-<div class="foot">Энэ мал YAK-TAG системд бүртгэлтэй.</div>
+<div class="foot" id="foot">YAK-TAG · Мал бүрт цахим үнэмлэх</div>
 
 <script src="config.js?v=20261007"></script>
 <script src="offline.js?v=20261007"></script>
@@ -228,6 +228,9 @@ function render(c, offline){
     </div>
     <a class="login" href="cow.html?tag=${encodeURIComponent(c.tag_code)}">Эзэмшигч бол нэвтрэх</a>
   `;
+  // Only now is it true; a new or unknown tag keeps the neutral footer.
+  const foot = document.getElementById('foot');
+  if (foot) foot.textContent = 'Энэ мал YAK-TAG системд бүртгэлтэй.';
 }
 
 // The tick appears only once the server has accepted the scan.
