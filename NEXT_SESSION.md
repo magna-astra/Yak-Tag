@@ -11,6 +11,7 @@ To continue, open this folder in Claude Code and say:
 ## 1. Rules that always apply
 
 - **The system is live and working. Don't break it.** Use a branch, then `git merge --ff-only` into `main`. SQL must be safe to run twice. Run SQL first, then push.
+- **Never open the LIVE `t.html` for a REGISTERED tag when testing** — every visit records a real stranger tap (and sends Telegram alerts if the animal is lost). Use `public_tag_lookup` for reads, a produced tag without an animal (e.g. YT-008005), or the sample-data copies in `dist/`. (On 2026-10-11 one such visit to YT-008000 added one tap without GPS; the owner got SQL to delete it — rows with `user_agent like '%SM-A546B%'`.)
 - **Don't touch the map.** That covers the map tab, map config, and `USE_GOOGLE_TILES_TESTING`. Change it only if the owner asks.
 - **Only free options.** No paid APIs, SMS, WhatsApp or Viber business fees. Telegram is used for alerts.
 - The owner pushes with **GitHub Desktop**. Claude commits locally only.
