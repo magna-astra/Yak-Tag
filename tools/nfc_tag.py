@@ -253,6 +253,34 @@ def find_ndef_tlv(raw):
     return None
 
 
+def ndef_empty(raw):
+    """True when the tag holds no NDEF message: all zeros, or only NULL /
+    lock-control / memory-control TLVs and an EMPTY NDEF TLV. New NTAG213/
+    215 tags come from the factory formatted like that (03 00 FE)."""
+    i = 0
+    while i < len(raw):
+        t = raw[i]
+        if t == 0x00:                    # NULL TLV
+            i += 1
+            continue
+        if t == 0xFE:                    # terminator
+            return True
+        if i + 1 >= len(raw):
+            return True
+        length, start = raw[i + 1], i + 2
+        if length == 0xFF:
+            if i + 3 >= len(raw):
+                return False
+            length, start = (raw[i + 2] << 8) | raw[i + 3], i + 4
+        if t == 0x03:                    # NDEF message TLV
+            return length == 0
+        if t in (0x01, 0x02, 0xFD):      # lock / memory control, proprietary
+            i = start + length
+            continue
+        return False                     # something else: real data
+    return True
+
+
 def parse_ndef_url(raw):
     try:
         rec = find_ndef_tlv(raw)
@@ -298,7 +326,8 @@ def tag_state(conn):
         pages = prof["last_page"] - prof["first_page"] + 1
         raw = read_pages(conn, prof["first_page"], min(pages, 40))
         state["url"] = parse_ndef_url(raw)
-        state["blank"] = all(b == 0x00 for b in raw[:16])
+        state["blank"] = ndef_empty(raw)
+        state["raw_yak"] = b"yaktag.org" in raw
     except Exception:
         pass
 
@@ -743,27 +772,42 @@ def try_connect():
         return None
 
 
+def close(conn):
+    try:
+        conn.disconnect()
+    except Exception:
+        pass
+
+
 def wait_for_tag():
     while True:
         conn = try_connect()
         if conn is not None:
             return conn
-        time.sleep(0.4)
+        time.sleep(0.3)
 
 
-def wait_for_removal(uid):
-    """Until the reader is empty (or, for a known chip, holds another chip)."""
-    while True:
+def wait_for_removal(uid, empty_needed=4):
+    """Until the reader has been EMPTY for ~1 s (the ACR1552U reports
+    'removed' for a split second while a tag still lies on it), or a
+    different chip is on it."""
+    empty = 0
+    while empty < empty_needed:
         conn = try_connect()
         if conn is None:
-            return
-        if uid is not None:
-            try:
-                if get_uid(conn) != uid:
-                    return
-            except Exception:
+            empty += 1
+        else:
+            same = True
+            if uid is not None:
+                try:
+                    same = get_uid(conn) == uid
+                except Exception:
+                    same = True
+            close(conn)
+            if not same:
                 return
-        time.sleep(0.4)
+            empty = 0
+        time.sleep(0.3)
 
 
 def code_range(first, last):
@@ -817,73 +861,101 @@ def cmd_batch(first, last):
     print("Put ONE new tag on the reader at a time. Ctrl+C stops at any moment.\n")
 
     written = []
-    i = 0
+    unfinished = set()        # chips that moved away while we wrote them (this session)
+    told = set()              # (uid, code) skip messages already shown
+    in_range = set(codes)
+    i, asked = 0, None
     try:
         while i < len(ready):
             code = ready[i]
-            print(f"[{i + 1}/{len(ready)}] Put a new tag on the reader for {code} …")
+            if asked != code:
+                print(f"[{i + 1}/{len(ready)}] Put a new tag on the reader for {code} …")
+                asked = code
             conn = wait_for_tag()
-            try:
-                s = tag_state(conn)
-            except RuntimeError as e:
-                print(f"   x Cannot read this chip ({e}). Put it aside.")
-                wait_for_removal(None)
-                continue
-            uid, prof = s["uid"], s["profile"]
-            reason = None
-            if uid in by_uid:
-                reason = f"this chip was already written as {by_uid[uid]}"
-            elif s["hardware_locked"]:
-                reason = "this chip is permanently locked"
-            elif s["url"] and "yaktag.org/t.html?tag=" in s["url"]:
-                reason = f"this chip is already a YAK-TAG tag ({s['url'].rsplit('=', 1)[-1]})"
-            elif not s["blank"]:
-                reason = "this chip is not blank — run  python nfc_tag.py reset  on it first"
-            elif s["password_protected"] and not authenticate(conn):
-                reason = "this chip is locked with another password"
-            if reason:
-                print(f"   x Skipped: {reason}. Put it aside; {code} stays free.")
-                wait_for_removal(uid)
-                continue
-
-            url = BASE_URL + code
-            tlv = build_ndef_url(url)
-            if len(tlv) > prof["user_bytes"]:
-                print(f"   x {prof['name']} is too small. Put it aside.")
-                wait_for_removal(uid)
-                continue
-            try:
-                blob = tlv + b"\x00" * ((-len(tlv)) % 4)
-                page = prof["first_page"]
-                for k in range(0, len(blob), 4):
-                    write_page(conn, page, blob[k:k + 4])
-                    page += 1
-                if parse_ndef_url(read_pages(conn, prof["first_page"], 20)) != url:
-                    raise RuntimeError("read-back does not match")
-                if read_pages(conn, prof["cfg0"], 1)[3] == 0xFF:
-                    apply_protection(conn, prof)
-                if read_pages(conn, prof["cfg0"], 1)[3] != prof["first_page"]:
-                    raise RuntimeError("protection did not stick")
-            except RuntimeError as e:
-                print(f"   x Failed ({e}). Do NOT use this chip; put it aside. {code} stays free.")
-                wait_for_removal(uid)
-                continue
-
-            log_written(code, uid)
-            by_code[code], by_uid[uid] = uid, code
-            written.append((code, uid))
-            print(f"   OK {code}  chip {uid}  written, checked, protected. Remove the tag.")
-            i += 1
+            status, uid, msg = batch_one(conn, code, by_code, by_uid, unfinished, in_range)
+            close(conn)
+            if status == "ok":
+                log_written(code, uid)
+                by_code[code], by_uid[uid] = uid, code
+                unfinished.discard(uid)
+                written.append((code, uid))
+                print(f"   OK {code}  chip {uid}  written, checked, protected. Remove the tag.")
+                i += 1
+            elif status == "moved" or (uid, code) not in told:
+                told.add((uid, code))
+                print(f"   x {msg}")
             wait_for_removal(uid)
     except KeyboardInterrupt:
         print("\nStopped by Ctrl+C.")
+    except Exception as e:                       # never lose what was already written
+        print(f"\nStopped: {e}")
+    finally:
+        print(f"\nDone: {len(written)} tags written in this batch.")
+        if written:
+            print(f"First {written[0][0]}, last {written[-1][0]}. Label the box with that range.")
+            out = save_uid_sql(written, f"batch {written[0][0]} … {written[-1][0]} ({len(written)} tags)")
+            print(f"\nChip IDs for the dashboard: {out.name}")
+            print("Open it, copy everything into Supabase -> SQL Editor -> Run (once).")
+        if unfinished:
+            print(f"\n{len(unfinished)} chip(s) moved away while being written and were not finished.")
+            print("They are NOT usable as they are: run  python nfc_tag.py reset  on each, then reuse.")
 
-    print(f"\nDone: {len(written)} tags written in this batch.")
-    if written:
-        print(f"First {written[0][0]}, last {written[-1][0]}. Label the box with that range.")
-        out = save_uid_sql(written, f"batch {written[0][0]} … {written[-1][0]} ({len(written)} tags)")
-        print(f"\nChip IDs for the dashboard: {out.name}")
-        print("Open it, copy everything into Supabase -> SQL Editor -> Run (once).")
+
+def batch_one(conn, code, by_code, by_uid, unfinished, in_range):
+    """One chip for one number. Returns (status, uid, message)."""
+    try:
+        s = tag_state(conn)
+    except Exception:
+        return "retry", None, "Could not read the tag — lay it flat in the middle of the reader."
+    uid, prof = s["uid"], s["profile"]
+    keep = f"{code} stays free."
+    if uid in by_uid:
+        return "skip", uid, f"Skipped: this chip already carries {by_uid[uid]}. Put it aside; {keep}"
+    if s["hardware_locked"]:
+        return "skip", uid, f"Skipped: this chip is permanently locked. Put it aside; {keep}"
+
+    # our own unfinished write: this session, or an unprotected chip with a
+    # broken / not-yet-logged YAK-TAG address of this range
+    own = uid in unfinished
+    if not own and not s["password_protected"]:
+        if s["url"] and "yaktag.org/t.html?tag=" in s["url"]:
+            c = s["url"].rsplit("=", 1)[-1]
+            own = c in in_range and c not in by_code
+        elif s.get("raw_yak"):
+            own = True
+    if not own:
+        if s["url"] and "yaktag.org/t.html?tag=" in s["url"]:
+            return "skip", uid, f"Skipped: this chip is already a YAK-TAG tag ({s['url'].rsplit('=', 1)[-1]}). Put it aside; {keep}"
+        if not s["blank"]:
+            what = s["url"] or "unknown data"
+            return "skip", uid, (f"Skipped: this chip holds other data ({what[:60]}). "
+                                 f"Put it aside and later run  python nfc_tag.py reset  on it; {keep}")
+    if s["password_protected"] and not authenticate(conn):
+        return "skip", uid, f"Skipped: this chip is locked with another password. Put it aside; {keep}"
+
+    url = BASE_URL + code
+    tlv = build_ndef_url(url)
+    if len(tlv) > prof["user_bytes"]:
+        return "skip", uid, f"Skipped: {prof['name']} is too small. Put it aside; {keep}"
+    try:
+        blob = tlv + b"\x00" * ((-len(tlv)) % 4)
+        if own:                                  # clear the rest of a half-written address
+            blob += b"\x00" * 16
+        page = prof["first_page"]
+        for k in range(0, len(blob), 4):
+            write_page(conn, page, blob[k:k + 4])
+            page += 1
+        if parse_ndef_url(read_pages(conn, prof["first_page"], 20)) != url:
+            raise RuntimeError("read-back does not match")
+        if read_pages(conn, prof["cfg0"], 1)[3] == 0xFF:
+            apply_protection(conn, prof)
+        if read_pages(conn, prof["cfg0"], 1)[3] != prof["first_page"]:
+            raise RuntimeError("protection did not stick")
+    except Exception:
+        unfinished.add(uid)
+        return "moved", uid, (f"The tag moved while writing. Put the SAME tag back, flat and still — "
+                              f"it will be finished as {code}.")
+    return "ok", uid, ""
 
 def main():
     if len(sys.argv) < 2:
