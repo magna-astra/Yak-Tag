@@ -348,8 +348,8 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
       <button data-tab="calving" id="calvTabBtn">Төллөлт</button>
       <button data-tab="users" class="super-only">Хэрэглэгчид</button>
       <button data-tab="farms" class="super-only">Фермүүд</button>
-      <button data-tab="tags" class="super-only">Тагууд</button>
-      <button data-tab="audit" class="admin-only">Түүх</button>
+      <button data-tab="tags" class="admin-only">Тагууд</button>
+      <button data-tab="audit" class="super-only">Түүх</button>
     </div>
 
     <!-- ===== HERD ===== -->
@@ -498,9 +498,9 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
       <div class="stats" id="tagStats"></div>
       <div class="filters">
         <div class="frow">
-          <button class="chip on" id="newTagsBtn">+ Таг үүсгэх</button>
-          <span class="flabel">Ферм</span>
-          <select id="tFarm"><option value="">Бүх ферм</option></select>
+          <button class="chip on super-only" id="newTagsBtn">+ Таг үүсгэх</button>
+          <span class="flabel super-only">Ферм</span>
+          <select id="tFarm" class="super-only"><option value="">Бүх ферм</option></select>
           <input type="search" id="tSearch" placeholder="Тагийн дугаар…">
           <span class="count-note" id="tagCount"></span>
         </div>
@@ -513,7 +513,7 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
           <button class="chip" data-stage="lost">Алдагдсан</button>
           <button class="chip" data-stage="retired">Хасагдсан</button>
         </div>
-        <div class="frow">
+        <div class="frow super-only">
           <span class="flabel">Сонгосон</span>
           <span id="tagSelNote" class="muted">0</span>
           <button class="minibtn" id="tagAssignBtn">Фермд оноох</button>
@@ -525,7 +525,7 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th><input type="checkbox" id="tagAll" title="Харагдаж буй бүгдийг сонгох"></th>
+            <tr><th class="super-only"><input type="checkbox" id="tagAll" title="Харагдаж буй бүгдийг сонгох"></th>
                 <th>Дугаар</th><th>Ферм</th><th>Төлөв</th><th>Чип UID</th>
                 <th>Мал / эзэмшигч</th><th>Бичсэн</th><th>Багц</th></tr>
           </thead>
@@ -2094,14 +2094,16 @@ function renderTags(){
   document.getElementById('tagsBody').innerHTML = shown.length ? shown.map(t=>{
     const [cls,lbl] = STAGE[t.stage] || ['none', t.stage];
     return `<tr>
-      <td><input type="checkbox" class="tagchk" data-code="${esc(t.tag_code)}" ${tagSel.has(t.tag_code)?'checked':''}></td>
+      <td class="super-only"><input type="checkbox" class="tagchk" data-code="${esc(t.tag_code)}" ${tagSel.has(t.tag_code)?'checked':''}></td>
       <td class="tag-code">${t.cattle_id
         ? `<a href="../cow.html?tag=${encodeURIComponent(t.tag_code)}">${esc(t.tag_code)}</a>`
         : esc(t.tag_code)}</td>
       <td class="muted">${esc(t.farm_code||'')} · ${esc(t.farm_name||'')}</td>
       <td><span class="badge ${cls}">${lbl}</span>${t.retire_reason?` <span class="muted" title="${esc(t.retire_reason)}">ⓘ</span>`:''}</td>
-      <td class="muted" style="font-family:var(--mono);font-size:.78rem"><button class="vbtn" data-act="setTagUid" data-id="${esc(t.tag_code)}"
-          title="Чип UID бүртгэх / засах">${t.nfc_uid ? esc(t.nfc_uid) : '<span class="add">+ UID</span>'}</button></td>
+      <td class="muted" style="font-family:var(--mono);font-size:.78rem">${myRole==='super_admin'
+        ? `<button class="vbtn" data-act="setTagUid" data-id="${esc(t.tag_code)}"
+          title="Чип UID бүртгэх / засах">${t.nfc_uid ? esc(t.nfc_uid) : '<span class="add">+ UID</span>'}</button>`
+        : esc(t.nfc_uid || '—')}</td>
       <td>${t.cattle_id ? esc(t.owner_name||'—') : '<span class="muted">—</span>'}</td>
       <td class="muted">${fmtD(t.written_at)}</td>
       <td class="muted">${esc(t.batch_code||'—')}</td>

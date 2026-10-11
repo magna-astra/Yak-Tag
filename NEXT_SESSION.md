@@ -229,6 +229,12 @@ Four parallel checks: website, app pages, database security, operations (backups
 - `tools/open_tag_tool.bat` opens a window in tools/. On the owner's PC use **`python`** (has pyscard), not `py`.
 - Tests (simulated NTAG215, scratchpad `nfc_test/`): production 19/19, reset 12/12. Not yet run on the real reader.
 
+## 3o. History super-admin only; farm admins see their tags (2026-10-11)
+
+- **v47** `db/schema_v47_history_super_only.sql`: `audit_log` select policy = `coalesce(is_super(), false)` (before: farm admins read their farm's history). Tested locally: farm admin 35 → 0 rows, super 35, run twice OK. **Must be run in Supabase.**
+- Dashboard: "Түүх" tab `super-only`; "Тагууд" tab `admin-only` = farm admins see a READ-ONLY list of their farm's tags (no create / farm filter / bulk actions / checkboxes / UID editing). RLS already limited tags to their farm.
+- **Agreed with the owner, not built yet (next):** new role **Админ** (sees + edits only the farms they CREATED, their herders/farm admins/animals/tags; creates & edits farms and herders + farm admins, resets passwords; never deletes); **any new tag** can be registered by any herder and moves to that herder's farm; **pause** one tag or a whole farm (paused page "Энэ таг түр зогсоогдсон. Админд хандана уу" + phone for strangers and herders, no new data, history kept, Telegram message to the farm's people), super admin resumes; **super admin full delete** of a farm (old delete_farm misses tag_batches; users with history get switched off instead of deleted). Plan: replay schema.sql + all patches on a local Postgres (scratchpad `replay/`) and test every rule there before writing v48.
+
 ## 4. To do next
 
 1. **Run `db/schema_v46_write_permissions.sql`** in Supabase → SQL Editor, read its CHECK output, then merge `fix/system-check-2026-10-07` and push.
