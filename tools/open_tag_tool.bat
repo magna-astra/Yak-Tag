@@ -10,7 +10,7 @@ if errorlevel 1 (
 )
 echo  YAK-TAG tag tool. Put ONE tag on the reader, then type for example:
 echo      python nfc_tag.py status
-echo      python nfc_tag.py rewrite YT-008005
-echo      python nfc_tag.py protect
+echo      python nfc_tag.py batch YT-009001 YT-009100
+echo      python nfc_tag.py uidsql
 echo.
 cmd /k

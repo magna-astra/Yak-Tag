@@ -220,12 +220,21 @@ Four parallel checks: website, app pages, database security, operations (backups
 - **Fixed:** `t.html` footer said "Энэ мал YAK-TAG системд бүртгэлтэй" even for a new/unknown tag; now neutral ("YAK-TAG · Мал бүрт цахим үнэмлэх") until an animal is rendered (5/5 states checked).
 - **Live first-tap screenshots:** `dist/first_tap.py [TAG]` (Chrome DevTools via `dist/cdp_shot.py`, true 390-px phone) shoots the LIVE tap page + login for a produced tag with no animal (70 such tags live, YT-008005…; opening them records nothing) and the after-login pages from sample copies → `dist/walkthrough/first_tap_storyboard.png`. Run it after `make_shots.py` (it overwrites h1–h4).
 
+## 3n. Tag production: YKTG standard, batch, no number twice, reset (2026-10-11)
+
+- **Owner's decision: every YAK-TAG tag uses the password `YKTG`** ("as before, no change"). `nfc_tag.py` uses it by default (no `setpass` needed; `setpass`/`YT_TAG_PASSWORD` still override). Risk told to the owner once: YKTG is public in this repo.
+- **`python nfc_tag.py batch YT-009001 YT-009100`**: checks every number online (`public_tag_state` = 'new': exists, farm active, no animal; read-only), then tag after tag: write → read back → protect → check AUTH0 → log; skips chips already logged, locked, already YAK-TAG, not blank, or locked with another password; Ctrl+C stops, rerun continues. Ends with `uid_import_<date>.sql` (chip IDs into `tags.nfc_uid` + audit rows; only where `nfc_uid is null`; safe twice; tested on Postgres).
+- **No number twice:** `tools/written_tags.csv` (git-ignored) logs code,uid,time; `write` refuses a code already on another chip or a chip that already carries a code; `rewrite` may move a chip to a new code but never reuses a code. Use a FRESH range per production run (older 8005… numbers may already be on old chips; that can't be seen from outside).
+- **`python nfc_tag.py reset`**: used tag → like new (memory zero, CFG0 04 00 00 FF = no mirror/no protection, PWD FFFFFFFF). OneTag tags (onetagmn.com, CFG0 54 00 12 04 = UID mirror at page 18) first need OneTag's own `node remove-password.js` (its tag-writer folder, Desktop\<nbsp><nbsp>\MY\ONE-YAK-TAG\OneTag App & Host	ag-writer).
+- `tools/open_tag_tool.bat` opens a window in tools/. On the owner's PC use **`python`** (has pyscard), not `py`.
+- Tests (simulated NTAG215, scratchpad `nfc_test/`): production 19/19, reset 12/12. Not yet run on the real reader.
+
 ## 4. To do next
 
 1. **Run `db/schema_v46_write_permissions.sql`** in Supabase → SQL Editor, read its CHECK output, then merge `fix/system-check-2026-10-07` and push.
 2. **BACKUP_TOKEN expiry:** GitHub → Settings → Developer settings → Fine-grained tokens → open the backup token → read "Expires". If it's near, Regenerate (longest expiry) and update the repo secret.
 3. Optional **full backup:** add secret `SUPABASE_DB_URL` (Supabase → Connect → Session pooler URI with the database password), then Actions → Daily database backup → Run workflow → both jobs green.
-4. **Re-protect field tags** that still use the old `YKTG` password (`tools/nfc_tag.py`, section 3j).
+4. ~~Re-protect field tags~~ — not needed: YKTG is the standard (section 3n).
 5. **Real lost-animal test (optional):** mark a test cow lost, tap its tag with a phone that isn't logged in, a Telegram alert with a map link should arrive, then press "Олдсон".
 6. Ask **farm admins and herders to link Telegram**.
 7. Google Search Console: submit `https://yaktag.org/sitemap.xml` if it isn't listed. "Page with redirect" (http://, www.) is expected — don't validate it.

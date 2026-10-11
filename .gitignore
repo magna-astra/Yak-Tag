@@ -12,3 +12,7 @@ tag_password.txt
 
 # built business kit
 dist/
+
+# tag production log and dashboard import files (tools/nfc_tag.py)
+written_tags.csv
+uid_import_*.sql

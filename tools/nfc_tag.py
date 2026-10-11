@@ -15,6 +15,8 @@ Auto-detects NTAG213 / NTAG215 / NTAG216 and uses the right memory map.
     python nfc_tag.py protect                set write password (REVERSIBLE)
     python nfc_tag.py unprotect              remove the write password
     python nfc_tag.py verify YT-008000
+    python nfc_tag.py batch YT-009001 YT-009100   write a whole range, tag after tag
+    python nfc_tag.py uidsql                 SQL that records all chip IDs in the dashboard
 
 TAG TYPES — they are NOT interchangeable:
     NTAG213  144 bytes user memory   (CC byte = 0x12)
@@ -29,16 +31,25 @@ USE `protect`, NOT A PERMANENT LOCK:
     anyone — it becomes waste the moment the animal is sold or the
     data was wrong.
 
-THE TAG PASSWORD IS NOT IN THIS FILE (the repo is public). `setpass`
-saves it in tag_password.txt next to this script, which git ignores.
-Or set the environment variable YT_TAG_PASSWORD (4 characters).
-Keep a copy somewhere safe: without it, protected tags cannot be
-rewritten.
+PASSWORD: every YAK-TAG tag is protected with YKTG (owner's decision,
+2026-10-11) — no setup needed. YKTG is visible in this public repo, so
+someone with a password-capable NFC app could rewrite a tag; to change
+it later, `setpass` (tag_password.txt) or YT_TAG_PASSWORD override it.
+
+NO NUMBER TWICE: every write is logged in written_tags.csv next to this
+script. A number already written on another chip, or a chip that already
+carries a number, is refused. `batch` also checks online that each number
+exists in the dashboard and has no animal.
 """
 
+import concurrent.futures
+import json
 import os
 import re
 import sys
+import time
+import urllib.request
+from datetime import datetime
 from getpass import getpass
 from pathlib import Path
 
@@ -54,11 +65,19 @@ except ImportError:
 # ============================================================
 BASE_URL = "https://yaktag.org/t.html?tag="
 
-# The write password: 4 characters, never stored in this public file.
-# Source: YT_TAG_PASSWORD environment variable, else tag_password.txt
-# next to this script (created by `setpass`, ignored by git).
-PASSWORD_FILE   = Path(__file__).with_name("tag_password.txt")
-LEGACY_PASSWORD = b"YKTG"       # old default, public on GitHub: never protect with it
+# The write password (4 characters). YAK-TAG standard: YKTG (owner's
+# decision 2026-10-11). YT_TAG_PASSWORD or tag_password.txt (`setpass`,
+# git-ignored) override it.
+PASSWORD_FILE    = Path(__file__).with_name("tag_password.txt")
+DEFAULT_PASSWORD = b"YKTG"
+
+# Every chip written on this PC: tag_code,uid,written_at (git-ignored).
+LOG_FILE = Path(__file__).with_name("written_tags.csv")
+
+# Public project address + publishable key (the same as config.js), for
+# the read-only "is this number ready in the dashboard?" check.
+SUPABASE_URL = "https://oxfbxqclqfglpzgzizhq.supabase.co"
+SUPABASE_KEY = "sb_publishable_W3WMWLP28Czb2_5VTDQUlg_--3vfY71"
 TAG_PACK     = b"\x59\x41"      # 2 bytes
 
 # ============================================================
@@ -154,7 +173,7 @@ def load_password():
     if raw is None and PASSWORD_FILE.exists():
         raw = PASSWORD_FILE.read_text(encoding="utf-8").strip()
     if raw is None:
-        return None
+        return DEFAULT_PASSWORD
     pw = raw.encode("ascii", errors="replace")
     if len(pw) != 4:
         print(f"Tag password must be exactly 4 characters ({PASSWORD_FILE.name} / YT_TAG_PASSWORD).")
@@ -162,7 +181,15 @@ def load_password():
     return pw
 
 
-TAG_PASSWORD = load_password()   # None until `setpass` has been run
+TAG_PASSWORD = load_password()   # YKTG unless overridden
+
+
+def password_source():
+    if os.environ.get("YT_TAG_PASSWORD"):
+        return "from YT_TAG_PASSWORD"
+    if PASSWORD_FILE.exists():
+        return f"from {PASSWORD_FILE.name}"
+    return "YKTG (YAK-TAG standard)"
 
 
 def authenticate(conn, password=None):
@@ -292,9 +319,9 @@ def print_state(s):
         print("Permanently locked. Cannot be rewritten by anyone, ever.")
         print("Retire it in the database and use a fresh tag.")
     elif s["password_protected"]:
-        print("Password protected. Rewriting works with the password it was")
-        print("protected with: yours (tag_password.txt), or for tags protected")
-        print("before 2026-10-07 the old YKTG (set YT_TAG_PASSWORD=YKTG, then unprotect).")
+        print("Password protected. YAK-TAG tags use YKTG, which this tool opens itself.")
+        print("A tag from another system (e.g. OneTag) needs that system's tool first")
+        print("(OneTag: remove-password.js), then  python nfc_tag.py reset.")
     elif not s["blank"]:
         print("Has data but unprotected. `rewrite` will overwrite it.")
     else:
@@ -383,6 +410,9 @@ def cmd_write(tag_code, force=False):
         else:
             print("Could not authenticate — attempting write anyway.")
 
+    if not check_unique(tag_code, s["uid"], moving=force):
+        return
+
     if not s["blank"] and not force:
         print_state(s)
         print("\nThis tag already holds data.")
@@ -414,9 +444,11 @@ def cmd_write(tag_code, force=False):
     check = read_pages(conn, prof["first_page"], 20)
     readback = parse_ndef_url(check)
     if readback == url:
+        log_written(tag_code, s["uid"])
         print(f"\nVerified OK. UID {s['uid']} now points to {tag_code}.")
         print("\nRecord the chip UID: dashboard -> Тагууд -> row " + tag_code + " -> '+ UID' ->")
         print(f"  {s['uid']}")
+        print("(or later, for many tags at once:  python nfc_tag.py uidsql)")
     else:
         print(f"\nMISMATCH — read back: {readback}")
         print("Do NOT put this tag on an animal.")
@@ -438,7 +470,7 @@ def cmd_reset():
         print("\nThis tag is locked with a password this tool does not have:")
         print("- a OneTag tag: run OneTag's remove-password.js first (its tag-writer")
         print("  folder), then run reset again;")
-        print("- an old YAK-TAG test tag: set YT_TAG_PASSWORD=YKTG, then reset again.")
+        print("- a tag protected with another password: it cannot be reset; put it aside.")
         return
 
     print("\nThis erases the address and every setting on the chip.")
@@ -494,34 +526,7 @@ def cmd_rewrite(tag_code):
     cmd_write(tag_code, force=True)
 
 
-def cmd_protect():
-    conn = get_connection()
-    s = tag_state(conn)
-    prof = s["profile"]
-
-    if s["hardware_locked"]:
-        print("Permanently locked; protection is irrelevant.")
-        return
-    if s["password_protected"]:
-        print("Already password protected.")
-        return
-
-    if TAG_PASSWORD is None:
-        print("No tag password yet. Run first:  python nfc_tag.py setpass")
-        return
-    if TAG_PASSWORD == LEGACY_PASSWORD:
-        print("YKTG is the old default and is public on GitHub — anyone could")
-        print("rewrite your tags. Choose your own:  python nfc_tag.py setpass")
-        return
-
-    print(f"Tag type: {prof['name']}")
-    print("Setting write password. REVERSIBLE via `unprotect`.\n")
-    where = "YT_TAG_PASSWORD" if os.environ.get("YT_TAG_PASSWORD") else PASSWORD_FILE.name
-    print(f"Password: your own, from {where}")
-    if input("Proceed? Type PROTECT: ").strip() != "PROTECT":
-        print("Aborted.")
-        return
-
+def apply_protection(conn, prof):
     write_page(conn, prof["pwd"], TAG_PASSWORD)
     write_page(conn, prof["pack"], TAG_PACK + b"\x00\x00")
 
@@ -535,6 +540,27 @@ def cmd_protect():
     cfg0[3] = prof["first_page"]        # protect from first user page onward (last step)
     write_page(conn, prof["cfg0"], bytes(cfg0))
 
+
+def cmd_protect():
+    conn = get_connection()
+    s = tag_state(conn)
+    prof = s["profile"]
+
+    if s["hardware_locked"]:
+        print("Permanently locked; protection is irrelevant.")
+        return
+    if s["password_protected"]:
+        print("Already password protected.")
+        return
+
+    print(f"Tag type: {prof['name']}")
+    print("Setting write password. REVERSIBLE via `unprotect`.\n")
+    print(f"Password: {password_source()}")
+    if input("Proceed? Type PROTECT: ").strip() != "PROTECT":
+        print("Aborted.")
+        return
+
+    apply_protection(conn, prof)
     print("Protected. Still readable by any phone; writes need the password.")
 
 
@@ -561,7 +587,8 @@ def cmd_unprotect():
 
 def cmd_setpass():
     print("Choose the secret password that protects your tags from rewriting.")
-    print("Exactly 4 characters (letters/digits), e.g. k7Qm. Not YKTG.\n")
+    print("Not needed for YAK-TAG: the standard password is YKTG. Only use this to")
+    print("change it for every tag from now on. Exactly 4 letters/digits.\n")
     if PASSWORD_FILE.exists():
         print(f"{PASSWORD_FILE.name} already exists. Tags protected with the OLD")
         print("password need the old one to be rewritten — keep a copy of it.\n")
@@ -574,9 +601,6 @@ def cmd_setpass():
         return
     if len(pw) != 4 or not pw.isascii() or not pw.isalnum():
         print("Must be exactly 4 letters/digits. Nothing saved.")
-        return
-    if pw.encode() == LEGACY_PASSWORD:
-        print("YKTG is public on GitHub. Choose another. Nothing saved.")
         return
     PASSWORD_FILE.write_text(pw, encoding="utf-8")
     print(f"Saved in {PASSWORD_FILE}")
@@ -594,6 +618,272 @@ def cmd_verify(tag_code):
     print(f"Found:    {s['url']}")
     print("RESULT: MATCH" if s["url"] == expected else "RESULT: MISMATCH")
 
+
+
+# ---------------- no number twice ----------------
+
+def load_log():
+    """{code: uid}, {uid: code} from written_tags.csv (later lines win)."""
+    by_code, by_uid = {}, {}
+    if LOG_FILE.exists():
+        for line in LOG_FILE.read_text(encoding="utf-8").splitlines()[1:]:
+            parts = line.strip().split(",")
+            if len(parts) >= 2 and parts[0] and parts[1]:
+                by_code[parts[0]] = parts[1]
+                by_uid[parts[1]] = parts[0]
+    return by_code, by_uid
+
+
+def log_written(code, uid):
+    new = not LOG_FILE.exists()
+    with LOG_FILE.open("a", encoding="utf-8") as f:
+        if new:
+            f.write("tag_code,uid,written_at\n")
+        f.write(f"{code},{uid},{datetime.now().isoformat(timespec='seconds')}\n")
+
+
+def check_unique(code, uid, moving=False):
+    by_code, by_uid = load_log()
+    if code in by_code and by_code[code] != uid:
+        print(f"\n{code} was already written on another chip ({by_code[code]}).")
+        print("Every number goes on ONE chip only — use the next free number.")
+        return False
+    if uid in by_uid and by_uid[uid] != code and not moving:
+        print(f"\nThis chip already carries {by_uid[uid]}. Use a new chip, or on purpose:")
+        print(f"  python nfc_tag.py rewrite {code}   (then clear {by_uid[uid]}'s UID in the dashboard)")
+        return False
+    return True
+
+
+def tag_states_online(codes):
+    """public_tag_state for each code: 'new' = in the dashboard, farm active,
+    no animal. Read-only; returns {code: 'new' | None | 'error'}."""
+    def one(code):
+        req = urllib.request.Request(
+            f"{SUPABASE_URL}/rest/v1/rpc/public_tag_state",
+            data=json.dumps({"p_tag_code": code}).encode(),
+            headers={"apikey": SUPABASE_KEY, "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                return code, json.loads(r.read().decode() or "null")
+        except Exception:
+            return code, "error"
+    with concurrent.futures.ThreadPoolExecutor(6) as ex:
+        return dict(ex.map(one, codes))
+
+
+def uid_sql(pairs, title):
+    rows = ",\n".join(f"  ('{c}', '{u}')" for c, u in pairs)
+    return f"""-- YAK-TAG: chip IDs written with nfc_tag.py — {title}
+-- Supabase -> SQL Editor -> paste all -> Run. Safe to run twice.
+-- The result lists every number; saved = true means the dashboard has its chip ID.
+with v(tag_code, uid) as (values
+{rows}
+), upd as (
+  update public.tags t
+     set nfc_uid    = v.uid,
+         written_at = coalesce(t.written_at, now()),
+         status     = case when t.status = 'blank' then 'written' else t.status end
+    from v
+   where t.tag_code = v.tag_code
+     and t.nfc_uid is null
+     and not exists (select 1 from public.tags o where o.nfc_uid = v.uid)
+  returning t.id, t.farm_id, t.tag_code, t.nfc_uid
+), hist as (
+  insert into public.audit_log (farm_id, actor_id, action, entity, entity_id, detail)
+  select farm_id, null, 'tag_uid', 'tags', id,
+         jsonb_build_object('tag_code', tag_code, 'nfc_uid', nfc_uid, 'source', 'nfc_tag.py')
+    from upd
+  returning 1
+)
+select v.tag_code as tag, v.uid as chip_uid,
+       coalesce(u.tag_code is not null or t.nfc_uid = v.uid, false) as saved,
+       case when t.id is null then 'number not in the dashboard'
+            when u.tag_code is not null then 'saved now'
+            when t.nfc_uid = v.uid then 'already saved'
+            else 'row has another UID: ' || t.nfc_uid end as note
+  from v
+  left join public.tags t on t.tag_code = v.tag_code
+  left join upd u on u.tag_code = v.tag_code
+ order by 1;
+"""
+
+
+def save_uid_sql(pairs, title):
+    out = Path(__file__).with_name(f"uid_import_{datetime.now():%Y-%m-%d_%H%M}.sql")
+    out.write_text(uid_sql(pairs, title), encoding="utf-8")
+    return out
+
+
+def cmd_uidsql():
+    by_code, _ = load_log()
+    if not by_code:
+        print("No tags written on this PC yet (written_tags.csv is empty).")
+        return
+    out = save_uid_sql(sorted(by_code.items()), f"all {len(by_code)} tags written on this PC")
+    print(f"Saved {out.name} ({len(by_code)} tags).")
+    print("Open it, copy everything into Supabase -> SQL Editor -> Run.")
+
+
+# ---------------- batch: a whole range, tag after tag ----------------
+
+def try_connect():
+    try:
+        r = readers()
+    except Exception:
+        return None
+    if not r:
+        return None
+    picc = [x for x in r if "PICC" in str(x)] or r
+    conn = picc[0].createConnection()
+    try:
+        conn.connect()
+        return conn
+    except Exception:
+        return None
+
+
+def wait_for_tag():
+    while True:
+        conn = try_connect()
+        if conn is not None:
+            return conn
+        time.sleep(0.4)
+
+
+def wait_for_removal(uid):
+    """Until the reader is empty (or, for a known chip, holds another chip)."""
+    while True:
+        conn = try_connect()
+        if conn is None:
+            return
+        if uid is not None:
+            try:
+                if get_uid(conn) != uid:
+                    return
+            except Exception:
+                return
+        time.sleep(0.4)
+
+
+def code_range(first, last):
+    m1 = re.fullmatch(r"([A-Z]{1,6})-(\d{6})", first)
+    m2 = re.fullmatch(r"([A-Z]{1,6})-(\d{6})", last)
+    if not (m1 and m2) or m1.group(1) != m2.group(1) or int(m1.group(2)) > int(m2.group(2)):
+        return None
+    return [f"{m1.group(1)}-{n:06d}" for n in range(int(m1.group(2)), int(m2.group(2)) + 1)]
+
+
+def cmd_batch(first, last):
+    codes = code_range(first, last)
+    if not codes:
+        print("Give the first and last number of ONE range, e.g.  batch YT-009001 YT-009100")
+        return
+    if len(codes) > 1000:
+        print("At most 1000 numbers per batch.")
+        return
+    if not readers():
+        print("No PC/SC reader found. Is the ACR1552U plugged in?")
+        return
+
+    by_code, by_uid = load_log()
+    done_before = [c for c in codes if c in by_code]
+    todo = [c for c in codes if c not in by_code]
+    print(f"Range {codes[0]} … {codes[-1]}: {len(codes)} numbers, {len(done_before)} already written on this PC.")
+    if not todo:
+        print("Nothing left to write in this range.")
+        return
+
+    print("Checking the numbers in the dashboard (read-only)…")
+    states = tag_states_online(todo)
+    if all(v == "error" for v in states.values()):
+        print("No internet: the numbers cannot be checked against the dashboard.")
+        if input("Write anyway (only numbers you created in the dashboard!)? Type YES: ").strip() != "YES":
+            print("Stopped — nothing written.")
+            return
+        ready = todo
+    else:
+        ready = [c for c in todo if states.get(c) == "new"]
+        missing = [c for c in todo if states.get(c) != "new"]
+        if missing:
+            print(f"{len(missing)} numbers are NOT ready (not created, no farm, farm paused, or already")
+            print(f"on an animal) and will be skipped: {', '.join(missing[:8])}{' …' if len(missing) > 8 else ''}")
+        if not ready:
+            print("No number of this range is ready. Create them first: dashboard -> Тагууд -> + Таг үүсгэх.")
+            return
+
+    print(f"\n{len(ready)} numbers to write: {ready[0]} … {ready[-1]}")
+    print(f"Every tag is written, checked and protected (password {password_source()}).")
+    print("Put ONE new tag on the reader at a time. Ctrl+C stops at any moment.\n")
+
+    written = []
+    i = 0
+    try:
+        while i < len(ready):
+            code = ready[i]
+            print(f"[{i + 1}/{len(ready)}] Put a new tag on the reader for {code} …")
+            conn = wait_for_tag()
+            try:
+                s = tag_state(conn)
+            except RuntimeError as e:
+                print(f"   x Cannot read this chip ({e}). Put it aside.")
+                wait_for_removal(None)
+                continue
+            uid, prof = s["uid"], s["profile"]
+            reason = None
+            if uid in by_uid:
+                reason = f"this chip was already written as {by_uid[uid]}"
+            elif s["hardware_locked"]:
+                reason = "this chip is permanently locked"
+            elif s["url"] and "yaktag.org/t.html?tag=" in s["url"]:
+                reason = f"this chip is already a YAK-TAG tag ({s['url'].rsplit('=', 1)[-1]})"
+            elif not s["blank"]:
+                reason = "this chip is not blank — run  python nfc_tag.py reset  on it first"
+            elif s["password_protected"] and not authenticate(conn):
+                reason = "this chip is locked with another password"
+            if reason:
+                print(f"   x Skipped: {reason}. Put it aside; {code} stays free.")
+                wait_for_removal(uid)
+                continue
+
+            url = BASE_URL + code
+            tlv = build_ndef_url(url)
+            if len(tlv) > prof["user_bytes"]:
+                print(f"   x {prof['name']} is too small. Put it aside.")
+                wait_for_removal(uid)
+                continue
+            try:
+                blob = tlv + b"\x00" * ((-len(tlv)) % 4)
+                page = prof["first_page"]
+                for k in range(0, len(blob), 4):
+                    write_page(conn, page, blob[k:k + 4])
+                    page += 1
+                if parse_ndef_url(read_pages(conn, prof["first_page"], 20)) != url:
+                    raise RuntimeError("read-back does not match")
+                if read_pages(conn, prof["cfg0"], 1)[3] == 0xFF:
+                    apply_protection(conn, prof)
+                if read_pages(conn, prof["cfg0"], 1)[3] != prof["first_page"]:
+                    raise RuntimeError("protection did not stick")
+            except RuntimeError as e:
+                print(f"   x Failed ({e}). Do NOT use this chip; put it aside. {code} stays free.")
+                wait_for_removal(uid)
+                continue
+
+            log_written(code, uid)
+            by_code[code], by_uid[uid] = uid, code
+            written.append((code, uid))
+            print(f"   OK {code}  chip {uid}  written, checked, protected. Remove the tag.")
+            i += 1
+            wait_for_removal(uid)
+    except KeyboardInterrupt:
+        print("\nStopped by Ctrl+C.")
+
+    print(f"\nDone: {len(written)} tags written in this batch.")
+    if written:
+        print(f"First {written[0][0]}, last {written[-1][0]}. Label the box with that range.")
+        out = save_uid_sql(written, f"batch {written[0][0]} … {written[-1][0]} ({len(written)} tags)")
+        print(f"\nChip IDs for the dashboard: {out.name}")
+        print("Open it, copy everything into Supabase -> SQL Editor -> Run (once).")
 
 def main():
     if len(sys.argv) < 2:
@@ -617,6 +907,9 @@ def main():
         elif cmd == "protect": cmd_protect()
         elif cmd == "unprotect": cmd_unprotect()
         elif cmd == "verify" and len(sys.argv) == 3: cmd_verify(sys.argv[2])
+        elif cmd == "batch" and len(sys.argv) == 4:
+            cmd_batch(sys.argv[2].strip().upper(), sys.argv[3].strip().upper())
+        elif cmd == "uidsql": cmd_uidsql()
         else: print(__doc__)
     except RuntimeError as e:
         print(f"Error: {e}")
