@@ -89,8 +89,16 @@ def get_connection():
     if not r:
         print("No PC/SC reader found. Is the ACR1552U plugged in?")
         sys.exit(1)
-    conn = r[0].createConnection()
-    conn.connect()
+    # The ACR1552U shows two slots: "PICC" (the NFC antenna) and "SAM".
+    picc = [x for x in r if "PICC" in str(x)] or r
+    conn = picc[0].createConnection()
+    try:
+        conn.connect()
+    except Exception:
+        # pyscard raises NoCardException with a long traceback otherwise
+        print("No tag on the reader. Put ONE tag flat on the middle of the reader")
+        print("(not two at once) and run the command again.")
+        sys.exit(1)
     return conn
 
 
