@@ -1,6 +1,6 @@
 # YAK-TAG: where we stopped
 
-Last updated **2026-10-07** (full system check, section 3k). Branch `fix/system-check-2026-10-07` waits for the owner: run `db/schema_v46_write_permissions.sql` in Supabase first, then merge and push.
+Last updated **2026-10-12** (Админ role, pause, full farm delete — section 3q). The owner must run `db/schema_v49_admin_role_pause.sql` in Supabase, deploy the updated Edge Function, then push (section 4).
 This file has no passwords or tokens. It is safe to commit, but note that the repo is public.
 
 To continue, open this folder in Claude Code and say:
@@ -17,7 +17,8 @@ To continue, open this folder in Claude Code and say:
 - The owner pushes with **GitHub Desktop**. Claude commits locally only.
 - Edit files with **exact-text replacements**, never line-range slicing. A slicing edit once silently deleted all the dashboard row buttons.
 - After any dashboard edit, **click-test every row button**.
-- If `config.js` or `offline.js` change, bump `?v=` in `t.html`, `cow.html` and `admin/index.html` (currently `?v=20261007`).
+- If `config.js` or `offline.js` change, bump `?v=` in `t.html`, `cow.html` and `admin/index.html` (currently `?v=20261011`).
+- **Test SQL on a full local rebuild first:** `python db/test/replay.py --keep` replays `schema.sql` + `seed.sql` + every patch on a throwaway Postgres 18 (port 55440, Supabase stand-ins in `db/test/stub.sql`, hand-made live objects in `db/test/prelude.sql`), then run role tests like `db/test/test_v49.sql` (one transaction, rolled back). Stop it afterwards: `pg_ctl -D "$TEMP/yt-replay" stop`.
 - If `assets/style-a.css` changes, bump its `?v=` in the 4 public pages (currently `?v=2026100701`); same for `assets/contacts.js` (currently `?v=2`). Without it, browsers mix the new pages with the old file. (`assets/site.css` is no longer used.)
 - **Testing without the live database:** the Claude browser preview of a local server was blocked on 2026-10-07, so the app logic was tested in Node with stubs (fake IndexedDB, fake server, fake caches). The test scripts were temporary. For screenshots, headless Edge's `--window-size=375,…` renders wider and crops; use DevTools phone emulation (`Emulation.setDeviceMetricsOverride`) for real phone widths.
 
@@ -32,7 +33,8 @@ To continue, open this folder in Claude Code and say:
 | Owner / herder page | `cow.html` |
 | Public tap page | `t.html` |
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
-| Database changes | `db/schema_v*.sql`. v21 to v45 are **run on live** (v45's e-mail part stays dormant). **v46 must still be run** (section 3k). |
+| Database changes | `db/schema_v*.sql`. v21 to v47 are **run on live** (v45's e-mail part stays dormant). **v48 and v49 must be run** if not done yet (sections 3p, 3q). |
+| Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password) — deployed by pasting it in Supabase → Edge Functions |
 | Daily backup | `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups` (+ `database.dump` once `SUPABASE_DB_URL` is set) |
 | Not on the website | `_config.yml` keeps `*.md`, `db/`, `tools/`, `scripts/`, `supabase/` off yaktag.org (they stay in the public repo) |
 
@@ -233,17 +235,37 @@ Four parallel checks: website, app pages, database security, operations (backups
 
 - **v47** `db/schema_v47_history_super_only.sql`: `audit_log` select policy = `coalesce(is_super(), false)` (before: farm admins read their farm's history). Tested locally: farm admin 35 → 0 rows, super 35, run twice OK. **Must be run in Supabase.**
 - Dashboard: "Түүх" tab `super-only`; "Тагууд" tab `admin-only` = farm admins see a READ-ONLY list of their farm's tags (no create / farm filter / bulk actions / checkboxes / UID editing). RLS already limited tags to their farm.
-- **Agreed with the owner, not built yet (next):** new role **Админ** (sees + edits only the farms they CREATED, their herders/farm admins/animals/tags; creates & edits farms and herders + farm admins, resets passwords; never deletes); **any new tag** can be registered by any herder and moves to that herder's farm; **pause** one tag or a whole farm (paused page "Энэ таг түр зогсоогдсон. Админд хандана уу" + phone for strangers and herders, no new data, history kept, Telegram message to the farm's people), super admin resumes; **super admin full delete** of a farm (old delete_farm misses tag_batches; users with history get switched off instead of deleted). Plan: replay schema.sql + all patches on a local Postgres (scratchpad `replay/`) and test every rule there before writing v48.
+- The Админ role / pause / full farm delete agreed here was built in v49 (section 3q).
 
 ## 3p. "+ Таг үүсгэх": any range, says what already exists (2026-10-11)
 
 - **v48** `db/schema_v48_create_tags_any_range.sql`: `admin_create_tags` (same signature, super only) now accepts any range: existing numbers are skipped and reported (count + first…last); missing numbers inside an existing batch of the SAME prefix join it; every gap gets its own new batch (no_range_overlap is per prefix). Returns created/created_first/created_last/skipped/existing_first/existing_last/new_batches. Tested locally with the real constraints (crossing a batch edge, all-existing, new range next to another prefix, batch+gap+batch, farm admin refused). **Must be run in Supabase.**
 - Dashboard: the window pre-fills the next 100 free numbers (highest existing + 1), previews "N нь аль хэдийн байна (first … last) · M шинээр үүснэ", disables Үүсгэх when nothing is new or > 2000, and the result toast names both ranges.
-- The owner declined running the full local replay of all patches (twice) — test with targeted local databases instead.
+- Later the owner chose the full local rebuild ("Full local rebuild (Recommended)"); it now lives in `db/test/` (rule in section 1).
+
+## 3q. Админ role, pause, any new tag, full farm delete (2026-10-12)
+
+What the owner asked: an "Админ" who creates farms and herders without super-admin powers and sees only what he created; the super admin alone deletes and pauses ("stop all tags"), and can finally delete fake farms (old delete_farm hit `tag_batches_farm_id_fkey`).
+
+- **v49** `db/schema_v49_admin_role_pause.sql` (one transaction, safe to run twice; built from the live function texts by targeted edits; 96 role checks in `db/test/test_v49.sql` pass on a full rebuild v1→v49):
+  - Role `admin` (no farm). `farms.created_by` = who created the farm. Helpers `is_admin()`, `admin_farm_ids()`, `admin_owns_farm()`, `admin_farm_folders()`. Extra **read-only** policies `admin_read` (ORed with the old ones, nobody else's access changes) on farms, profiles, cattle, photos, milk, health, repro, scans, public scans, transfers, tags, batches + photo files. `audit_log` stays super-only.
+  - Админ **can**: `create_farm`, `admin_update_farm` (own farms), `admin_update_profile` (herder/farm admin of own farms; roles herder/farm_admin only; cannot switch a login off). **Cannot**: delete, pause, create tag numbers, register animals, add milk/vaccines, transfer, read Түүх.
+  - Super admin: `admin_set_farm_owner(farm, admin)` hands an older farm to an Админ (farm edit window → "Хариуцсан Админ").
+  - **Any new tag**: `register_cattle` / `tag_registration_info` no longer refuse "other farm"; the animal joins the herder's farm and the tag moves there. New reasons `paused`, `no_farm`.
+  - **Pause**: `tags.paused_at / paused_by / pause_note`; `admin_pause_tags(codes, pause, note)` (super only, Telegram to owner + farm admins + the farm's Админ). `public_tag_state` → `'paused'` for a paused tag or a non-active farm; `public_tag_lookup` hides it; `record_public_scan` saves nothing; trigger `paused_guard` (`refuse_when_paused`) blocks new milk/health/repro/photos/scans/transfers and animal updates for everyone but the super admin. History is kept.
+  - Farm pause ("Түр хаах" = `archive_farm`) now sends Telegram and remembers who was active; "Сэргээх" switches exactly those back on (farms paused before v49: all of them).
+  - **`delete_farm`** (super, returns jsonb) removes the farm's animals + records, tags, batches, users; keeps and moves what belongs elsewhere (tag on another farm's animal, that animal's older records, a batch holding other farms' tags); users with history are switched off (`status disabled`, farm null) instead of deleted; history rows keep their text, lose the farm link. `farm_required` allows a disabled user without a farm.
+  - **`delete_profile`** returns `'deleted'` or `'disabled'` (a user with history is switched off).
+  - Lost-animal alert also goes to the farm's Админ.
+- **Edge Function** `admin-users`: an active Админ may create herder/farm admin users and reset their passwords, only in farms he created; the super admin may also create "Админ" users. **Must be re-deployed** (paste the file).
+- **Dashboard**: `body.role-admin` hides `.super-only` unless it also has `.mgr` (Хэрэглэгчид, Фермүүд, farm filters, farm code); `.no-admin` hides the transfer button and the user on/off switch. Админ's herd view is read-only (milk buttons off, vaccine view only). Role lists come from `roleOptions()`. Тагууд: "⏸ Түр зогсоох" / "▶ Идэвхжүүлэх" (super), "⏸ Түр зогсоосон" filter, badge and stat. Farm delete toast says what was removed / switched off.
+- **t.html / cow.html**: a paused tag shows "⏸ Түр зогсоогдсон — Энэ таг түр зогсоогдсон. Админд хандана уу" + the site phone (`site_settings`), no scan is logged; the super admin still sees the animal with a banner. Registration says "Мал таны ферм рүү бүртгэгдэнэ."
+- Checked with sample-data copies (`python dist/v49_ui.py`, then serve the repo root): Админ, super admin and farm admin dashboards, paused tap page, paused animal and registration pages — no console errors.
+- Note: deleting a farm deletes its tag NUMBERS too. Printed chips with those numbers then show "not found" until the numbers are re-created with "+ Таг үүсгэх" (v48). Pause instead if the tags are real.
 
 ## 4. To do next
 
-1. **Run `db/schema_v46_write_permissions.sql`** in Supabase → SQL Editor, read its CHECK output, then merge `fix/system-check-2026-10-07` and push.
+1. **v49, in this order:** (a) run `db/schema_v48_create_tags_any_range.sql` if not yet run, (b) run `db/schema_v49_admin_role_pause.sql` in Supabase → SQL Editor (it is one transaction — on any error nothing changes), (c) Supabase → Edge Functions → `admin-users` → paste the new `supabase/functions/admin-users/index.ts` → Deploy, (d) push with GitHub Desktop. Then: create an Админ test user (Хэрэглэгчид → + Шинэ хэрэглэгч → Эрх "Админ"), log in as him, create a farm and a herder, check he sees only those; pause one blank tag and open its page.
 2. **BACKUP_TOKEN expiry:** GitHub → Settings → Developer settings → Fine-grained tokens → open the backup token → read "Expires". If it's near, Regenerate (longest expiry) and update the repo secret.
 3. Optional **full backup:** add secret `SUPABASE_DB_URL` (Supabase → Connect → Session pooler URI with the database password), then Actions → Daily database backup → Run workflow → both jobs green.
 4. ~~Re-protect field tags~~ — not needed: YKTG is the standard (section 3n).
@@ -280,7 +302,7 @@ If the token ever leaks, get a new one in @BotFather: `/mybots` → the bot → 
 for f in admin/index.html cow.html t.html config.js; do L=$(curl -s "https://yaktag.org/$f?nc=$RANDOM" | md5sum | cut -c1-32); R=$(git show HEAD:$f | md5sum | cut -c1-32); [ "$L" = "$R" ] && echo "same $f" || echo "DIFF $f"; done
 ```
 
-**Test SQL safely before running it on live.** Use a throwaway local Postgres 18 on port 55432. The base setup script was in the Claude scratchpad (`v28_setup.sql`) and will need rebuilding:
+**Test SQL safely before running it on live.** Best: the full rebuild in `db/test/` (section 1). For a quick empty throwaway Postgres 18 on port 55432:
 ```bash
 PG="/c/Program Files/PostgreSQL/18/bin"; D="$TEMP/yt-pgtest"
 "$PG/initdb" -D "$D" -U tester -A trust -E UTF8

@@ -179,6 +179,8 @@ function fmtDateTime(ts) {
 // "pass force"); every toast / confirmation passes through this.
 const MN_ERRORS = [
   [/Farm has (\d+) animals and (\d+) users\. Archive it, or pass force\./, 'Энэ фермд $1 мал, $2 хэрэглэгч бүртгэлтэй. Устгахын оронд "Түр хаах" нь аюулгүй.'],
+  [/Farm has (\d+) animals, (\d+) users and (\d+) tags\. Archive it, or pass force\./,
+     'Энэ фермд $1 мал, $2 хэрэглэгч, $3 таг бүртгэлтэй — устгавал бүгд устна (түүхтэй хэрэглэгчийг хаана). Устгахын оронд "Түр хаах" нь аюулгүй.'],
   [/Animal has records \((\d+) milk, (\d+) photos, (\d+) public scans\)\. Archive it, or pass force\./,
      'Энэ малд $1 сүүний, $2 зургийн, $3 уншуулалтын бүртгэл бий. Устгахын оронд төлөвийг "Зарагдсан" эсвэл "Үхсэн" болгох нь аюулгүй.'],
   [/User owns (\d+) animals\. Reassign them first, or pass force\./, 'Энэ хэрэглэгч $1 малтай. Эхлээд малыг өөр эзэмшигчид шилжүүлнэ үү.'],

@@ -98,7 +98,7 @@ main{flex:1;max-width:460px;width:100%;margin:0 auto;padding:22px 18px 34px}
 <main id="main"><div class="skel">Ачаалж байна…</div></main>
 <div class="foot" id="foot">YAK-TAG · Мал бүрт цахим үнэмлэх</div>
 
-<script src="config.js?v=20261007"></script>
+<script src="config.js?v=20261011"></script>
 <script src="offline.js?v=20261007"></script>
 <script>
 let scanId = null;
@@ -150,6 +150,22 @@ async function boot(){
     if(!error){
       try { ({ data: state } = await sb.rpc('public_tag_state', { p_tag_code: tag })); }
       catch (e) {}                       // before schema_v25: just "not found"
+    }
+    // Paused by the admin (schema v49): say so, and whom to call. Nothing
+    // is saved for a paused tag, so no scan is logged either.
+    if(state === 'paused'){
+      try { localStorage.removeItem('yt-tag:' + tag); } catch (e) {}
+      let phone = '';
+      try {
+        const { data: s } = await sb.from('site_settings').select('phone').eq('id', 1).maybeSingle();
+        phone = (s && s.phone) || '';
+      } catch (e) {}
+      document.getElementById('main').innerHTML =
+        `<div class="notfound"><h2>⏸ Түр зогсоогдсон</h2>
+         <p>Энэ таг түр зогсоогдсон. Админд хандана уу.</p>
+         <p>Таг <b>${esc(tag)}</b></p></div>`
+        + (phone ? `<a class="call" href="tel:${esc(phone.replace(/[^0-9+]/g, ''))}">📞 Админ: ${esc(phone)}</a>` : '');
+      return;
     }
     if(state === 'new'){
       document.getElementById('main').innerHTML =

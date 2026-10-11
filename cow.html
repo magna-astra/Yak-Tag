@@ -286,7 +286,7 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
 <div class="toast" id="toast"></div>
 <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
 
-<script src="config.js?v=20261007"></script>
+<script src="config.js?v=20261011"></script>
 <script src="offline.js?v=20261007"></script>
 <script>
 let cow = null;
@@ -541,6 +541,7 @@ async function boot() {
 
 async function loadCow(tag) {
   let data = null, error = null;
+  const pausedP = offlineMode ? Promise.resolve(false) : pausedCheck(tag);
   if (!offlineMode) {
     try {
       ({ data, error } = await sb
@@ -591,22 +592,58 @@ async function loadCow(tag) {
        <p>Энэ таг таны фермд бүртгэлгүй байна.</p></div>`;
     return;
   }
+  // Paused by the admin (schema v49): the herder sees why and whom to
+  // call; nothing can be added. The super admin still sees the animal.
+  const paused = await pausedP;
+  if (paused && !isSuper) {
+    try { localStorage.removeItem('yt-cow:' + tag); } catch (e) {}
+    renderPaused(tag);
+    return;                                  // cow stays null: no scan is logged
+  }
   cow = data;
   cacheSet('yt-cow:' + tag, data);
   renderCow();
   loadPhotos();
+  if (paused) document.getElementById('cowBody').insertAdjacentHTML('afterbegin',
+    `<div class="offbar">⏸ Энэ таг түр зогсоогдсон — малчин шинэ мэдээлэл нэмэх боломжгүй.
+     Админы самбар → Тагууд → "▶ Идэвхжүүлэх".</div>`);
   // The scan itself is logged once, from boot(). loadCow() is also
   // used to refresh after every save and must not add fake encounters.
 }
 
+// ---------- paused tag (schema v49) ----------
+async function pausedCheck(tag) {
+  try {
+    const { data } = await sb.rpc('public_tag_state', { p_tag_code: tag });
+    return data === 'paused';
+  } catch (e) { return false; }
+}
+async function renderPaused(tag) {
+  let phone = '';
+  try {
+    const { data } = await sb.from('site_settings').select('phone').eq('id', 1).maybeSingle();
+    phone = (data && data.phone) || '';
+  } catch (e) {}
+  document.getElementById('tagBig').textContent = tag;
+  document.getElementById('cowMeta').textContent = 'Түр зогсоогдсон';
+  document.getElementById('cowBody').innerHTML =
+    `<div class="notfound"><h2>⏸ Түр зогсоогдсон</h2>
+     <p>Энэ таг түр зогсоогдсон. Админд хандана уу.</p>
+     <p class="hint">Малын түүх хадгалагдаж байгаа. Админ идэвхжүүлсний дараа дахин бүртгэл хийнэ.</p>
+     ${phone ? `<a class="btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:14px"
+        href="tel:${esc(phone.replace(/[^0-9+]/g, ''))}">📞 Админ: ${esc(phone)}</a>` : ''}</div>`;
+}
+
 // ---------- registration of a new tag ----------
-// The farm is shown but never chosen here: it is the tag's farm, set
-// by the admin. The database (register_cattle) enforces every rule;
-// this form only collects the herder's answers.
+// Any new (unused) tag: the animal joins the signed-in herder's farm
+// and the tag moves with it (schema v49). The database (register_cattle)
+// enforces every rule; this form only collects the herder's answers.
 const REG_REASONS = {
   assigned:    'Энэ таг дээр мал аль хэдийн бүртгэгдсэн байна.',
   unavailable: 'Энэ таг ашиглах боломжгүй байна (алдагдсан эсвэл хасагдсан). Админд хандана уу.',
   other_farm:  'Энэ таг өөр фермийнх тул та бүртгэх боломжгүй. Админд хандана уу.',
+  paused:      'Энэ таг түр зогсоогдсон. Админд хандана уу.',
+  no_farm:     'Мал бүртгэхэд ферм хэрэгтэй. Малчин эсвэл ферм админ бүртгэнэ.',
   no_profile:  'Таны эрх идэвхгүй байна. Админд хандана уу.',
   not_found:   'Ийм таг системд алга.'
 };
@@ -615,6 +652,7 @@ function renderRegistration(tag, info) {
   document.getElementById('tagBig').textContent = tag;
   const farm = info.farm_name ? `${info.farm_code || ''} · ${info.farm_name}` : '—';
 
+  if (info.reason === 'paused') { renderPaused(tag); return; }
   if (!info.can_register) {
     document.getElementById('cowMeta').textContent = 'Бүртгэх боломжгүй';
     document.getElementById('cowBody').innerHTML =
@@ -631,7 +669,7 @@ function renderRegistration(tag, info) {
       <h2><span class="dot"></span>Мал бүртгэх</h2>
       <div class="kv"><span>Таг</span><span class="mono">${esc(tag)}</span></div>
       <div class="kv"><span>Ферм</span><span>${esc(farm)}</span></div>
-      <p class="hint" style="margin-bottom:16px">Фермийг админ тохируулна. Буруу бол админд хандана уу.</p>
+      <p class="hint" style="margin-bottom:16px">Мал таны ферм рүү бүртгэгдэнэ. Буруу бол админд хандана уу.</p>
 
       <div class="field"><label>Хүйс *</label>
         <div class="kind-pick" id="regSex">

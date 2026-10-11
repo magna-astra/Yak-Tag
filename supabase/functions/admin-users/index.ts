@@ -6,9 +6,12 @@
 //   create        — new user with a first password, role and farm
 //   set_password  — admin resets a user's forgotten password
 //
-// Only an ACTIVE SUPER ADMIN may call it. The caller is identified
-// from their own login token and checked against profiles on every
-// request — the page's claim about who it is counts for nothing.
+// Who may call it (checked against profiles on every request — the
+// page's claim about who it is counts for nothing):
+//   · an active SUPER ADMIN — anyone, any role (also "Админ");
+//   · an active АДМИН (role 'admin', schema v49) — only малчин / ферм
+//     админ, only in farms he created himself.
+// The caller is identified from their own login token.
 //
 // Deploy: Supabase dashboard → Edge Functions → Deploy a new function
 // → Via Editor → name it  admin-users  → paste this file → Deploy.
@@ -54,9 +57,20 @@ Deno.serve(async (req) => {
 
   const { data: me } = await admin.from("profiles")
     .select("role, status").eq("id", user.id).maybeSingle();
-  if (!me || me.role !== "super_admin" || me.status !== "active") {
-    return reply(403, { error: "Зөвхөн ерөнхий админ." });
+  const isSuper = me?.role === "super_admin" && me?.status === "active";
+  const isAdmin = me?.role === "admin" && me?.status === "active";
+  if (!isSuper && !isAdmin) {
+    return reply(403, { error: "Зөвхөн ерөнхий админ эсвэл Админ." });
   }
+  // an Админ works only in the farms he created
+  const callerId = user.id;
+  const ownsFarm = async (farmId: string | null): Promise<boolean> => {
+    if (isSuper) return true;
+    if (!farmId) return false;
+    const { data } = await admin.from("farms").select("id")
+      .eq("id", farmId).eq("created_by", callerId).maybeSingle();
+    return !!data;
+  };
 
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return reply(400, { error: "Bad request" }); }
@@ -76,10 +90,15 @@ Deno.serve(async (req) => {
                   (phone ? `${phone}@${HERDER_EMAIL_DOMAIN}` : "");
 
     if (!fullName) return reply(400, { error: "Нэрээ оруулна уу." });
-    if (!["herder", "farm_admin", "super_admin"].includes(role)) {
+    const allowed = isSuper ? ["herder", "farm_admin", "admin", "super_admin"] : ["herder", "farm_admin"];
+    if (!allowed.includes(role)) {
       return reply(400, { error: "Эрх буруу." });
     }
-    if (role !== "super_admin" && !farmId) return reply(400, { error: "Ферм сонгоно уу." });
+    const noFarm = role === "super_admin" || role === "admin";
+    if (!noFarm && !farmId) return reply(400, { error: "Ферм сонгоно уу." });
+    if (!noFarm && !(await ownsFarm(farmId))) {
+      return reply(403, { error: "Зөвхөн өөрийн үүсгэсэн фермд хэрэглэгч нэмнэ." });
+    }
     if (!email) return reply(400, { error: "Утас эсвэл и-мэйл оруулна уу." });
     if (phone && (phone.length < 6 || phone.length > 15)) {
       return reply(400, { error: "Утасны дугаар буруу." });
@@ -96,7 +115,7 @@ Deno.serve(async (req) => {
 
     const { error: pErr } = await admin.from("profiles").insert({
       id: created.user.id, full_name: fullName, phone: phone || null,
-      role, farm_id: role === "super_admin" ? null : farmId, status: "active",
+      role, farm_id: noFarm ? null : farmId, status: "active",
     });
     if (pErr) {
       // Don't leave a login with no profile behind.
@@ -105,7 +124,7 @@ Deno.serve(async (req) => {
     }
 
     await admin.from("audit_log").insert({
-      farm_id: farmId, actor_id: user.id, action: "create_user",
+      farm_id: noFarm ? null : farmId, actor_id: user.id, action: "create_user",
       entity: "profiles", entity_id: created.user.id,
       detail: { role, login: email },
     });
@@ -116,10 +135,13 @@ Deno.serve(async (req) => {
   if (body.action === "set_password") {
     const id = String(body.user_id ?? "");
     if (!id) return reply(400, { error: "user_id required" });
+    const { data: p } = await admin.from("profiles").select("farm_id, role").eq("id", id).maybeSingle();
+    if (!isSuper && (!p || !["herder", "farm_admin"].includes(p.role) || !(await ownsFarm(p.farm_id)))) {
+      return reply(403, { error: "Энэ хэрэглэгчийн нууц үгийг солих эрхгүй." });
+    }
     const { error } = await admin.auth.admin.updateUserById(id, { password });
     if (error) return reply(400, { error: error.message });
 
-    const { data: p } = await admin.from("profiles").select("farm_id").eq("id", id).maybeSingle();
     await admin.from("audit_log").insert({
       farm_id: p?.farm_id ?? null, actor_id: user.id, action: "set_password",
       entity: "profiles", entity_id: id, detail: {},
