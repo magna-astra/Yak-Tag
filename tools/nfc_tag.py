@@ -7,6 +7,8 @@ Auto-detects NTAG213 / NTAG215 / NTAG216 and uses the right memory map.
     python nfc_tag.py status                 what state is this tag in?
     python nfc_tag.py diag                   raw config dump (troubleshooting)
     python nfc_tag.py wipe                   erase user memory
+    python nfc_tag.py reset                  erase everything + factory settings
+                                             (re-use a tag from another system)
     python nfc_tag.py write YT-008000        write the tap URL
     python nfc_tag.py rewrite YT-008000      wipe + write onto a used tag
     python nfc_tag.py setpass                choose YOUR secret tag password (once)
@@ -420,6 +422,55 @@ def cmd_write(tag_code, force=False):
         print("Do NOT put this tag on an animal.")
 
 
+def cmd_reset():
+    """Make a used tag like new: empty memory, no password, no UID/counter
+    mirror (other systems, e.g. OneTag, switch the mirror on — it would
+    write the chip ID into our address on every read)."""
+    conn = get_connection()
+    s = tag_state(conn)
+    prof = s["profile"]
+    print_state(s)
+
+    if s["hardware_locked"]:
+        print("\nCannot reset: permanently locked. Retire it, use a new tag.")
+        return
+    if s["password_protected"] and not authenticate(conn):
+        print("\nThis tag is locked with a password this tool does not have:")
+        print("- a OneTag tag: run OneTag's remove-password.js first (its tag-writer")
+        print("  folder), then run reset again;")
+        print("- an old YAK-TAG test tag: set YT_TAG_PASSWORD=YKTG, then reset again.")
+        return
+
+    print("\nThis erases the address and every setting on the chip.")
+    if input("Make this tag like new? Type RESET: ").strip() != "RESET":
+        print("Aborted — nothing changed.")
+        return
+
+    print("Erasing memory…")
+    wipe_user_memory(conn, prof)
+    try:
+        # factory settings: no mirror, protection off; then default password
+        write_page(conn, prof["cfg0"], bytes([0x04, 0x00, 0x00, 0xFF]))
+        cfg1 = bytearray(read_pages(conn, prof["cfg1"], 1))
+        cfg1[0] = 0x00                  # PROT off, config not locked, no auth limit, no NFC counter
+        write_page(conn, prof["cfg1"], bytes(cfg1))
+        write_page(conn, prof["pwd"], b"\xff\xff\xff\xff")
+        write_page(conn, prof["pack"], b"\x00\x00\x00\x00")
+    except RuntimeError as e:
+        print(f"\nMemory erased, but the settings could not be reset ({e}).")
+        print("The previous system may have locked its settings for good. Do NOT")
+        print("use this tag on an animal; put it aside.")
+        return
+
+    cfg0 = read_pages(conn, prof["cfg0"], 1)
+    after = tag_state(conn)
+    if after["blank"] and not after["password_protected"] and (cfg0[0] & 0xC0) == 0:
+        print(f"\nDone. Tag {after['uid']} is like new: empty, no password, no mirror.")
+        print("Next: give it a number —  python nfc_tag.py write YT-008005  — then protect.")
+    else:
+        print("\nReset finished but the check failed — run  python nfc_tag.py diag  and ask for help.")
+
+
 def cmd_rewrite(tag_code):
     conn = get_connection()
     s = tag_state(conn)
@@ -559,6 +610,7 @@ def main():
         if cmd == "status": cmd_status()
         elif cmd == "diag": cmd_diag()
         elif cmd == "wipe": cmd_wipe()
+        elif cmd == "reset": cmd_reset()
         elif cmd == "write" and len(sys.argv) == 3: cmd_write(sys.argv[2])
         elif cmd == "rewrite" and len(sys.argv) == 3: cmd_rewrite(sys.argv[2])
         elif cmd == "setpass": cmd_setpass()
