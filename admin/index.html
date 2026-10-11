@@ -2647,16 +2647,44 @@ function needSel(){
 }
 
 // create a range of codes
+// Shows BEFORE saving which numbers already exist (allTags = every tag;
+// this tab is super-admin only for creating) and how many will be new.
 function ntPreview(){
   const p = document.getElementById('ntPrefix').value.trim().toUpperCase() || 'YT';
   const a = parseInt(document.getElementById('ntFrom').value), b = parseInt(document.getElementById('ntTo').value);
   const code = n => `${p}-${String(n).padStart(6,'0')}`;
-  document.getElementById('ntPreview').textContent = (a>=0 && b>=a)
-    ? `${code(a)} … ${code(b)}  (${b-a+1} таг)` : 'Жишээ: YT-008010 … YT-008099';
+  const box = document.getElementById('ntPreview'), save = document.getElementById('ntSave');
+  box.style.color = '';
+  if(!(a>=0 && b>=a)){ box.textContent = 'Эхний ба сүүлийн дугаараа оруулна уу.'; save.disabled = true; return; }
+  if(b-a+1 > 2000){ box.textContent = 'Нэг удаад 2000-аас ихгүй таг.'; box.style.color = '#B3341F'; save.disabled = true; return; }
+  const have = new Set(allTags.map(t=>t.tag_code));
+  const exist = []; for(let n=a; n<=b; n++) if(have.has(code(n))) exist.push(code(n));
+  const fresh = (b-a+1) - exist.length;
+  let msg = `${code(a)} … ${code(b)}  (${b-a+1} таг)`;
+  if(exist.length) msg += ` · ${exist.length} нь аль хэдийн байна (${exist[0]}${exist.length>1?' … '+exist[exist.length-1]:''})`;
+  msg += fresh ? ` · ${fresh} шинээр үүснэ` : ' · шинэ таг үүсэхгүй';
+  box.textContent = msg;
+  if(!fresh) box.style.color = '#B3341F';
+  save.disabled = !fresh;
+}
+// next free number for a prefix = highest existing + 1
+function ntNextFree(prefix){
+  let max = -1;
+  for(const t of allTags){
+    const m = /^([A-Z]{1,6})-(\d{6})$/.exec(t.tag_code||'');
+    if(m && m[1]===prefix) max = Math.max(max, parseInt(m[2],10));
+  }
+  return max >= 0 ? max + 1 : null;
 }
 ['ntPrefix','ntFrom','ntTo'].forEach(id=>document.getElementById(id).addEventListener('input',ntPreview));
 document.getElementById('newTagsBtn').addEventListener('click',()=>{
   document.getElementById('ntFarm').innerHTML = farmOptions();
+  const pre = document.getElementById('ntPrefix').value.trim().toUpperCase() || 'YT';
+  const next = ntNextFree(pre);
+  if(next !== null){                      // suggest the next 100 free numbers
+    document.getElementById('ntFrom').value = next;
+    document.getElementById('ntTo').value = Math.min(next + 99, 999999);
+  }
   ntPreview();
   document.getElementById('newTagsModal').classList.add('on');
 });
@@ -2668,7 +2696,13 @@ document.getElementById('ntSave').addEventListener('click', async ()=>{
     p_farm_id: document.getElementById('ntFarm').value });
   if(error){toast(error.message,true);return;}
   closeModal('newTagsModal');
-  toast(`${data.created} таг үүслээ${data.skipped?` · ${data.skipped} аль хэдийн байсан`:''}`);
+  const span = (f,l) => f ? (f===l ? f : `${f} … ${l}`) : '';
+  if(!data.created){
+    toast(`Шинэ таг үүсээгүй: ${data.skipped} дугаар аль хэдийн байна (${span(data.existing_first, data.existing_last)}).`, true);
+  } else {
+    toast(`${data.created} шинэ таг үүслээ (${span(data.created_first, data.created_last)})`
+      + (data.skipped ? ` · ${data.skipped} аль хэдийн байсан (${span(data.existing_first, data.existing_last)})` : ''));
+  }
   loadTags();
 });
 

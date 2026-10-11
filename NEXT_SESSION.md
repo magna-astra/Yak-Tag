@@ -235,6 +235,12 @@ Four parallel checks: website, app pages, database security, operations (backups
 - Dashboard: "Түүх" tab `super-only`; "Тагууд" tab `admin-only` = farm admins see a READ-ONLY list of their farm's tags (no create / farm filter / bulk actions / checkboxes / UID editing). RLS already limited tags to their farm.
 - **Agreed with the owner, not built yet (next):** new role **Админ** (sees + edits only the farms they CREATED, their herders/farm admins/animals/tags; creates & edits farms and herders + farm admins, resets passwords; never deletes); **any new tag** can be registered by any herder and moves to that herder's farm; **pause** one tag or a whole farm (paused page "Энэ таг түр зогсоогдсон. Админд хандана уу" + phone for strangers and herders, no new data, history kept, Telegram message to the farm's people), super admin resumes; **super admin full delete** of a farm (old delete_farm misses tag_batches; users with history get switched off instead of deleted). Plan: replay schema.sql + all patches on a local Postgres (scratchpad `replay/`) and test every rule there before writing v48.
 
+## 3p. "+ Таг үүсгэх": any range, says what already exists (2026-10-11)
+
+- **v48** `db/schema_v48_create_tags_any_range.sql`: `admin_create_tags` (same signature, super only) now accepts any range: existing numbers are skipped and reported (count + first…last); missing numbers inside an existing batch of the SAME prefix join it; every gap gets its own new batch (no_range_overlap is per prefix). Returns created/created_first/created_last/skipped/existing_first/existing_last/new_batches. Tested locally with the real constraints (crossing a batch edge, all-existing, new range next to another prefix, batch+gap+batch, farm admin refused). **Must be run in Supabase.**
+- Dashboard: the window pre-fills the next 100 free numbers (highest existing + 1), previews "N нь аль хэдийн байна (first … last) · M шинээр үүснэ", disables Үүсгэх when nothing is new or > 2000, and the result toast names both ranges.
+- The owner declined running the full local replay of all patches (twice) — test with targeted local databases instead.
+
 ## 4. To do next
 
 1. **Run `db/schema_v46_write_permissions.sql`** in Supabase → SQL Editor, read its CHECK output, then merge `fix/system-check-2026-10-07` and push.
