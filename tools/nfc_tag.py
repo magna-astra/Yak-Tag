@@ -290,7 +290,9 @@ def print_state(s):
         print("Permanently locked. Cannot be rewritten by anyone, ever.")
         print("Retire it in the database and use a fresh tag.")
     elif s["password_protected"]:
-        print("Protected but rewritable — will authenticate automatically.")
+        print("Password protected. Rewriting works with the password it was")
+        print("protected with: yours (tag_password.txt), or for tags protected")
+        print("before 2026-10-07 the old YKTG (set YT_TAG_PASSWORD=YKTG, then unprotect).")
     elif not s["blank"]:
         print("Has data but unprotected. `rewrite` will overwrite it.")
     else:
