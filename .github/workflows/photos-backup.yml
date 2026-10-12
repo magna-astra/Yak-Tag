@@ -1,0 +1,64 @@
+name: Monthly photo backup
+
+# v1 — the animal photos (Supabase Storage: cattle-photos, cattle-public),
+# once a month, into the same PRIVATE backup repo as the weekly database
+# backup, folder photos/ (same paths as in Supabase).
+#
+# Only new photos are downloaded; a photo deleted in Supabase is removed
+# from photos/ too, and the backup repo's git history keeps it.
+# Restore: upload the files back to the same bucket and path.
+#
+# Uses the secrets the database backup already has:
+#   BACKUP_TOKEN, SUPABASE_URL, SUPABASE_SERVICE_KEY
+
+on:
+  schedule:
+    - cron: '37 3 1 * *'    # the 1st of every month, 03:37 UTC (11:37 Ulaanbaatar)
+  workflow_dispatch:
+
+permissions:
+  contents: read            # this repo is only read; the backup repo uses BACKUP_TOKEN
+
+# never at the same time as the database backup: both push to the backup repo
+concurrency:
+  group: backup-repo
+  cancel-in-progress: false
+
+jobs:
+  photos:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      # the public repo — only for the script
+      - name: Checkout Yak-Tag
+        uses: actions/checkout@v5
+        with:
+          path: src
+
+      # the private repo — where the photos land
+      - name: Checkout backup repo
+        uses: actions/checkout@v5
+        with:
+          repository: magna-astra/Yak-Tag-backups
+          token: ${{ secrets.BACKUP_TOKEN }}
+          path: store
+
+      # A failed photo turns the run red (GitHub e-mails), but whatever
+      # was copied is still saved by the next step.
+      - name: Copy the photos
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python3 src/scripts/backup_photos.py store/photos
+          du -sh store/photos
+
+      - name: Commit to the private repo
+        if: always() && hashFiles('store/photos/README.txt') != ''
+        working-directory: store
+        run: |
+          git config user.name  "yaktag-backup"
+          git config user.email "actions@github.com"
+          git add -A photos/
+          git diff --staged --quiet || git commit -m "Photos $(date -u +%Y-%m-%d)"
+          git push

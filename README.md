@@ -25,9 +25,11 @@ db/schema.sql             original database; db/schema_v3 … v46 = every change
                           run in number order in Supabase → SQL Editor
 supabase/functions/       admin-users Edge Function (creates logins)
 tools/nfc_tag.py          writes and password-protects NFC tags (ACR1552U + NTAG215)
-scripts/export_supabase.py  table export used by the daily backup
+scripts/export_supabase.py  table export used by the weekly backup
+scripts/backup_photos.py    animal photos, used by the monthly photo backup
 .github/workflows/
-  backup.yml              daily backup → private repo magna-astra/Yak-Tag-backups
+  backup.yml              weekly database backup → private repo magna-astra/Yak-Tag-backups
+  photos-backup.yml       monthly photo backup → same private repo, folder photos/
   keepalive.yml           keeps the free Supabase project from pausing
 _config.yml               keeps notes, SQL and tools off the published website
 ```
@@ -54,7 +56,7 @@ never go in this repo.
 | Database | 500 MB | 12,000 animals ≈ 120 MB |
 | File storage | 1 GB | photos are shrunk to ~0.3 MB before upload |
 | Inactivity pause | 7 days | handled by `keepalive.yml` |
-| Supabase backups | none on free | handled by `backup.yml` (daily) |
+| Supabase backups | none on free | `backup.yml` (weekly) + `photos-backup.yml` (monthly) |
 | Scheduled workflows | switched off after 60 days without a commit | `keepalive.yml` re-enables them on every run |
 
 ## Tag technology

@@ -1,6 +1,7 @@
-name: Daily database backup
+name: Weekly database backup
 
-# v4 — daily (was weekly), red on ANY missing table, optional full copy.
+# v5 — weekly (the owner's choice; was daily), red on ANY missing table,
+# optional full copy. Animal photos: photos-backup.yml, once a month.
 #
 # Exports over REST and pushes into a SEPARATE PRIVATE repo.
 # The main Yak-Tag repo is public so GitHub Pages can serve the site.
@@ -20,11 +21,16 @@ name: Daily database backup
 
 on:
   schedule:
-    - cron: '7 3 * * *'     # every day 03:07 UTC (11:07 Ulaanbaatar)
+    - cron: '7 3 * * 1'     # every Monday 03:07 UTC (11:07 Ulaanbaatar)
   workflow_dispatch:
 
 permissions:
   contents: read            # this repo is only read; the backup repo uses BACKUP_TOKEN
+
+# never at the same time as the photo copy: both push to the backup repo
+concurrency:
+  group: backup-repo
+  cancel-in-progress: false
 
 jobs:
   export:
@@ -55,8 +61,8 @@ jobs:
           cp src/db/*.sql "store/backups/$STAMP/" 2>/dev/null || true
           du -sh "store/backups/$STAMP"
 
-      # Older days stay in the backup repo's git history; this only keeps
-      # the folder list short. Folder names are dates, so sort by name.
+      # Older weeks stay in the backup repo's git history; this only keeps
+      # the folder list short (30 weeks). Folder names are dates, so sort by name.
       - name: Keep only the last 30 backups
         working-directory: store
         run: |

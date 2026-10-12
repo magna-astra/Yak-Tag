@@ -87,7 +87,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for wf in keepalive.yml backup.yml; do
+          for wf in keepalive.yml backup.yml photos-backup.yml; do
             gh api --method PUT "repos/${{ github.repository }}/actions/workflows/$wf/enable"
             echo "$wf: enabled"
           done

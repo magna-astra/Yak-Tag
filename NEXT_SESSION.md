@@ -36,7 +36,7 @@ To continue, open this folder in Claude Code and say:
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
 | Database changes | `db/schema_v*.sql`. v21 to v51 are **run on live** (v45's e-mail part stays dormant). |
 | Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password) — deployed by pasting it in Supabase → Edge Functions |
-| Daily backup | `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups` (+ `database.dump` once `SUPABASE_DB_URL` is set) |
+| Backups | **Weekly** (Mondays 11:07 UB): `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups/backups/<date>` (+ `database.dump` once `SUPABASE_DB_URL` is set). **Monthly** photos (1st, 11:37 UB): `photos-backup.yml` → `scripts/backup_photos.py` → `Yak-Tag-backups/photos/<bucket>/<path>` (mirror; deleted photos stay in its git history). Both share concurrency group `backup-repo`; keepalive re-enables all three schedules. |
 | Not on the website | `_config.yml` keeps `*.md`, `db/`, `tools/`, `scripts/`, `supabase/` off yaktag.org (they stay in the public repo) |
 
 ## 3. Done on 2026-09-26 (all live and checked)
@@ -203,7 +203,7 @@ Four parallel checks: website, app pages, database security, operations (backups
 **Found, not changed (decide later):**
 - `public_tag_lookup` visitor limit trusts the first `X-Forwarded-For` entry if `cf-connecting-ip` is missing; changing `scan_caller_hash()` blind could lock out all visitors at once — measure first.
 - `submit_order` allows 30/hour (≈720/day) of attacker text through the Telegram bot; a daily cap (~100) would help.
-- Photos (`cattle-photos`, `cattle-public`) are not in any backup.
+- ~~Photos not in any backup~~ — monthly photo backup since 2026-10-12.
 - Old password `YKTG` is in public git history: any tag still protected with it can be rewritten.
 - ~2.2 MB of unused images in `assets/` (herd-*, yak-*, logo-yak.png, tag-raw.png …).
 - Leaflet on how.html loads from unpkg without integrity, on every visit (MAP — hands off).
@@ -294,13 +294,20 @@ v50 confirmed live (site = repo). Scripts are in the session scratchpad (not kep
 
 **Still open (owner's decisions):** tag password YKTG is public in the repo → anyone with an NFC app can rewrite a tag's link (owner chose YKTG for all); `scan_caller_hash` trusts `X-Forwarded-For` when `cf-connecting-ip` is missing (measure before changing); photos not in the backup.
 
+## 3t. Backups: database weekly, photos monthly (2026-10-12)
+
+The owner's choice: photos once a month, everything else once a week.
+- `backup.yml`: cron `7 3 * * 1` (was daily). 30 folders kept = 30 weeks; older ones in the backup repo's history.
+- New `photos-backup.yml` (cron `37 3 1 * *`, also Run workflow): `scripts/backup_photos.py` lists both buckets with the service key (folders = entries with `id: null`, paged by 1000), downloads only files whose size differs or that are missing, removes files deleted in Supabase (git history keeps them), refuses paths leaving the folder, turns the run red on any failure but still commits what it copied, never deletes anything when a listing fails. Tested against a fake Storage API: 1,207 photos incl. >1000 in one folder and odd names, re-run downloads nothing, delete/new/changed mirrored, listing error deletes nothing, `../` refused, missing key = clear error.
+- First real run: the owner presses Actions → Monthly photo backup → Run workflow once and checks `Yak-Tag-backups/photos/`.
+
 ## 4. To do next
 
 1. ~~v51~~ — run and pushed 2026-10-12; checked live: `record_public_scan` accepts `p_age_ms` and the older call forms (unknown tag → null), security probe 180/183 (same 3 expected), background sync test sent the tap with no page open.
 2. ~~Edge Function `admin-users`~~ — re-deployed 2026-10-12; the owner tested the Админ role (creating a farm + herder, sees only his own).
 3. ~~Test farm's tags to the stock~~ — done 2026-10-12 (stock tags still answer "new" on the tap page, checked).
 2. **BACKUP_TOKEN expiry:** GitHub → Settings → Developer settings → Fine-grained tokens → open the backup token → read "Expires". If it's near, Regenerate (longest expiry) and update the repo secret.
-3. Optional **full backup:** add secret `SUPABASE_DB_URL` (Supabase → Connect → Session pooler URI with the database password), then Actions → Daily database backup → Run workflow → both jobs green.
+3. Optional **full backup:** add secret `SUPABASE_DB_URL` (Supabase → Connect → Session pooler URI with the database password), then Actions → Weekly database backup → Run workflow → both jobs green.
 4. ~~Re-protect field tags~~ — not needed: YKTG is the standard (section 3n).
 5. **Real lost-animal test (optional):** mark a test cow lost, tap its tag with a phone that isn't logged in, a Telegram alert with a map link should arrive, then press "Олдсон".
 6. Ask **farm admins and herders to link Telegram**.
