@@ -1,6 +1,6 @@
 # YAK-TAG: where we stopped
 
-Last updated **2026-10-12** (Админ role, pause, full farm delete — section 3q). The owner must run `db/schema_v49_admin_role_pause.sql` in Supabase, deploy the updated Edge Function, then push (section 4).
+Last updated **2026-10-12** (v49 Админ role / pause / farm delete is live — 3q; v50 tag stock "Фермгүй" — 3r). The owner must run `db/schema_v50_tag_stock.sql`, then push (section 4).
 This file has no passwords or tokens. It is safe to commit, but note that the repo is public.
 
 To continue, open this folder in Claude Code and say:
@@ -33,7 +33,7 @@ To continue, open this folder in Claude Code and say:
 | Owner / herder page | `cow.html` |
 | Public tap page | `t.html` |
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
-| Database changes | `db/schema_v*.sql`. v21 to v47 are **run on live** (v45's e-mail part stays dormant). **v48 and v49 must be run** if not done yet (sections 3p, 3q). |
+| Database changes | `db/schema_v*.sql`. v21 to v49 are **run on live** (v45's e-mail part stays dormant). **v50 must be run** (section 3r). |
 | Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password) — deployed by pasting it in Supabase → Edge Functions |
 | Daily backup | `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups` (+ `database.dump` once `SUPABASE_DB_URL` is set) |
 | Not on the website | `_config.yml` keeps `*.md`, `db/`, `tools/`, `scripts/`, `supabase/` off yaktag.org (they stay in the public repo) |
@@ -261,11 +261,21 @@ What the owner asked: an "Админ" who creates farms and herders without supe
 - **Dashboard**: `body.role-admin` hides `.super-only` unless it also has `.mgr` (Хэрэглэгчид, Фермүүд, farm filters, farm code); `.no-admin` hides the transfer button and the user on/off switch. Админ's herd view is read-only (milk buttons off, vaccine view only). Role lists come from `roleOptions()`. Тагууд: "⏸ Түр зогсоох" / "▶ Идэвхжүүлэх" (super), "⏸ Түр зогсоосон" filter, badge and stat. Farm delete toast says what was removed / switched off.
 - **t.html / cow.html**: a paused tag shows "⏸ Түр зогсоогдсон — Энэ таг түр зогсоогдсон. Админд хандана уу" + the site phone (`site_settings`), no scan is logged; the super admin still sees the animal with a banner. Registration says "Мал таны ферм рүү бүртгэгдэнэ."
 - Checked with sample-data copies (`python dist/v49_ui.py`, then serve the repo root): Админ, super admin and farm admin dashboards, paused tap page, paused animal and registration pages — no console errors.
-- Note: deleting a farm deletes its tag NUMBERS too. Printed chips with those numbers then show "not found" until the numbers are re-created with "+ Таг үүсгэх" (v48). Pause instead if the tags are real.
+- ~~Deleting a farm deletes its tag numbers too~~ — changed in v50: they go to the stock (3r).
+
+- 2026-10-12: commit "123" had overwritten the v49 file with v48's text, so v49 was not run at first; restored, then run on live (checked: `admin_pause_tags` answers anon with 42501 = exists). Also: deleting / pausing a farm never switches off a super admin or Админ linked to it.
+
+## 3r. Tag stock "Фермгүй (агуулах)" (2026-10-12)
+
+The owner: all tags sat in a test farm — pausing it would freeze them, deleting it would delete the numbers. He asked for a way to change the farm and a "no farm" option.
+- **v50** `db/schema_v50_tag_stock.sql` (needs v49; one transaction; 29 checks in `db/test/test_v50.sql` + the 98 of v49 pass on a full rebuild v1→v50): `tags.farm_id` and `tag_batches.farm_id` may be null = the stock. `admin_assign_tags(codes, null)` moves unused tags to the stock; `admin_create_tags(..., null)` creates into it; a stock tag is "Шинэ таг" for everyone and joins the farm of the herder / farm admin who registers it (the super admin cannot register on it: reason `no_farm`); `admin_replace_tag` accepts a stock tag; `admin_tag_list` shows stock tags (left join). **`delete_farm` no longer deletes tag numbers**: they go to the stock (a tag of a deleted animal becomes `recycled`, usable again); a farm with only tags deletes without the force question; returns `tags_to_stock`.
+- RLS unchanged: only the super admin sees stock tags.
+- Dashboard (Тагууд, super admin): button "Ферм солих" (was "Фермд оноох") with "Фермгүй (агуулах)" first; "+ Таг үүсгэх" defaults to the stock; farm filter has "Фермгүй (агуулах)"; stat "Агуулахад (фермгүй)"; stock rows show the badge "Агуулах".
 
 ## 4. To do next
 
-1. **v49, in this order:** (a) run `db/schema_v48_create_tags_any_range.sql` if not yet run, (b) run `db/schema_v49_admin_role_pause.sql` in Supabase → SQL Editor (it is one transaction — on any error nothing changes), (c) Supabase → Edge Functions → `admin-users` → paste the new `supabase/functions/admin-users/index.ts` → Deploy, (d) push with GitHub Desktop. Then: create an Админ test user (Хэрэглэгчид → + Шинэ хэрэглэгч → Эрх "Админ"), log in as him, create a farm and a herder, check he sees only those; pause one blank tag and open its page.
+1. **v50:** run `db/schema_v50_tag_stock.sql` in Supabase → SQL Editor ("Success. No rows returned"), then push. Then move the test farm's unused tags: Тагууд → Ферм = the test farm → tick the header box (selects every shown tag) → **Ферм солих** → "Фермгүй (агуулах)" → Шилжүүлэх (tags on animals are skipped automatically).
+2. Edge Function `admin-users` re-deployed for v49? (needed for the Админ role to create users).
 2. **BACKUP_TOKEN expiry:** GitHub → Settings → Developer settings → Fine-grained tokens → open the backup token → read "Expires". If it's near, Regenerate (longest expiry) and update the repo secret.
 3. Optional **full backup:** add secret `SUPABASE_DB_URL` (Supabase → Connect → Session pooler URI with the database password), then Actions → Daily database backup → Run workflow → both jobs green.
 4. ~~Re-protect field tags~~ — not needed: YKTG is the standard (section 3n).

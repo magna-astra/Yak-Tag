@@ -255,7 +255,8 @@ select t.ok((select status || coalesce(farm_id::text, '-') from profiles where i
 select t.ok((select farm_id from tags where tag_code = :'t07b') = :'f12', 'its tag on the FERM-12 animal stays');
 select t.ok((select farm_id from tag_batches where id = (select batch_id from tags where tag_code = :'t07b')) = :'f12',
             'its batch moved to FERM-12 (still holds that tag)');
-select t.ok((select count(*) from tags where tag_code = :'t07') = 0, 'its unused tags are deleted');
+select t.ok((select count(*) from tags where tag_code = :'t07' and farm_id is not null) = 0,
+            'its unused tags are gone from it (v49: deleted; v50: in the stock)');
 select t.ok((select count(*) from profiles where id = :'FA07' and not (status = 'disabled' and farm_id is null)) = 0,
             'its farm admin: deleted, or switched off without a farm if he has history');
 select t.ok((select count(*) from audit_log where action = 'farm_delete' and entity_id = :'f07') = 1, 'delete is in the history');
