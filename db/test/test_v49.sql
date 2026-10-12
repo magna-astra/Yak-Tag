@@ -178,6 +178,7 @@ select t.ok((select reason from tag_registration_info(:'t07')) = 'ok', 'after re
 -- ================= pause / resume the whole farm =================
 reset role;
 update profiles set status = 'disabled' where id = :'HA2';     -- switched off before the pause
+update profiles set farm_id = :'fa' where id = :'SUPER';       -- a super admin linked to the farm
 delete from net.calls;
 set role authenticated;
 select t.as_(:'SUPER');
@@ -187,6 +188,7 @@ reset role;
 select t.ok((select string_agg(body->>'chat_id', ',' order by body->>'chat_id') from net.calls) = '111,222,222',
             'farm pause: herder + Админ told (once per farm)');
 select t.ok((select status from profiles where id = :'HA') = 'disabled', 'farm pause switches its people off');
+select t.ok((select status from profiles where id = :'SUPER') = 'active', 'farm pause never switches off a super admin linked to it');
 set role anon; select t.as_(null);
 select t.ok(public_tag_state(:'t12') = 'paused', 'paused farm: its tag says paused');
 set role authenticated; select t.as_(:'ADM');
@@ -241,10 +243,15 @@ select t.as_(:'H12');
 select register_cattle(:'t07b', 'male', 2021) as cow2 \gset
 select t.as_(:'SUPER');
 select t.err(format($$select delete_farm(%L, false)$$, :'f07'), 'pass force', 'farm with users/tags: asks for force first');
+reset role;
+update profiles set farm_id = :'f07' where id = :'SUPER';      -- the deleting super admin is linked to it
+set role authenticated; select t.as_(:'SUPER');
 select delete_farm(:'f07', true) as res \gset
 \echo delete FERM-07 → :res
 reset role;
 select t.ok((select count(*) from farms where id = :'f07') = 0, 'FERM-07 gone');
+select t.ok((select status || coalesce(farm_id::text, '-') from profiles where id = :'SUPER') = 'active-',
+            'the super admin who was linked to it keeps his login (only the link goes)');
 select t.ok((select farm_id from tags where tag_code = :'t07b') = :'f12', 'its tag on the FERM-12 animal stays');
 select t.ok((select farm_id from tag_batches where id = (select batch_id from tags where tag_code = :'t07b')) = :'f12',
             'its batch moved to FERM-12 (still holds that tag)');
