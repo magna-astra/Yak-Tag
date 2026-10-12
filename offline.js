@@ -11,6 +11,10 @@
 // ignores a uuid it already has, so a retry after a dropped
 // connection can never create a second scan.
 //
+// A stranger's tap also asks the browser for a background "sync"
+// (Android Chrome): sw.js then sends it once the phone is online, even
+// if the page was closed in the meantime.
+//
 // Only scans are queued. Milk, feeding and photos still need a
 // connection at the moment of saving.
 // ============================================================
@@ -67,15 +71,25 @@ const ytQueue = (() => {
   const senders = {
     // Public tap page → record_public_scan (anonymous).
     async public_scan(p) {
+      // How long ago the tap was, on this phone's own clock: stays right
+      // even when the clock itself is set wrong (schema_v51).
+      const age = Date.now() - Date.parse(p.scanned_at);
       const args = {
         p_tag_code: p.tag_code, p_lat: p.lat, p_lng: p.lng,
         p_accuracy: p.accuracy, p_user_agent: p.user_agent,
-        p_client_uuid: p.client_uuid, p_scanned_at: p.scanned_at
+        p_client_uuid: p.client_uuid, p_scanned_at: p.scanned_at,
+        p_age_ms: Number.isFinite(age) && age >= 0 ? Math.round(age) : null
       };
+      const missing = e => e && (e.code === 'PGRST202' || /function .*does not exist|Could not find the function/i.test(e.message));
       let { data, error } = await sb.rpc('record_public_scan', args);
+      // Database not yet on schema_v51: send without the age.
+      if (missing(error)) {
+        delete args.p_age_ms;
+        ({ data, error } = await sb.rpc('record_public_scan', args));
+      }
       // Database not yet on schema_v23: send the old way so scans keep
       // working. The time recorded is then the time it arrives.
-      if (error && (error.code === 'PGRST202' || /function .*does not exist|Could not find the function/i.test(error.message))) {
+      if (missing(error)) {
         delete args.p_client_uuid; delete args.p_scanned_at;
         ({ data, error } = await sb.rpc('record_public_scan', args));
       }
@@ -198,11 +212,24 @@ const ytQueue = (() => {
     // Milk and pregnancy/calving entries were typed by someone who now
     // sees the error and can fix and resend — don't also retry the old
     // copy behind their back. Scans are automatic: retried a few times.
+    if (queued && kind === 'public_scan') askBackgroundSync();
     if (mine && mine.lastError && !sent && !queued && (kind === 'milk' || kind === 'repro')) {
       try { await del(item.id); } catch (e) {}
       notify();
     }
     return { sent, queued, result: mine && mine.result, error: mine && mine.lastError };
+  }
+
+  // Android Chrome: sw.js sends queued strangers' taps when the phone is
+  // online again, even with the page closed. Elsewhere: nothing happens
+  // and the next page open sends them, as before.
+  function askBackgroundSync() {
+    try {
+      if (!('serviceWorker' in navigator) || !('SyncManager' in window)) return;
+      navigator.serviceWorker.ready
+        .then(r => r.sync && r.sync.register('yt-scans'))
+        .catch(() => {});
+    } catch (e) {}
   }
 
   function onChange(fn) { listeners.push(fn); notify(); }

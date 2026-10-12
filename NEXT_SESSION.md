@@ -1,6 +1,6 @@
 # YAK-TAG: where we stopped
 
-Last updated **2026-10-12** (v49 Админ role / pause / farm delete is live — 3q; v50 tag stock "Фермгүй" — 3r). The owner must run `db/schema_v50_tag_stock.sql`, then push (section 4).
+Last updated **2026-10-12** (v49 + v50 live; security/stress/no-signal check and v51 — 3s). The owner must run `db/schema_v51_scan_time_limits.sql`, then push (section 4).
 This file has no passwords or tokens. It is safe to commit, but note that the repo is public.
 
 To continue, open this folder in Claude Code and say:
@@ -17,7 +17,8 @@ To continue, open this folder in Claude Code and say:
 - The owner pushes with **GitHub Desktop**. Claude commits locally only.
 - Edit files with **exact-text replacements**, never line-range slicing. A slicing edit once silently deleted all the dashboard row buttons.
 - After any dashboard edit, **click-test every row button**.
-- If `config.js` or `offline.js` change, bump `?v=` in `t.html`, `cow.html` and `admin/index.html` (currently `?v=20261011`).
+- If `config.js` or `offline.js` change, bump their `?v=` in `t.html`, `cow.html` and `admin/index.html` (currently `config.js?v=20261011`, `offline.js?v=20261012`).
+- **Test pages must never run the real `sw.js` with a real tag code:** since v51 the service worker sends queued strangers' taps to the LIVE server in the background. `dist/offline_test.py` blocks the service worker and uses `ZZ-…` codes; `dist/sync_test.py` uses `ZZ-SYNC-TEST` (unknown tag = the server answers, saves nothing).
 - **Test SQL on a full local rebuild first:** `python db/test/replay.py --keep` replays `schema.sql` + `seed.sql` + every patch on a throwaway Postgres 18 (port 55440, Supabase stand-ins in `db/test/stub.sql`, hand-made live objects in `db/test/prelude.sql`), then run role tests like `db/test/test_v49.sql` (one transaction, rolled back). Stop it afterwards: `pg_ctl -D "$TEMP/yt-replay" stop`.
 - If `assets/style-a.css` changes, bump its `?v=` in the 4 public pages (currently `?v=2026100701`); same for `assets/contacts.js` (currently `?v=2`). Without it, browsers mix the new pages with the old file. (`assets/site.css` is no longer used.)
 - **Testing without the live database:** the Claude browser preview of a local server was blocked on 2026-10-07, so the app logic was tested in Node with stubs (fake IndexedDB, fake server, fake caches). The test scripts were temporary. For screenshots, headless Edge's `--window-size=375,…` renders wider and crops; use DevTools phone emulation (`Emulation.setDeviceMetricsOverride`) for real phone widths.
@@ -33,7 +34,7 @@ To continue, open this folder in Claude Code and say:
 | Owner / herder page | `cow.html` |
 | Public tap page | `t.html` |
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
-| Database changes | `db/schema_v*.sql`. v21 to v49 are **run on live** (v45's e-mail part stays dormant). **v50 must be run** (section 3r). |
+| Database changes | `db/schema_v*.sql`. v21 to v50 are **run on live** (v45's e-mail part stays dormant). **v51 must be run** (section 3s). |
 | Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password) — deployed by pasting it in Supabase → Edge Functions |
 | Daily backup | `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups` (+ `database.dump` once `SUPABASE_DB_URL` is set) |
 | Not on the website | `_config.yml` keeps `*.md`, `db/`, `tools/`, `scripts/`, `supabase/` off yaktag.org (they stay in the public repo) |
@@ -272,10 +273,32 @@ The owner: all tags sat in a test farm — pausing it would freeze them, deletin
 - RLS unchanged: only the super admin sees stock tags.
 - Dashboard (Тагууд, super admin): button "Ферм солих" (was "Фермд оноох") with "Фермгүй (агуулах)" first; "+ Таг үүсгэх" defaults to the stock; farm filter has "Фермгүй (агуулах)"; stat "Агуулахад (фермгүй)"; stock rows show the badge "Агуулах".
 
+## 3s. Security, stress and no-signal tap check + v51 (2026-10-12)
+
+v50 confirmed live (site = repo). Scripts are in the session scratchpad (not kept); method:
+- **Live, as an anonymous visitor (public key): 180/183 pass.** Every table and view reads empty; empty inserts into all 24 tables refused; update/delete (filter matching no row) refused; all 63 non-public functions incl. every v49/v50 one → `permission denied`; webhook refuses missing/wrong secret; order form validates before saving; SQL-injection text harmless; storage not listable; sign-up OFF, no social logins; Edge Function refuses no-login and public-key calls; `db/`, `tools/`, `supabase/`, `dist/`, `.git`, notes → 404. The 3 "fails" are expected: `site_settings` is public on purpose (website contacts; also shows `updated_by` uuid — harmless), no HSTS header (GitHub Pages can't send it; http→https redirect works), and a false alarm on a comment in config.js.
+- **Live stress (read-only): 870/870 OK** — pages p95 0.45 s; tap-page state p95 0.87 s at 20 parallel; 50 at the same instant p95 0.69 s.
+- **Local race tests:** 10 herders registering the same tag at once → exactly 1; 60 strangers tapping one animal at once → 20 saved (limit); the same offline tap resent 20× at once → 1 row; one person tapping 30× → 3 saved.
+- **No unescaped user text** found in the pages' HTML templates (heuristic scan).
+- **No-signal tap (real t.html + offline.js in a browser, network simulated):** the tap time and GPS are stored on the phone at the tap; when signal returns (page open) or the page is opened again later, they are sent with the ORIGINAL time; the server keeps it (up to 7 days back) and marks the tap `was_offline`; the lost-animal Telegram shows the tap time and exact map link.
+- **Limit (web, cannot be fixed):** a phone that has NEVER opened a YAK-TAG page cannot open the tap page at all with no signal — nothing is saved. Every phone that opened one before (herders, returning visitors) works offline.
+- **Finding, fixed in v51:** any herder login could claim every blank tag in seconds by script (sequential codes, no limit; tested: 50 in one go).
+
+**v51** `db/schema_v51_scan_time_limits.sql` (needs v50; 14 checks in `db/test/test_v51.sql`; full rebuild v1→v51 with v49+v50+v51 tests = 141 pass):
+- `record_public_scan(..., p_age_ms bigint)`: the phone sends how long ago the tap was on its own clock → right time even with a wrong phone clock. The old 7-argument version is dropped (one function only — no PostgREST overload clash); pages already on phones keep working (parameter optional); `offline.js` retries without `p_age_ms` on an older database.
+- Lost alert: a tap that arrives >5 min late adds "⏱ Сүлжээгүй үед уншуулсан — HH:MI-д ирсэн. Байршил нь уншуулсан үеийнх."
+- `register_cattle`: at most 60 per login per hour (super admin exempt); the 50th sends ONE Telegram warning to super admins. Index `cattle_registered_by_idx`.
+- `submit_order`: also 100 per day.
+- **Background sending (`sw.js`, Android Chrome/Edge/Samsung):** a queued stranger's tap asks for a `sync`; the browser wakes the service worker when online, even with the page closed, and it sends the tap (same request, public key; `API`/`PUBLIC_KEY` in sw.js must match config.js). Tested in real headless Chrome via DevTools `ServiceWorker.dispatchSyncEvent` with the page closed → queue emptied, server answered OK (also through the pre-v51 fallback). iPhone/Firefox: no background sync → sent on the next page open, as before.
+- Note: during the browser test the real service worker sent two test taps for YT-008100 / YT-008222 to live — both have no animal on live (checked), so nothing was saved. Test pages now block the service worker (rule in section 1).
+
+**Still open (owner's decisions):** tag password YKTG is public in the repo → anyone with an NFC app can rewrite a tag's link (owner chose YKTG for all); `scan_caller_hash` trusts `X-Forwarded-For` when `cf-connecting-ip` is missing (measure before changing); photos not in the backup.
+
 ## 4. To do next
 
-1. **v50:** run `db/schema_v50_tag_stock.sql` in Supabase → SQL Editor ("Success. No rows returned"), then push. Then move the test farm's unused tags: Тагууд → Ферм = the test farm → tick the header box (selects every shown tag) → **Ферм солих** → "Фермгүй (агуулах)" → Шилжүүлэх (tags on animals are skipped automatically).
+1. **v51:** run `db/schema_v51_scan_time_limits.sql` in Supabase → SQL Editor ("Success. No rows returned"), then push.
 2. Edge Function `admin-users` re-deployed for v49? (needed for the Админ role to create users).
+3. Move the test farm's unused tags to the stock if not done: Тагууд → Ферм = test farm → header checkbox → **Ферм солих** → "Фермгүй (агуулах)".
 2. **BACKUP_TOKEN expiry:** GitHub → Settings → Developer settings → Fine-grained tokens → open the backup token → read "Expires". If it's near, Regenerate (longest expiry) and update the repo secret.
 3. Optional **full backup:** add secret `SUPABASE_DB_URL` (Supabase → Connect → Session pooler URI with the database password), then Actions → Daily database backup → Run workflow → both jobs green.
 4. ~~Re-protect field tags~~ — not needed: YKTG is the standard (section 3n).

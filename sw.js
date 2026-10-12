@@ -20,6 +20,12 @@
 
 const VERSION = 'yt-shell-v1';
 
+// = SUPABASE_URL / SUPABASE_KEY in config.js (the public key every page
+// already carries). Change both places together.
+const API = 'https://oxfbxqclqfglpzgzizhq.supabase.co';
+const PUBLIC_KEY = 'sb_publishable_W3WMWLP28Czb2_5VTDQUlg_--3vfY71';
+const MAX_PUBLIC_AGE = 7 * 86400000;            // = offline.js; server takes 7 days back
+
 const SHELL = [
   't.html', 'cow.html', 'config.js', 'offline.js',
   'assets/logo-256.png', 'assets/logo-64.png', 'assets/logo-180.png', 'assets/favicon.ico'
@@ -47,6 +53,62 @@ self.addEventListener('activate', event => {
     }
     await self.clients.claim();
   })());
+});
+
+// ---------- background sending of no-signal taps (Android Chrome) ----------
+// A stranger who tapped with no signal may close the browser before the
+// signal returns. offline.js asks for a "sync"; the browser wakes this
+// worker once the phone is online, even with the page closed, and the
+// tap is sent from here — the same request the page makes, with the tap's
+// own time and position. The server ignores a client_uuid it already has,
+// so a page sending the same tap at the same moment cannot double it.
+// Herders' entries need their login: the app pages send those, as before.
+function queueDb(mode, fn) {
+  return new Promise((resolve, reject) => {
+    const r = indexedDB.open('yaktag-offline', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('queue', { keyPath: 'id' });
+    r.onerror = () => reject(r.error);
+    r.onsuccess = () => {
+      const t = r.result.transaction('queue', mode);
+      const q = fn(t.objectStore('queue'));
+      t.oncomplete = () => { r.result.close(); resolve(q && q.result); };
+      t.onerror = t.onabort = () => { r.result.close(); reject(t.error); };
+    };
+  });
+}
+function postScan(body) {
+  return fetch(API + '/rest/v1/rpc/record_public_scan', {
+    method: 'POST',
+    headers: { apikey: PUBLIC_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+async function sendQueuedScans() {
+  const items = (await queueDb('readonly', s => s.getAll())) || [];
+  for (const item of items) {
+    if (item.kind !== 'public_scan') continue;
+    if (Date.now() - item.created > MAX_PUBLIC_AGE) {      // too old for the server
+      await queueDb('readwrite', s => s.delete(item.id));
+      continue;
+    }
+    const p = item.payload, age = Date.now() - Date.parse(p.scanned_at);
+    const body = {
+      p_tag_code: p.tag_code, p_lat: p.lat, p_lng: p.lng, p_accuracy: p.accuracy,
+      p_user_agent: p.user_agent, p_client_uuid: p.client_uuid, p_scanned_at: p.scanned_at,
+      p_age_ms: Number.isFinite(age) && age >= 0 ? Math.round(age) : null
+    };
+    // a network error throws out of here: the browser retries the sync later
+    let res = await postScan(body);
+    if (res.status === 404) {                             // database before schema_v51
+      delete body.p_age_ms;
+      res = await postScan(body);
+    }
+    if (res.ok) await queueDb('readwrite', s => s.delete(item.id));
+    // any other refusal stays for the page, which counts and reports it
+  }
+}
+self.addEventListener('sync', event => {
+  if (event.tag === 'yt-scans') event.waitUntil(sendQueuedScans());
 });
 
 function withTimeout(promise, ms) {
