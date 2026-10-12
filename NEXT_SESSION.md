@@ -297,8 +297,8 @@ v50 confirmed live (site = repo). Scripts are in the session scratchpad (not kep
 ## 4. To do next
 
 1. ~~v51~~ — run and pushed 2026-10-12; checked live: `record_public_scan` accepts `p_age_ms` and the older call forms (unknown tag → null), security probe 180/183 (same 3 expected), background sync test sent the tap with no page open.
-2. Edge Function `admin-users` re-deployed for v49? (needed for the Админ role to create users).
-3. Move the test farm's unused tags to the stock if not done: Тагууд → Ферм = test farm → header checkbox → **Ферм солих** → "Фермгүй (агуулах)".
+2. ~~Edge Function `admin-users`~~ — re-deployed 2026-10-12; the owner tested the Админ role (creating a farm + herder, sees only his own).
+3. ~~Test farm's tags to the stock~~ — done 2026-10-12 (stock tags still answer "new" on the tap page, checked).
 2. **BACKUP_TOKEN expiry:** GitHub → Settings → Developer settings → Fine-grained tokens → open the backup token → read "Expires". If it's near, Regenerate (longest expiry) and update the repo secret.
 3. Optional **full backup:** add secret `SUPABASE_DB_URL` (Supabase → Connect → Session pooler URI with the database password), then Actions → Daily database backup → Run workflow → both jobs green.
 4. ~~Re-protect field tags~~ — not needed: YKTG is the standard (section 3n).
