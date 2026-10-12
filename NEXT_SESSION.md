@@ -1,6 +1,6 @@
 # YAK-TAG: where we stopped
 
-Last updated **2026-10-12** (v49 + v50 live; security/stress/no-signal check and v51 — 3s). The owner must run `db/schema_v51_scan_time_limits.sql`, then push (section 4).
+Last updated **2026-10-12** (v49, v50, v51 all live and checked — sections 3q–3s).
 This file has no passwords or tokens. It is safe to commit, but note that the repo is public.
 
 To continue, open this folder in Claude Code and say:
@@ -34,7 +34,7 @@ To continue, open this folder in Claude Code and say:
 | Owner / herder page | `cow.html` |
 | Public tap page | `t.html` |
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
-| Database changes | `db/schema_v*.sql`. v21 to v50 are **run on live** (v45's e-mail part stays dormant). **v51 must be run** (section 3s). |
+| Database changes | `db/schema_v*.sql`. v21 to v51 are **run on live** (v45's e-mail part stays dormant). |
 | Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password) — deployed by pasting it in Supabase → Edge Functions |
 | Daily backup | `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups` (+ `database.dump` once `SUPABASE_DB_URL` is set) |
 | Not on the website | `_config.yml` keeps `*.md`, `db/`, `tools/`, `scripts/`, `supabase/` off yaktag.org (they stay in the public repo) |
@@ -296,7 +296,7 @@ v50 confirmed live (site = repo). Scripts are in the session scratchpad (not kep
 
 ## 4. To do next
 
-1. **v51:** run `db/schema_v51_scan_time_limits.sql` in Supabase → SQL Editor ("Success. No rows returned"), then push.
+1. ~~v51~~ — run and pushed 2026-10-12; checked live: `record_public_scan` accepts `p_age_ms` and the older call forms (unknown tag → null), security probe 180/183 (same 3 expected), background sync test sent the tap with no page open.
 2. Edge Function `admin-users` re-deployed for v49? (needed for the Админ role to create users).
 3. Move the test farm's unused tags to the stock if not done: Тагууд → Ферм = test farm → header checkbox → **Ферм солих** → "Фермгүй (агуулах)".
 2. **BACKUP_TOKEN expiry:** GitHub → Settings → Developer settings → Fine-grained tokens → open the backup token → read "Expires". If it's near, Regenerate (longest expiry) and update the repo secret.
