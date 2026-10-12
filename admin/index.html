@@ -513,8 +513,8 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
           <span class="flabel">Төлөв</span>
           <button class="chip on" data-stage="">Бүгд</button>
           <button class="chip" data-stage="blank">Хоосон</button>
-          <button class="chip" data-stage="written">Мал хүлээж буй</button>
-          <button class="chip" data-stage="assigned">Малтай</button>
+          <button class="chip" data-stage="written">Бүртгэлгүй</button>
+          <button class="chip" data-stage="assigned">Бүртгэлтэй</button>
           <button class="chip" data-stage="lost">Алдагдсан</button>
           <button class="chip" data-stage="retired">Хасагдсан</button>
           <button class="chip" data-stage="paused">⏸ Түр зогсоосон</button>
@@ -540,7 +540,7 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
           <tbody id="tagsBody"><tr><td colspan="8" class="loading">Ачаалж байна…</td></tr></tbody>
         </table>
       </div>
-      <p class="mapnote">Шинэ (малгүй) таг дээр аль ч малчин мал бүртгэж болно — таг тэр малчны ферм рүү шилжинэ.
+      <p class="mapnote">Бүртгэлгүй таг дээр аль ч малчин бүртгэл хийж болно — таг тэр малчны ферм рүү шилжинэ.
         Ашиглаагүй тагийг "Фермгүй (агуулах)"-д хадгална уу ("Ферм солих"): ферм түр хаагдах, устгагдахад нөлөөлөхгүй.
         Түр зогсоосон таг уншуулахад "Энэ таг түр зогсоогдсон. Админд хандана уу" гэж гарч, шинэ мэдээлэл нэмэгдэхгүй; түүх хадгалагдана.</p>
     </div>
@@ -861,7 +861,7 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
     <label>Ферм</label><select id="atFarm"></select>
     <div class="mnote">"Фермгүй (агуулах)": ашиглаагүй тагийн хадгалах газар. Аль ч малчин бүртгэж болно
       (таг тэр малчны ферм рүү шилжинэ), ферм түр хаагдах эсвэл устгагдахад нөлөөлөхгүй.<br>
-      Малтай таг шилжихгүй — малын фермийг "Мал сүрэг" хүснэгтээс засна.</div>
+      Бүртгэлтэй таг шилжихгүй — түүний фермийг "Мал сүрэг" хүснэгтээс засна.</div>
     <div class="mactions">
       <button class="mcancel" onclick="closeModal('assignTagsModal')">Болих</button>
       <button class="msave" id="atSave">Шилжүүлэх</button>
@@ -2098,8 +2098,8 @@ document.getElementById('userSave').addEventListener('click', async ()=>{
 // wait for a herder, which carry an animal. The farm of a tag decides
 // who may register an animal on it, so only the super admin sets it.
 let allTags = [], tStage = '', tagSel = new Set();
-const STAGE = { blank:['none','Хоосон'], written:['warn','Мал хүлээж буй'],
-  assigned:['ok','Малтай'], lost:['late','Алдагдсан'], retired:['none','Хасагдсан'] };
+const STAGE = { blank:['none','Хоосон'], written:['warn','Бүртгэлгүй'],
+  assigned:['ok','Бүртгэлтэй'], lost:['late','Алдагдсан'], retired:['none','Хасагдсан'] };
 
 async function loadTags(){
   const {data,error} = await fetchAll(
@@ -2134,8 +2134,8 @@ function renderTags(){
   document.getElementById('tagStats').innerHTML = `
     <div class="stat"><div class="lbl">Нийт таг</div><div class="val">${allTags.length}</div></div>
     <div class="stat"><div class="lbl">Хоосон</div><div class="val">${n('blank')}</div></div>
-    <div class="stat"><div class="lbl">Мал хүлээж буй</div><div class="val">${n('written')}</div></div>
-    <div class="stat"><div class="lbl">Малтай</div><div class="val">${n('assigned')}</div></div>
+    <div class="stat"><div class="lbl">Бүртгэлгүй</div><div class="val">${n('written')}</div></div>
+    <div class="stat"><div class="lbl">Бүртгэлтэй</div><div class="val">${n('assigned')}</div></div>
     <div class="stat"><div class="lbl">Алдагдсан / хасагдсан</div><div class="val">${n('lost')+n('retired')}</div></div>`
     + (allTags.some(t=>!t.farm_id) ? `<div class="stat"><div class="lbl">Агуулахад (фермгүй)</div><div class="val">${allTags.filter(t=>!t.farm_id).length}</div></div>` : '')
     + (allTags.some(t=>t.paused_at) ? `<div class="stat"><div class="lbl">Түр зогсоосон</div><div class="val">${allTags.filter(t=>t.paused_at).length}</div></div>` : '');
@@ -2776,7 +2776,7 @@ document.getElementById('atSave').addEventListener('click', async ()=>{
     p_codes:[...tagSel], p_farm_id: document.getElementById('atFarm').value || null });
   if(error){toast(error.message,true);return;}
   closeModal('assignTagsModal');
-  toast(`${data.moved} таг шилжлээ${data.skipped?` · ${data.skipped} алгассан (малтай, хасагдсан, эсвэл аль хэдийн тэнд байгаа)`:''}`);
+  toast(`${data.moved} таг шилжлээ${data.skipped?` · ${data.skipped} алгассан (бүртгэлтэй, хасагдсан, эсвэл аль хэдийн тэнд байгаа)`:''}`);
   tagSel.clear(); loadTags();
 });
 
@@ -2793,9 +2793,9 @@ async function tagStatus(action, question, askReason){
   if(action!=='restore') loadCattle();
 }
 document.getElementById('tagLostBtn').addEventListener('click',
-  ()=>tagStatus('lost','алдагдсан гэж тэмдэглэх үү? Малтай бол мал бүртгэлээ хадгална, зөвхөн тагийн холбоос салгана.',true));
+  ()=>tagStatus('lost','алдагдсан гэж тэмдэглэх үү? Бүртгэлтэй бол бүртгэл нь хадгалагдана, зөвхөн тагийн холбоос салгана.',true));
 document.getElementById('tagRestoreBtn').addEventListener('click',
-  ()=>tagStatus('restore','олдсон — сэргээх үү? (зөвхөн малгүй алдагдсан таг)',false));
+  ()=>tagStatus('restore','олдсон — сэргээх үү? (зөвхөн бүртгэлгүй алдагдсан таг)',false));
 document.getElementById('tagRetireBtn').addEventListener('click',
   ()=>tagStatus('retired','БҮРМӨСӨН хасах уу? Буцаах боломжгүй.',true));
 
