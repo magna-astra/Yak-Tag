@@ -19,12 +19,12 @@
 // old caches to be deleted.
 // ============================================================
 
-const VERSION = 'yt-shell-v1';
+const VERSION = 'yt-shell-v2';
 
 // = SUPABASE_URL / SUPABASE_KEY in config.js (the public key every page
 // already carries). Change both places together.
-const API = 'https://oxfbxqclqfglpzgzizhq.supabase.co';
-const PUBLIC_KEY = 'sb_publishable_W3WMWLP28Czb2_5VTDQUlg_--3vfY71';
+const API = 'https://mjijgxfmkgtxmpbmshtl.supabase.co';
+const PUBLIC_KEY = 'sb_publishable_npSJ3ZAWO_ODx_cXbvORoQ__t-_1GiJ';
 const MAX_PUBLIC_AGE = 7 * 86400000;            // = offline.js; server takes 7 days back
 
 const SHELL = [

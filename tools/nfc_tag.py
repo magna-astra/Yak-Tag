@@ -76,8 +76,8 @@ LOG_FILE = Path(__file__).with_name("written_tags.csv")
 
 # Public project address + publishable key (the same as config.js), for
 # the read-only "is this number ready in the dashboard?" check.
-SUPABASE_URL = "https://oxfbxqclqfglpzgzizhq.supabase.co"
-SUPABASE_KEY = "sb_publishable_W3WMWLP28Czb2_5VTDQUlg_--3vfY71"
+SUPABASE_URL = "https://mjijgxfmkgtxmpbmshtl.supabase.co"
+SUPABASE_KEY = "sb_publishable_npSJ3ZAWO_ODx_cXbvORoQ__t-_1GiJ"
 TAG_PACK     = b"\x59\x41"      # 2 bytes
 
 # ============================================================

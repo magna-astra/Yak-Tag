@@ -32,15 +32,16 @@ To continue, open this folder in Claude Code and say:
 |---|---|
 | Live site | https://yaktag.org/ (old https://magna-astra.github.io/Yak-Tag/ forwards here) |
 | Repo | `magna-astra/Yak-Tag` (public, GitHub Pages) |
-| Database | Supabase project `oxfbxqclqfglpzgzizhq` |
+| Database | Supabase project `mjijgxfmkgtxmpbmshtl` (**Tokyo**, ap-northeast-1, since 2026-10-23 — section 3z). Old Sydney project `oxfbxqclqfglpzgzizhq` = fallback only, pause / delete after ~2026-11-06 |
 | Dashboard | `admin/index.html` |
 | Owner / herder page | `cow.html` |
 | Public tap page | `t.html` |
 | Herder app (installable) | `app/index.html` + `app/manifest.json` → **https://yaktag.org/app/** (section 3u) |
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
-| Database changes | `db/schema_v*.sql`. v21 to v52 are **run on live** (v45's e-mail part stays dormant; v52 run 2026-10-23: "Success. No rows returned"). |
+| Database changes | `db/schema_v*.sql`. v21 to v52 are **run on live** (v45's e-mail part stays dormant; v52 run 2026-10-23: "Success. No rows returned"). They came to Tokyo with the copy (not re-run). v53 = Tokyo Telegram, run in Tokyo right after the switch. The "Wrong database … oxfbxqclqfglpzgzizhq" texts in old files are only messages (the checks look for functions, not the project id). |
 | Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password, move login to a phone, list logins) — deployed by pasting it in Supabase → Edge Functions |
 | Password reset Edge Function | `supabase/functions/password-reset/index.ts` (Telegram code) — public: **"Verify JWT" must be OFF** |
+| Edge Functions in Tokyo | **both** `admin-users` and `password-reset` need "Verify JWT with legacy secret" **OFF**: Tokyo signs logins with the new ECC key, the legacy check would refuse every logged-in call. Both functions check the caller themselves. |
 | Backups | **Weekly** (Mondays 11:07 UB): `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups/backups/<date>` (+ `database.dump` once `SUPABASE_DB_URL` is set). **Monthly** photos (1st, 11:37 UB): `photos-backup.yml` → `scripts/backup_photos.py` → `Yak-Tag-backups/photos/<bucket>/<path>` (mirror; deleted photos stay in its git history). Both share concurrency group `backup-repo`; keepalive re-enables all three schedules. |
 | Not on the website | `_config.yml` keeps `*.md`, `db/`, `tools/`, `scripts/`, `supabase/` off yaktag.org (they stay in the public repo) |
 
@@ -349,7 +350,7 @@ The owner found old test logins (ganzo@yaktag.test, admin07@yaktag.test …) sti
 - Note: `db/test/replay.py` replays EVERY `db/schema_v*.sql` — set a new patch aside to measure "before".
 - Logins: Supabase limits sign-ins per internet address (default roughly 30 per 5 min) — a training day with many herders on one Wi-Fi / mobile NAT could hit it; Supabase → Authentication → Rate Limits (free) if that happens.
 
-## 3y. PLAN (not started): move the database closer to Mongolia (2026-10-23)
+## 3y. PLAN: move the database closer to Mongolia (2026-10-23) — done, see 3z
 
 **Measured from the owner's connection** (TCP connect to AWS regional endpoints, best of 4): Hong Kong 57 ms (not a Supabase region), **Tokyo ap-northeast-1 74 ms**, Seoul ap-northeast-2 98 ms, Singapore 166 ms, **Sydney (now) 249 ms**. Today a database request takes ~350 ms (server 1 ms); in Tokyo expect roughly half. Recommended: **Tokyo**, Seoul second. (Mobile networks may route differently — re-measure in the rehearsal.)
 **A region can't be changed** (Supabase docs "Change Project Region"): new project in Tokyo + copy everything. Free plan = $0. Free allows **2 active free projects per organization** (counted over all Owners/Admins; paused ones don't count) — check a slot is free (pause another project for the move if needed).
@@ -357,7 +358,18 @@ The owner found old test logins (ganzo@yaktag.test, admin07@yaktag.test …) sti
 **Free plan capacity:** DB 500 MB ≈ 5,000 cow-years; photos 1 GB ≈ 5,000+ animals; **egress 5 GB/month is the tightest**: each animal-page open downloads up to 6 photos through fresh signed URLs (never cached) ≈ 150–300 KB → ~1,000 animals opened daily fills it. Fix (free, small): reuse signed URLs ~50 min / load photos on demand / thumbnails → ~10× less. Pro ($25/month/org incl. Micro compute 1 GB RAM): 8 GB DB, 100 GB files, 250 GB egress, daily backups, no pausing → ~50,000 animals.
 **Steps (owner + Claude):** 1) owner creates the Tokyo project (free), same org; 2) settings: sign-ups OFF, rate limits, site URL, extensions pgcrypto / btree_gist / pg_net, buckets cattle-photos (private) + cattle-public (public) with v46 limits; 3) rehearsal: copy DB (pg_dump of public schema + auth.users/identities data — keeps user ids and password hashes), copy photos (Supabase's storage script or a restore twin of scripts/backup_photos.py), deploy admin-users + password-reset (Verify JWT OFF), run telegram_setup, test with a local copy of the site; 4) move night (~1–2 h, e.g. 22:00 UB): copy again from the old project, switch the address + publishable key in config.js, sw.js, assets/contacts.js, order.html, tools/nfc_tag.py (+ bump ?v=), GitHub secrets SUPABASE_URL / SUPABASE_SERVICE_KEY / SUPABASE_ANON_KEY, push; 5) everyone logs in once again (same passwords); 6) keep the Sydney project paused 2 weeks as fallback, then delete. NFC tags hold yaktag.org links → no tag changes. Rollback = revert the config commit (entries made in Tokyo in between would need copying back).
 
+## 3z. Database moved to Tokyo (2026-10-23, branch `switch-to-tokyo`)
+
+- New project `yak-tag-tokyo` = `mjijgxfmkgtxmpbmshtl` (ap-northeast-1), publishable key `sb_publishable_npSJ3ZAWO_ODx_cXbvORoQ__t-_1GiJ`. Sign-ups OFF, confirm e-mail ON (as Sydney), extensions pgcrypto / btree_gist / pg_net.
+- Copied with `scripts/move_database.py move` (Sydney only read): 158 s for the database, 16 photos (1.7 MB); compare = **all the same** — 30 tables row for row, 8 logins (same ids + password hashes → same passwords), 84 functions, 45 + 8 access rules (texts identical), table / function / default permissions identical. Checked from outside: stranger reads `[]`, `app_secrets` refused, contacts readable, both functions answer with their own errors, wrong login refused.
+- The tool asks the passwords / keys hidden and checks each at once (3 tries). The built-in browser pane can't copy to the clipboard — copy keys / passwords in Chrome.
+- Switch commit: `config.js`, `sw.js` (+ VERSION yt-shell-v2 so phones drop cached Sydney files), `assets/contacts.js`, `order.html`, `tools/nfc_tag.py`; `config.js?v=2026102302`, `contacts.js?v=3`.
+- Logins: supabase-js keeps the session per project, so after the switch **everyone logs in once** (same phone + password).
+- **Rollback:** revert the switch commit and push (entries made in Tokyo meanwhile would need copying back). Telegram: run `select telegram_setup(app_secret('telegram_token'), app_secret('telegram_bot'), 'https://oxfbxqclqfglpzgzizhq.supabase.co', 'sb_publishable_W3WMWLP28Czb2_5VTDQUlg_--3vfY71');` in Sydney.
+
 ## 4. To do next
+
+0e. **Tokyo switch, in this order:** (1) Tokyo → Edge Functions → `admin-users` → Settings → "Verify JWT with legacy secret" **OFF** → Save; (2) push `main` (has the switch); (3) Tokyo SQL editor: paste `db/schema_v53_tokyo_telegram.sql` → Run; 10 s later `select telegram_check();` → (200) ok; (4) GitHub → Settings → Secrets → Actions: `SUPABASE_URL` = https://mjijgxfmkgtxmpbmshtl.supabase.co, `SUPABASE_SERVICE_KEY` = Tokyo secret key, `SUPABASE_ANON_KEY` = Tokyo publishable key, `SUPABASE_DB_URL` = Tokyo session pooler URI with its password; (5) log in on the site, the app and the dashboard; (6) after ~2 weeks with no problem pause, later delete, the Sydney project.
 
 0d. ~~Run v52~~ — done 2026-10-23 on live; its CHECK returned no rows (no access rule left calling helpers per row).
 

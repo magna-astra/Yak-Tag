@@ -6,8 +6,8 @@
 //   data-c-href="phone|email"          -> tel: / mailto: link
 //   data-c-show="address"              -> shown only when there is a value
 (function(){
-  var API='https://oxfbxqclqfglpzgzizhq.supabase.co/rest/v1/site_settings?id=eq.1&select=phone,email,address';
-  var KEY='sb_publishable_W3WMWLP28Czb2_5VTDQUlg_--3vfY71';      // public key, the same as in config.js
+  var API='https://mjijgxfmkgtxmpbmshtl.supabase.co/rest/v1/site_settings?id=eq.1&select=phone,email,address';
+  var KEY='sb_publishable_npSJ3ZAWO_ODx_cXbvORoQ__t-_1GiJ';      // public key, the same as in config.js
   function tel(p){ var d=String(p||'').replace(/[^\d+]/g,''); if(!d) return ''; if(d.charAt(0)!=='+') d=(d.length===8?'+976':'')+d; return 'tel:'+d; }
   function apply(c){
     if(!c||!c.phone||!c.email) return;

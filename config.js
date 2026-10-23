@@ -13,8 +13,8 @@
 // sees their own farm. Never put the sb_secret_... key here.
 // ============================================================
 
-const SUPABASE_URL = 'https://oxfbxqclqfglpzgzizhq.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_W3WMWLP28Czb2_5VTDQUlg_--3vfY71';
+const SUPABASE_URL = 'https://mjijgxfmkgtxmpbmshtl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_npSJ3ZAWO_ODx_cXbvORoQ__t-_1GiJ';
 
 // ============================================================
 // OPTIONAL: Google Maps satellite key.
