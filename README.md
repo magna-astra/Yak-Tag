@@ -19,6 +19,8 @@ read [`NEXT_SESSION.md`](NEXT_SESSION.md).
 index.html how.html faq.html order.html   public website (assets/style-a.css)
 t.html                    public tap page — what a phone opens from a tag
 cow.html                  owner / herder page for one animal (works offline)
+app/                      herder app, installable on any phone: yaktag.org/app
+                          (phone-number login → "Миний мал" → cow.html)
 admin/index.html          dashboard (farms, animals, tags, users, map, reports)
 config.js offline.js sw.js  shared code: Supabase client, offline queue, offline cache
 db/schema.sql             original database; db/schema_v3 … v46 = every change since,

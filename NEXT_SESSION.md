@@ -1,6 +1,6 @@
 # YAK-TAG: where we stopped
 
-Last updated **2026-10-12** (v49, v50, v51 all live and checked — sections 3q–3s).
+Last updated **2026-10-23** (phone-only login + herder app at yaktag.org/app — section 3u; v49–v51 live since 10-12).
 This file has no passwords or tokens. It is safe to commit, but note that the repo is public.
 
 To continue, open this folder in Claude Code and say:
@@ -10,6 +10,7 @@ To continue, open this folder in Claude Code and say:
 
 ## 1. Rules that always apply
 
+- **First check everything, then propose; build only after the owner picks** (owner, 2026-10-23: "next time first check all"; new features: "need idea and suggestions before actions"). Check = live site vs repo, visitor probes, workflows/backups, and what other sessions changed since (this file + `git log`).
 - **The system is live and working. Don't break it.** Use a branch, then `git merge --ff-only` into `main`. SQL must be safe to run twice. Run SQL first, then push.
 - **Never open the LIVE `t.html` for a REGISTERED tag when testing** — every visit records a real stranger tap (and sends Telegram alerts if the animal is lost). Use `public_tag_lookup` for reads, a produced tag without an animal (e.g. YT-008005), or the sample-data copies in `dist/`. (On 2026-10-11 one such visit to YT-008000 added one tap without GPS; the owner got SQL to delete it — rows with `user_agent like '%SM-A546B%'`.)
 - **Don't touch the map.** That covers the map tab, map config, and `USE_GOOGLE_TILES_TESTING`. Change it only if the owner asks.
@@ -17,7 +18,8 @@ To continue, open this folder in Claude Code and say:
 - The owner pushes with **GitHub Desktop**. Claude commits locally only.
 - Edit files with **exact-text replacements**, never line-range slicing. A slicing edit once silently deleted all the dashboard row buttons.
 - After any dashboard edit, **click-test every row button**.
-- If `config.js` or `offline.js` change, bump their `?v=` in `t.html`, `cow.html` and `admin/index.html` (currently `config.js?v=20261011`, `offline.js?v=20261012`).
+- If `config.js` or `offline.js` change, bump their `?v=` in `t.html`, `cow.html`, `admin/index.html` **and `app/index.html`** (currently `config.js?v=20261011`, `offline.js?v=20261023`).
+- **Logins are phone numbers only** (2026-10-23): every login box is "Утасны дугаар" with the number keypad; the Edge Function creates users with a phone only. `loginEmail()` still accepts a typed e-mail (hidden fallback, e.g. from a PC keyboard) — don't remove it until no e-mail logins are left.
 - **Test pages must never run the real `sw.js` with a real tag code:** since v51 the service worker sends queued strangers' taps to the LIVE server in the background. `dist/offline_test.py` blocks the service worker and uses `ZZ-…` codes; `dist/sync_test.py` uses `ZZ-SYNC-TEST` (unknown tag = the server answers, saves nothing).
 - **Test SQL on a full local rebuild first:** `python db/test/replay.py --keep` replays `schema.sql` + `seed.sql` + every patch on a throwaway Postgres 18 (port 55440, Supabase stand-ins in `db/test/stub.sql`, hand-made live objects in `db/test/prelude.sql`), then run role tests like `db/test/test_v49.sql` (one transaction, rolled back). Stop it afterwards: `pg_ctl -D "$TEMP/yt-replay" stop`.
 - If `assets/style-a.css` changes, bump its `?v=` in the 4 public pages (currently `?v=2026100701`); same for `assets/contacts.js` (currently `?v=2`). Without it, browsers mix the new pages with the old file. (`assets/site.css` is no longer used.)
@@ -33,6 +35,7 @@ To continue, open this folder in Claude Code and say:
 | Dashboard | `admin/index.html` |
 | Owner / herder page | `cow.html` |
 | Public tap page | `t.html` |
+| Herder app (installable) | `app/index.html` + `app/manifest.json` → **https://yaktag.org/app/** (section 3u) |
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
 | Database changes | `db/schema_v*.sql`. v21 to v51 are **run on live** (v45's e-mail part stays dormant). |
 | Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password) — deployed by pasting it in Supabase → Edge Functions |
@@ -301,7 +304,26 @@ The owner's choice: photos once a month, everything else once a week.
 - New `photos-backup.yml` (cron `37 3 1 * *`, also Run workflow): `scripts/backup_photos.py` lists both buckets with the service key (folders = entries with `id: null`, paged by 1000), downloads only files whose size differs or that are missing, removes files deleted in Supabase (git history keeps them), refuses paths leaving the folder, turns the run red on any failure but still commits what it copied, never deletes anything when a listing fails. Tested against a fake Storage API: 1,207 photos incl. >1000 in one folder and odd names, re-run downloads nothing, delete/new/changed mirrored, listing error deletes nothing, `../` refused, missing key = clear error.
 - First real run: the owner presses Actions → Monthly photo backup → Run workflow once and checks `Yak-Tag-backups/photos/`.
 
+## 3u. Phone-only login + herder app (2026-10-23, branch `feature/phone-login-herder-app`)
+
+System check first (all green): 59/59 published files = repo; notes/SQL/tools 404; as a visitor all 24 tables read empty, nothing writable, storage not listable, sign-up off, Edge Function 401 without login; 22 scripts parse; keep-alive 10-21, weekly backup 10-19, photo backup 10-12 all green; HTTPS to 2027-01-03.
+
+**Phone-only login** (the owner: "only telephone number and password" — the cow page's box opened the number keypad, so an e-mail login couldn't be typed on a phone):
+- `cow.html`, `admin/index.html`, `app/`: label "Утасны дугаар", `type="tel"`, messages "Утасны дугаар …". A too-short number is refused before sending.
+- Edge Function `admin-users` (**must be re-deployed**): `create` needs a phone (e-mail ignored); new `set_login_phone` (super admin: anyone incl. himself; Админ: herders/farm admins of his own farms) moves a login to `<phone>@yaktag.invalid`, keeps the password, sets `profiles.phone`, history `set_login_phone {from, to}`; new `list_logins`. The password check now applies only to `create` / `set_password`.
+- Dashboard → Хэрэглэгчид: a red "✉ И-мэйлээр нэвтэрдэг — утас болгоно уу" under each e-mail login; Засах shows "Нэвтрэх нэр" and "📱 Дээрх утсаар нэвтэрдэг болгох" (uses the Утас field above). New-user form: phone only. Түүх labels: create_user / set_password / set_login_phone.
+- Tests (Node, fake Supabase): Edge Function 18/18, dashboard 11/11.
+
+**Herder app** https://yaktag.org/app/ (free, no app store — Apple $99/yr, Google $25 aren't):
+- Installable web app: `app/manifest.json` (scope `/`, start `/app/`, standalone, icons `assets/app-icon-*.png` made from the tag artwork), Android "Суулгах" button (beforeinstallprompt), iPhone Safari steps (Share → Add to Home Screen).
+- Login (phone + password) → "Миний мал": herder = own animals, farm admin = whole farm (RLS, `cattle_dashboard`); badges lost / sold… / milk today / vaccine overdue or ≤7 days; search; open by number ("8000" → YT-008000, also new tags → registration); Android "📶 Таг уншуулах" (Web NFC reads the tag's link inside the app). Super admin / Админ get "use the dashboard".
+- No signal: the list is kept on the phone (`yt-applist`), the page is in `sw.js` SHELL (`app/`, paths ending `/` count as pages); `offline.js` now registers `/sw.js` by its own address (from `app/` a relative `sw.js` would be `app/sw.js`).
+- `cow.html` opened from the app (standalone, or `sessionStorage yt-from-app`): "‹" before the logo and the bottom link → `app/` ("Миний мал") — an installed iPhone app has no back button. Its login card links "📲 Малчны апп суулгах". Logout also clears `yt-applist`.
+- Tests: app 26/26, cow app-mode + sw 11/11. **Not seen in a real browser yet** (local preview was blocked once by a safety rule on 2026-10-07) — check on an Android and an iPhone after pushing.
+
 ## 4. To do next
+
+0. **After pushing `feature/phone-login-herder-app`:** (a) re-deploy the Edge Function `admin-users` (paste the file); (b) dashboard → Хэрэглэгчид → every "✉ И-мэйлээр нэвтэрдэг" row → Засах → phone in "Утас" → "📱 Дээрх утсаар нэвтэрдэг болгох" (own account too); check in SQL Editor: `select email from auth.users where email not like '%@yaktag.invalid';` → no rows; (c) open https://yaktag.org/app/ on an Android and an iPhone, install, log in as a herder.
 
 1. ~~v51~~ — run and pushed 2026-10-12; checked live: `record_public_scan` accepts `p_age_ms` and the older call forms (unknown tag → null), security probe 180/183 (same 3 expected), background sync test sent the tap with no page open.
 2. ~~Edge Function `admin-users`~~ — re-deployed 2026-10-12; the owner tested the Админ role (creating a farm + herder, sees only his own).
@@ -317,7 +339,8 @@ The owner's choice: photos once a month, everything else once a week.
 ## 5. Idea list (not started)
 
 - Feeding entries without signal: send them through the offline queue, as milk and pregnancy entries already do.
-- Install to the home screen as an app (PWA manifest).
+- ~~Install to the home screen as an app (PWA manifest)~~ — the herder app, 2026-10-23 (3u).
+- **More animal kinds (owner, 2026-10-23: horses, then cats and dogs).** Proposed, not built: one system with a kind switch (🐄 Үхэр | 🐎 Адуу | …) on the app's and dashboard's main screen; lists, counts, forms and words follow it (тугал→унага, бух→азарга, үнээ→гүү); registration starts with the kind, then that kind's breeds. Already there: `cattle.species` / `breeds.species` ('cattle','horse'), 6 horse breeds, 340-day gestation, унага/азарга words, Excel column. Build it data-driven (a kinds list), so cats/dogs (pets: owner contact matters more than milk/pregnancy) are a new row, not new code. Owner to confirm the horse details first (mare's milk / airag, horse vaccine list with a vet, Mongolian age names).
 - Weight history and a growth chart. Today only the last weight is kept.
 - A permanent one-click test page. Today's tests were temporary files, deleted after use.
 - Lock `scan_caller_hash()` for visitors. It's harmless and read-only, but not needed.
