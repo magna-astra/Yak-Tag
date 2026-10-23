@@ -1,0 +1,18 @@
+{
+  "id": "/app/",
+  "name": "YAK-TAG Малчин",
+  "short_name": "YAK-TAG",
+  "description": "Малчин, ферм админд: миний мал, сүү, вакцин, хээл төл — сүлжээгүй үед ч ажиллана.",
+  "lang": "mn",
+  "start_url": "/app/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFDF8",
+  "theme_color": "#23633A",
+  "icons": [
+    { "src": "/assets/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/app-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<!-- Never shown inside another site's frame (click-jacking guard;
+     GitHub Pages cannot send an X-Frame-Options header). -->
+<style id="yt-noframe">html{display:none}</style>
+<script>if (window.self === window.top) document.getElementById('yt-noframe').remove(); else window.top.location = window.self.location.href;</script>
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>YAK-TAG Малчин</title>
+<!--
+  YAK-TAG herder app — https://yaktag.org/app/
+  For herders and farm admins: log in with phone number + password, see
+  "Миний мал", open an animal (cow.html) to add milk, vaccines, pregnancy
+  and photos. Installable on any phone (manifest.json + sw.js), opens with
+  no signal. Super admins and Админ use the dashboard (admin/).
+  The database decides what each login sees (RLS); this page only shows it.
+-->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="../assets/favicon.ico">
+<link rel="apple-touch-icon" href="../assets/app-icon-180.png">
+<meta name="theme-color" content="#23633A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="YAK-TAG">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
+<style>
+:root{
+  --bg:#FFFDF8; --card:#fff; --ink:#14243B; --ink2:#46556B; --muted:#5E6878; --line:#E9E2D3;
+  --green:#2E7D46; --green-d:#23633A; --green-l:#E7F2E6; --red:#B3341F; --red-l:#FCEAE7;
+  --sun:#9A6A00; --sun-l:#FDF3DC; --r:16px;
+  --font:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--font);-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+button,input{font:inherit}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+
+header.top{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 100%);color:#fff;
+  padding:calc(14px + env(safe-area-inset-top)) 0 16px;box-shadow:0 8px 22px rgba(35,99,58,.2)}
+header.top .wrap{display:flex;align-items:center;gap:10px}
+header.top img{width:30px;height:30px;filter:invert(1)}
+header.top .brand{font-weight:800;letter-spacing:.03em;white-space:nowrap}
+header.top .brand small{display:block;font-weight:600;font-size:.74rem;letter-spacing:0;opacity:.85}
+header.top .out{margin-left:auto;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);
+  border-radius:10px;padding:6px 12px;font-size:.85rem;cursor:pointer;white-space:nowrap}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-top:16px;
+  box-shadow:0 6px 18px rgba(20,36,59,.05)}
+h1{font-size:1.25rem;margin-bottom:4px}
+h2{font-size:1.05rem;margin-bottom:8px}
+.sub{color:var(--muted);font-size:.9rem}
+label{display:block;font-size:.85rem;font-weight:700;color:var(--ink2);margin:14px 0 6px}
+input[type=tel],input[type=password],input[type=text],input[type=search]{width:100%;padding:13px 14px;font-size:1.05rem;
+  border:1.5px solid #8F887A;border-radius:12px;background:#fff;color:var(--ink)}
+input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px var(--green-l)}
+.btn{display:block;width:100%;margin-top:16px;padding:14px;border:0;border-radius:12px;background:var(--green);
+  color:#fff;font-weight:800;font-size:1.02rem;cursor:pointer;text-align:center;text-decoration:none}
+.btn:disabled{opacity:.6}
+.btn.ghost{background:var(--green-l);color:var(--green-d)}
+.err{display:none;margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--red-l);color:var(--red);font-size:.9rem}
+.note{font-size:.84rem;color:var(--muted);margin-top:12px;text-align:center}
+.link{color:var(--green-d);font-weight:700}
+
+#install ol{margin:8px 0 0 20px;font-size:.92rem}
+#install li{margin:4px 0}
+#install .share{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:0 6px;font-weight:700}
+
+.bar{display:none;margin-top:12px;padding:9px 12px;border-radius:10px;font-size:.88rem}
+.bar.off{background:var(--sun-l);color:var(--sun)}
+.bar.q{background:#E8EFFB;color:#1B4FA8}
+
+.open{display:flex;gap:8px;margin-top:10px}
+.open input{flex:1;font-family:var(--mono);text-transform:uppercase}
+.open button{flex:none;padding:0 18px;border:0;border-radius:12px;background:var(--ink);color:#fff;font-weight:800;cursor:pointer}
+#nfcBtn{display:none}
+#nfcMsg{margin-top:8px;font-size:.88rem;color:var(--ink2);text-align:center}
+
+.listhead{display:flex;align-items:baseline;gap:8px;margin:20px 0 8px}
+.listhead h2{margin:0}
+.listhead .sub{margin-left:auto}
+.listhead button{border:0;background:none;color:var(--green-d);font-weight:700;cursor:pointer;font-size:.9rem}
+#search{margin-bottom:10px}
+.animal{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;
+  color:inherit;text-decoration:none}
+.animal:active{background:var(--green-l)}
+.animal .row{display:flex;align-items:center;gap:8px}
+.animal .code{font-family:var(--mono);font-weight:800;font-size:1.05rem}
+.animal .go{margin-left:auto;color:var(--muted);font-size:1.3rem;line-height:1}
+.animal .meta{color:var(--ink2);font-size:.87rem;margin-top:2px}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.b{font-size:.76rem;font-weight:700;padding:3px 8px;border-radius:999px;background:#EEF0F4;color:var(--ink2)}
+.b.ok{background:var(--green-l);color:var(--green-d)}
+.b.warn{background:var(--sun-l);color:var(--sun)}
+.b.bad{background:var(--red-l);color:var(--red)}
+.empty{text-align:center;color:var(--muted);padding:26px 10px}
+footer{text-align:center;margin:28px 0 18px;font-size:.84rem}
+footer a{color:var(--muted)}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <img src="../assets/logo-64.png" alt="">
+    <div class="brand">YAK-TAG<small>Малчны апп</small></div>
+    <button class="out" id="outBtn" hidden>Гарах</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ===== Install (hidden once opened as the installed app) ===== -->
+  <section class="card" id="install" hidden>
+    <h2>📲 Утсандаа суулгах</h2>
+    <p class="sub">Нэг удаа суулгавал утасны нүүр дэлгэцэнд YAK-TAG дүрс гарч, апп шиг нээгдэнэ. Сүлжээгүй үед ч ажиллана. Үнэгүй.</p>
+    <button class="btn" id="installBtn" hidden>Суулгах</button>
+    <div id="iosSteps" hidden>
+      <ol>
+        <li>Safari-ийн доод хэсгийн <span class="share">⬆</span> «Хуваалцах» товчийг дарна.</li>
+        <li>«Нүүр дэлгэцэнд нэмэх» (Add to Home Screen)-ийг сонгоно.</li>
+        <li>«Нэмэх» (Add) дарна.</li>
+      </ol>
+    </div>
+    <div id="otherSteps" hidden>
+      <ol>
+        <li>Хөтчийн цэс <b>⋮</b>-ийг дарна.</li>
+        <li>«Апп суулгах» эсвэл «Нүүр дэлгэцэнд нэмэх»-ийг сонгоно.</li>
+      </ol>
+    </div>
+    <p class="note">Бусад малчинд энэ хаягийг илгээнэ: <b>yaktag.org/app</b></p>
+  </section>
+
+  <!-- ===== Login ===== -->
+  <section class="card" id="loginView" hidden>
+    <h1>Нэвтрэх</h1>
+    <p class="sub">Малчин, ферм админд зориулсан.</p>
+    <div class="err" id="loginErr"></div>
+    <label for="phone">Утасны дугаар</label>
+    <input type="tel" id="phone" inputmode="tel" autocomplete="username" placeholder="9911 2233">
+    <label for="password">Нууц үг</label>
+    <input type="password" id="password" autocomplete="current-password">
+    <button class="btn" id="loginBtn">Нэвтрэх</button>
+    <p class="note">Нууц үгээ мартсан бол фермийн админдаа хандана уу.</p>
+  </section>
+
+  <!-- ===== Super admin / Админ: they use the dashboard ===== -->
+  <section class="card" id="roleView" hidden>
+    <h2>Удирдлагын самбарыг ашиглана уу</h2>
+    <p class="sub">Энэ апп малчин, ферм админд зориулсан. Ерөнхий админ болон Админ удирдлагын самбараар ажиллана.</p>
+    <a class="btn" href="../admin/">Удирдлагын самбар нээх</a>
+  </section>
+
+  <!-- ===== Home: my animals ===== -->
+  <section id="homeView" hidden>
+    <div class="card">
+      <h1 id="hello">Сайн байна уу</h1>
+      <p class="sub" id="whoami"></p>
+      <div class="bar off" id="offBar"></div>
+      <div class="bar q" id="queueBar"></div>
+
+      <button class="btn" id="nfcBtn">📶 Таг уншуулах</button>
+      <div id="nfcMsg" hidden></div>
+
+      <label for="code">Тагийн дугаараар нээх</label>
+      <div class="open">
+        <input type="text" id="code" placeholder="YT-008000" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <button id="codeBtn">Нээх</button>
+      </div>
+      <p class="note" style="text-align:left">Шинэ таг бол энд нээгээд мал бүртгэнэ.</p>
+    </div>
+
+    <div class="listhead">
+      <h2>Миний мал</h2>
+      <span class="sub" id="count"></span>
+      <button id="reloadBtn" title="Шинэчлэх">↻</button>
+    </div>
+    <input type="search" id="search" placeholder="Хайх: дугаар, үүлдэр…" hidden>
+    <div id="list"></div>
+  </section>
+
+  <footer><a href="../">yaktag.org</a></footer>
+</main>
+
+<script src="../config.js?v=20261011"></script>
+<script src="../offline.js?v=20261023"></script>
+<script>
+// ============================================================
+// Herder app. Uses config.js (sb, loginEmail, normPhone, mnError,
+// mnDate, daysUntil) and offline.js (ytQueue, ytUuid, service worker).
+// ============================================================
+const $ = id => document.getElementById(id);
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+function isOffline(error) {
+  if (!navigator.onLine) return true;
+  return /fetch|network|load failed|timeout|abort/i.test(String(error && (error.message || error)));
+}
+function cacheGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+function cacheSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function show(id) {
+  ['loginView', 'roleView', 'homeView'].forEach(v => { $(v).hidden = v !== id; });
+  $('outBtn').hidden = id === 'loginView';
+}
+
+// ---------- install ----------
+const standalone = (() => {
+  try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }
+  catch (e) { return false; }
+})();
+let installEvt = null;
+if (!standalone) {
+  $('install').hidden = false;
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (ios) $('iosSteps').hidden = false; else $('otherSteps').hidden = false;
+  // Android Chrome / Edge / Samsung: the browser offers its own install window.
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    installEvt = e;
+    $('installBtn').hidden = false;
+    $('otherSteps').hidden = true;
+  });
+  $('installBtn').addEventListener('click', async () => {
+    if (!installEvt) return;
+    installEvt.prompt();
+    try { await installEvt.userChoice; } catch (e) {}
+    installEvt = null;
+    $('installBtn').hidden = true;
+  });
+  window.addEventListener('appinstalled', () => { $('install').hidden = true; });
+}
+
+// ---------- login (phone number + password) ----------
+async function doLogin() {
+  const phone = $('phone').value.trim(), password = $('password').value;
+  const err = $('loginErr');
+  const fail = m => { err.textContent = m; err.style.display = 'block'; };
+  err.style.display = 'none';
+  if (!phone || !password || (!phone.includes('@') && normPhone(phone).length < 6)) {
+    return fail('Утасны дугаар болон нууц үгээ оруулна уу.');
+  }
+  $('loginBtn').disabled = true; $('loginBtn').textContent = 'Нэвтэрч байна…';
+  let error = null;
+  try { ({ error } = await sb.auth.signInWithPassword({ email: loginEmail(phone), password })); }
+  catch (e) { error = e; }
+  $('loginBtn').disabled = false; $('loginBtn').textContent = 'Нэвтрэх';
+  if (error) {
+    return fail((isOffline(error) || error.name === 'AuthRetryableFetchError')
+      ? 'Сүлжээ муу байна. Дахин оролдоно уу.'
+      : 'Утасны дугаар эсвэл нууц үг буруу байна.');
+  }
+  $('password').value = '';
+  boot();
+}
+$('loginBtn').addEventListener('click', doLogin);
+$('password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ---------- log out ----------
+$('outBtn').addEventListener('click', async () => {
+  let waiting = 0;
+  try { waiting = await ytQueue.count(); } catch (e) {}
+  if (waiting && !confirm(`${waiting} бүртгэл илгээгдээгүй байна. Сүлжээ ороход автоматаар илгээгдэнэ.\n\nОдоо гарвал эдгээр бүртгэл хадгалагдахгүй байж магадгүй. Гарах уу?`)) return;
+  try { await sb.auth.signOut(); } catch (e) {}
+  // This user's animals and profile don't stay on the phone for the next person.
+  try {
+    Object.keys(localStorage)
+      .filter(k => /^yt-(uid|prof|cow:|extra:|repro:|applist)/.test(k))
+      .forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+  location.reload();
+});
+
+// ---------- start ----------
+let me = null, offlineMode = false, animals = [];
+
+async function boot() {
+  let session = null, sErr = null;
+  try { ({ data: { session }, error: sErr } = await sb.auth.getSession()); } catch (e) { sErr = e; }
+  // No signal and the login needs refreshing: open from what this phone saved.
+  const noNet = !navigator.onLine || (sErr && (isOffline(sErr) || sErr.name === 'AuthRetryableFetchError'));
+  offlineMode = !session && noNet && !!cacheGet('yt-uid');
+  if (!session && !offlineMode) { show('loginView'); return; }
+  if (session) cacheSet('yt-uid', session.user.id);
+
+  let prof = null;
+  if (!offlineMode) { try { prof = await myProfile(); } catch (e) {} }
+  if (prof) cacheSet('yt-prof', prof);
+  me = prof || cacheGet('yt-prof');
+
+  if (me && (me.role === 'super_admin' || me.role === 'admin')) { show('roleView'); return; }
+  show('homeView');
+  $('hello').textContent = me && me.full_name ? `Сайн байна уу, ${me.full_name}` : 'Сайн байна уу';
+  $('whoami').textContent = me ? (me.role === 'farm_admin' ? 'Ферм админ — фермийн бүх мал' : 'Малчин — таны мал') : '';
+  watchQueue();
+  setupNfc();
+  await loadAnimals();
+}
+
+// ---------- my animals ----------
+// The database returns only what this login may see: a herder's own
+// animals, a farm admin's whole farm.
+const COLS = 'id,tag_code,breed,sex,birth_year,status,reported_lost_at,milk_today,next_vaccination_due,owner_name,owner_id';
+async function fetchAnimals() {
+  const out = [];
+  for (let from = 0; from < 20000; from += 1000) {
+    const { data, error } = await sb.from('cattle_dashboard').select(COLS)
+      .order('tag_code').range(from, from + 999);
+    if (error) throw error;
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+async function loadAnimals() {
+  $('list').innerHTML = '<div class="empty">Ачаалж байна…</div>';
+  let rows = null, fromCache = false;
+  if (!offlineMode) {
+    try { rows = await fetchAnimals(); cacheSet('yt-applist', { at: Date.now(), rows }); }
+    catch (e) {
+      if (!isOffline(e)) { $('list').innerHTML = `<div class="empty">${esc(mnError(e.message || e))}</div>`; return; }
+    }
+  }
+  if (!rows) {
+    const saved = cacheGet('yt-applist');
+    rows = (saved && saved.rows) || [];
+    fromCache = true;
+    const bar = $('offBar');
+    bar.textContent = saved
+      ? `Сүлжээгүй — энэ утсанд ${fmtDateTime(saved.at)}-д хадгалсан жагсаалт. Мал руу ороод сүү оруулбал утсанд хадгалагдаж, сүлжээ ороход илгээгдэнэ.`
+      : 'Сүлжээгүй. Сүлжээтэй үед нэг удаа нээгээрэй.';
+    bar.style.display = 'block';
+  } else {
+    $('offBar').style.display = 'none';
+  }
+  animals = rows;
+  $('search').hidden = rows.length < 8;
+  render();
+  if (fromCache && !rows.length) $('list').innerHTML = '<div class="empty">Энэ утсанд хадгалсан жагсаалт алга.</div>';
+}
+
+const STATUS_MN = { sold:'Зарагдсан', slaughtered:'Нядалсан', dead:'Үхсэн', lost:'Алга болсон', stolen:'Хулгайлагдсан' };
+function card(c) {
+  const age = c.birth_year ? `${new Date().getFullYear() - c.birth_year} нас` : '';
+  const meta = [c.sex === 'female' ? 'Эм' : c.sex === 'male' ? 'Эр' : '', age, c.breed,
+                me && me.role === 'farm_admin' ? c.owner_name : ''].filter(Boolean).join(' · ');
+  const b = [];
+  const lost = c.reported_lost_at || c.status === 'lost' || c.status === 'stolen';
+  if (lost) b.push('<span class="b bad">⚠ Алга болсон</span>');
+  else if (STATUS_MN[c.status]) b.push(`<span class="b">${STATUS_MN[c.status]}</span>`);
+  if (c.status === 'active' && c.sex !== 'male') {
+    b.push(c.milk_today != null ? `<span class="b ok">🥛 Өнөөдөр ${Number(c.milk_today).toFixed(1)} л</span>`
+                                : '<span class="b">🥛 Өнөөдөр —</span>');
+  }
+  const d = daysUntil(c.next_vaccination_due);
+  if (c.status === 'active' && d != null) {
+    if (d < 0) b.push('<span class="b bad">💉 Вакцин хэтэрсэн</span>');
+    else if (d <= 7) b.push(`<span class="b warn">💉 Вакцин ${d === 0 ? 'өнөөдөр' : d + ' хоногт'}</span>`);
+  }
+  return `<a class="animal" href="../cow.html?tag=${encodeURIComponent(c.tag_code)}" data-tag="${esc(c.tag_code)}">
+    <div class="row"><span class="code">${esc(c.tag_code)}</span><span class="go">›</span></div>
+    ${meta ? `<div class="meta">${esc(meta)}</div>` : ''}
+    ${b.length ? `<div class="badges">${b.join('')}</div>` : ''}
+  </a>`;
+}
+function render() {
+  const q = $('search').value.trim().toLowerCase();
+  // active animals first, then the rest (sold, dead…) in tag order
+  const rank = c => (c.status === 'active' || c.reported_lost_at) ? 0 : 1;
+  const list = animals
+    .filter(c => !q || [c.tag_code, c.breed, c.owner_name].some(v => String(v || '').toLowerCase().includes(q)))
+    .sort((a, b) => rank(a) - rank(b) || String(a.tag_code).localeCompare(String(b.tag_code)));
+  const active = animals.filter(c => c.status === 'active').length;
+  $('count').textContent = animals.length ? `${active} идэвхтэй${animals.length > active ? ` / ${animals.length}` : ''}` : '';
+  $('list').innerHTML = list.length ? list.map(card).join('')
+    : `<div class="empty">${animals.length ? 'Олдсонгүй.' : 'Танд бүртгэлтэй мал алга.<br>Шинэ тагаа дээр уншуулж эсвэл дугаараар нээгээд мал бүртгэнэ.'}</div>`;
+}
+$('search').addEventListener('input', render);
+$('reloadBtn').addEventListener('click', () => { offlineMode = false; boot(); });
+
+// Opening an animal: the animal page then leads back here (its logo and
+// bottom link say "Миний мал").
+function openAnimal(code) {
+  try { sessionStorage.setItem('yt-from-app', '1'); } catch (e) {}
+  location.href = '../cow.html?tag=' + encodeURIComponent(code);
+}
+$('list').addEventListener('click', e => {
+  const a = e.target.closest('a.animal');
+  if (!a) return;
+  e.preventDefault();
+  openAnimal(a.dataset.tag);
+});
+
+// ---------- open by tag number ----------
+// "8000" or "yt-8000" → YT-008000 (the dashboard's format).
+function normTag(s) {
+  let v = String(s || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (/^\d+$/.test(v)) v = 'YT-' + v;
+  const m = v.match(/^([A-Z]{1,6})-?(\d{1,6})$/);
+  return m ? `${m[1]}-${m[2].padStart(6, '0')}` : null;
+}
+function openTyped() {
+  const code = normTag($('code').value);
+  if (!code) { alert('Тагийн дугаар буруу. Жишээ: YT-008000 эсвэл 8000'); return; }
+  openAnimal(code);
+}
+$('codeBtn').addEventListener('click', openTyped);
+$('code').addEventListener('keydown', e => { if (e.key === 'Enter') openTyped(); });
+
+// ---------- read a tag inside the app (Android Chrome: Web NFC) ----------
+// iPhone has no Web NFC: there the phone's own NFC opens the tag's link.
+function tagFromUrl(u) {
+  try { return normTag(new URL(u).searchParams.get('tag')); } catch (e) { return null; }
+}
+let nfcAbort = null;
+function setupNfc() {
+  if (!('NDEFReader' in window) || setupNfc.done) return;
+  setupNfc.done = true;
+  const btn = $('nfcBtn'), msg = $('nfcMsg');
+  btn.style.display = 'block';
+  const say = t => { msg.textContent = t; msg.hidden = false; };
+  btn.addEventListener('click', async () => {
+    if (nfcAbort) { nfcAbort.abort(); nfcAbort = null; btn.textContent = '📶 Таг уншуулах'; msg.hidden = true; return; }
+    try {
+      const reader = new NDEFReader();
+      nfcAbort = new AbortController();
+      const stop = nfcAbort;
+      await reader.scan({ signal: stop.signal });
+      btn.textContent = '✕ Зогсоох';
+      say('Утсаа тагт ойртуулна уу…');
+      setTimeout(() => { if (nfcAbort === stop) { stop.abort(); nfcAbort = null; btn.textContent = '📶 Таг уншуулах'; say('Хугацаа дууслаа. Дахин дарна уу.'); } }, 60000);
+      reader.onreading = ev => {
+        for (const rec of ev.message.records) {
+          if (rec.recordType !== 'url' && rec.recordType !== 'absolute-url') continue;
+          const code = tagFromUrl(new TextDecoder().decode(rec.data));
+          if (code) { stop.abort(); nfcAbort = null; say(`${code} нээж байна…`); openAnimal(code); return; }
+        }
+        say('Энэ таг YAK-TAG биш байна.');
+      };
+      reader.onreadingerror = () => say('Уншиж чадсангүй. Утсаа дахин ойртуулна уу.');
+    } catch (e) {
+      nfcAbort = null;
+      say(/NotAllowed|denied/i.test(String(e && (e.name || e.message)))
+        ? 'NFC зөвшөөрөл өгөөгүй байна. Утасны тохиргоонд NFC-г асааж, зөвшөөрнө үү.'
+        : 'NFC ажиллахгүй байна. Утасны тохиргоонд NFC асаалттай эсэхийг шалгана уу.');
+    }
+  });
+}
+
+// ---------- entries waiting on this phone ----------
+function watchQueue() {
+  if (watchQueue.on) return; watchQueue.on = true;
+  ytQueue.onChange(n => {
+    const bar = $('queueBar');
+    bar.textContent = n ? `⏳ ${n} бүртгэл утсанд хадгалагдсан, сүлжээ ороход илгээгдэнэ.` : '';
+    bar.style.display = n ? 'block' : 'none';
+  });
+}
+window.addEventListener('online', () => { if (offlineMode) { offlineMode = false; boot(); } });
+
+boot();
+</script>
+</body>
+</html>

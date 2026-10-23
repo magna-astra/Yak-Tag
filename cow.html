@@ -227,14 +227,15 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
     <p class="sub">Малын бүртгэл рүү нэвтрэх</p>
     <div class="err" id="loginErr"></div>
     <div class="field">
-      <label for="email">Утас эсвэл и-мэйл</label>
-      <input type="text" id="email" autocomplete="username" inputmode="tel" placeholder="99112233">
+      <label for="email">Утасны дугаар</label>
+      <input type="tel" id="email" autocomplete="username" inputmode="tel" placeholder="9911 2233">
     </div>
     <div class="field">
       <label for="password">Нууц үг</label>
       <input type="password" id="password" autocomplete="current-password">
     </div>
     <button class="btn-primary" id="loginBtn">Нэвтрэх</button>
+    <a class="backsite" href="app/">📲 Малчны апп суулгах</a>
     <a class="backsite" href="index.html">← Вэб сайт руу буцах</a>
   </div>
 </div>
@@ -287,7 +288,7 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
 <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
 
 <script src="config.js?v=20261011"></script>
-<script src="offline.js?v=20261012"></script>
+<script src="offline.js?v=20261023"></script>
 <script>
 let cow = null;
 let myProf = null;          // role / farm of the signed-in user
@@ -315,20 +316,50 @@ function getTagFromUrl() {
   return p.get('tag') || p.get('slug') || p.get('uid');
 }
 
+// ---------- inside the herder app (app/) ----------
+// Opened from the installed app (no browser bar — an iPhone has no back
+// button there) or from the app's animal list: the logo and the bottom
+// link lead back to "Миний мал" instead of the website.
+const inHerderApp = (() => {
+  try {
+    return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true ||
+           sessionStorage.getItem('yt-from-app') === '1';
+  } catch (e) { return false; }
+})();
+if (inHerderApp) {
+  const home = document.querySelector('a.homelink');
+  if (home) {
+    home.href = 'app/'; home.title = 'Миний мал'; home.setAttribute('aria-label', 'Миний мал');
+    home.insertAdjacentHTML('afterbegin', '<span aria-hidden="true" style="font-size:1.4rem;line-height:1;margin-right:-2px">‹</span>');
+  }
+  const foot = document.querySelector('a.sitefoot');
+  if (foot) { foot.href = 'app/'; foot.textContent = '← Миний мал'; }
+  document.querySelectorAll('a.backsite').forEach(a => {
+    if (a.getAttribute('href') === 'app/') a.remove();       // already in the app
+    else { a.href = 'app/'; a.textContent = '← Миний мал'; }
+  });
+}
+
 // ---------- login ----------
 const loginBtn = document.getElementById('loginBtn');
 async function doLogin() {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
+  const e = document.getElementById('loginErr');
+  // Logins are phone numbers (an old e-mail login still works if typed).
+  if (!email || !password || (!email.includes('@') && normPhone(email).length < 6)) {
+    e.textContent = 'Утасны дугаар болон нууц үгээ оруулна уу.';
+    e.style.display = 'block';
+    return;
+  }
   loginBtn.disabled = true; loginBtn.textContent = 'Нэвтэрч байна…';
   const { error } = await sb.auth.signInWithPassword({ email: loginEmail(email), password });
   loginBtn.disabled = false; loginBtn.textContent = 'Нэвтрэх';
   if (error) {
-    const e = document.getElementById('loginErr');
     // No signal is not a wrong password.
     e.textContent = (isOffline(error) || error.name === 'AuthRetryableFetchError')
       ? 'Сүлжээ муу байна. Дахин оролдоно уу.'
-      : 'Утас/и-мэйл эсвэл нууц үг буруу байна.';
+      : 'Утасны дугаар эсвэл нууц үг буруу байна.';
     e.style.display = 'block';
     return;
   }
@@ -431,7 +462,7 @@ document.getElementById('signoutBtn').addEventListener('click', async () => {
   // This user's animals and profile don't stay on the phone for the next person.
   try {
     Object.keys(localStorage)
-      .filter(k => /^yt-(uid|prof|cow:|extra:|repro:)/.test(k))
+      .filter(k => /^yt-(uid|prof|cow:|extra:|repro:|applist)/.test(k))
       .forEach(k => localStorage.removeItem(k));
   } catch (e) {}
   location.reload();

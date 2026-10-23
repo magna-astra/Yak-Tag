@@ -244,11 +244,15 @@ const ytQueue = (() => {
   return { add, flush, count, onChange };
 })();
 
-// Keeps t.html and cow.html openable with no signal. Only those pages
-// and their own files are cached — the admin dashboard, the map and
-// all database calls are never touched by it (see sw.js).
+// Keeps t.html, cow.html and the herder app (app/) openable with no
+// signal. Only those pages and their own files are cached — the admin
+// dashboard, the map and all database calls are never touched by it
+// (see sw.js). sw.js sits next to THIS file (the site root): the app
+// page loads it as ../offline.js, where a plain 'sw.js' would point at
+// app/sw.js, which doesn't exist.
+const YT_SW_URL = new URL('sw.js', (document.currentScript && document.currentScript.src) || location.href).href;
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW:', e));
+    navigator.serviceWorker.register(YT_SW_URL).catch(e => console.warn('SW:', e));
   });
 }

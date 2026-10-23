@@ -1,8 +1,9 @@
 // ============================================================
 // YAK-TAG — service worker
 //
-// Lets the tap page (t.html) and the owner page (cow.html) open with
-// no signal, so a scan can still be saved to the offline queue.
+// Lets the tap page (t.html), the owner page (cow.html) and the herder
+// app (app/) open with no signal, so a scan or an entry can still be
+// saved to the offline queue.
 //
 // It answers ONLY for the files listed in SHELL / LIB below. Every
 // other request — admin dashboard, map tiles, Supabase database and
@@ -28,7 +29,10 @@ const MAX_PUBLIC_AGE = 7 * 86400000;            // = offline.js; server takes 7 
 
 const SHELL = [
   't.html', 'cow.html', 'config.js', 'offline.js',
-  'assets/logo-256.png', 'assets/logo-64.png', 'assets/logo-180.png', 'assets/favicon.ico'
+  'assets/logo-256.png', 'assets/logo-64.png', 'assets/logo-180.png', 'assets/favicon.ico',
+  // the herder app (installable, opens with no signal)
+  'app/', 'app/index.html', 'app/manifest.json',
+  'assets/app-icon-192.png', 'assets/app-icon-512.png'
 ];
 const LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js';
 
@@ -146,7 +150,7 @@ self.addEventListener('fetch', event => {
   // are kept under their full address, ?v= included, so a slow network
   // never pairs a new page with an old config.js / offline.js. Another
   // version is used only when there is no network at all.
-  const isPage = url.pathname.endsWith('.html');
+  const isPage = url.pathname.endsWith('.html') || url.pathname.endsWith('/');   // app/ = app/index.html
   const key = isPage ? path : req.url;
 
   event.respondWith((async () => {

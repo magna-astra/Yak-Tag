@@ -319,8 +319,11 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
     <p class="sub">Удирдлагын самбарт нэвтрэх</p>
     <div class="err" id="loginErr"></div>
     <div class="field">
-      <label for="email">Утас эсвэл и-мэйл</label>
-      <input type="text" id="email" autocomplete="username" placeholder="99112233">
+      <label for="email">Утасны дугаар</label>
+      <!-- Phone number only (number keypad on phones). An old e-mail login
+           typed on a computer keyboard still works until it is moved to a
+           phone (Хэрэглэгчид → Засах → "Утсаар нэвтэрдэг болгох"). -->
+      <input type="tel" id="email" autocomplete="username" inputmode="tel" placeholder="9911 2233">
     </div>
     <div class="field">
       <label for="password">Нууц үг</label>
@@ -763,7 +766,14 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
     <label>Нэр</label>
     <input type="text" id="uName">
     <label>Утас</label>
-    <input type="text" id="uPhone">
+    <input type="tel" id="uPhone" inputmode="tel">
+    <!-- Login name (from the admin-users function). Logins are phone numbers;
+         an old e-mail login is moved to the phone above with one press. -->
+    <div id="uLoginBox" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid var(--line,#E5E7EB);border-radius:12px">
+      <div style="font-size:.85rem">Нэвтрэх нэр: <b id="uLogin">—</b></div>
+      <button type="button" class="pwbtn" id="uLoginSet" style="margin-top:8px">📱 Дээрх утсаар нэвтэрдэг болгох</button>
+      <div style="font-size:.78rem;color:var(--ink-soft,#6B7280);margin-top:6px">Нууц үг өөрчлөгдөхгүй. Утсаа сольсон бол үүгээр нэвтрэх нэрийг мөн солино.</div>
+    </div>
     <label>Эрх</label>
     <select id="uRole"></select>
     <label>Ферм</label>
@@ -874,8 +884,7 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
     <h3>Шинэ хэрэглэгч</h3>
     <p class="msub">Малчин утасны дугаар, нууц үгээрээ нэвтэрнэ. Дараа нь нууц үгээ өөрөө сольж болно.</p>
     <label>Нэр</label><input type="text" id="nuName">
-    <label>Утас (нэвтрэх нэр)</label><input type="tel" id="nuPhone" placeholder="99112233">
-    <label>И-мэйл (утасгүй бол)</label><input type="email" id="nuEmail">
+    <label>Утасны дугаар (нэвтрэх нэр)</label><input type="tel" id="nuPhone" inputmode="tel" placeholder="9911 2233">
     <label>Эрх</label>
     <select id="nuRole"></select>
     <label>Ферм</label><select id="nuFarm"></select>
@@ -951,14 +960,15 @@ const loginBtn = document.getElementById('loginBtn');
 async function doLogin(){
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
-  if(!email||!password){showErr('Утас/и-мэйл болон нууц үгээ оруулна уу.');return;}
+  if(!email||!password){showErr('Утасны дугаар болон нууц үгээ оруулна уу.');return;}
+  if(!email.includes('@') && normPhone(email).length<6){showErr('Утасны дугаараа бүтэн оруулна уу.');return;}
   loginBtn.disabled=true; loginBtn.textContent='Нэвтэрч байна…';
   const {error} = await sb.auth.signInWithPassword({email: loginEmail(email), password});
   loginBtn.disabled=false; loginBtn.textContent='Нэвтрэх';
   if(error){
     // No signal is not a wrong password.
     const net = !navigator.onLine || error.name==='AuthRetryableFetchError' || /fetch|network|load failed|timeout|abort/i.test(error.message||'');
-    showErr(net ? 'Сүлжээ муу байна. Дахин оролдоно уу.' : 'Утас/и-мэйл эсвэл нууц үг буруу байна.');
+    showErr(net ? 'Сүлжээ муу байна. Дахин оролдоно уу.' : 'Утасны дугаар эсвэл нууц үг буруу байна.');
     return;
   }
   boot();
@@ -1079,17 +1089,30 @@ async function loadMilkForDate(){
   (data||[]).forEach(m=>{ milkByDate[m.cattle_id] = m; });
 }
 
+// Each user's login (phone number, or an old e-mail), from the admin-users
+// function. Empty when the function is older than 2026-10-23 or the call
+// fails — the list then simply shows no login marks.
+let userLogins = {};
+async function loadLogins(){
+  if(myRole!=='super_admin' && myRole!=='admin') return {};
+  const {data,error} = await adminUsers({action:'list_logins'});
+  if(error || !data || !Array.isArray(data.logins)) return {};
+  return Object.fromEntries(data.logins.map(l=>[l.id,l]));
+}
 async function loadUsers(){
-  const {data,error} = await sb.from('admin_users').select('*').order('full_name');
+  const [{data,error}, logins] = await Promise.all([
+    sb.from('admin_users').select('*').order('full_name'), loadLogins()]);
   if(error){
     document.getElementById('usersBody').innerHTML =
       `<tr><td colspan="7" class="empty">Алдаа: ${esc(error.message)}</td></tr>`;
     return;
   }
   users = data||[];
+  userLogins = logins;
   document.getElementById('usersBody').innerHTML = users.map(u=>`
     <tr class="userrow">
-      <td><b>${esc(u.full_name)}</b></td>
+      <td><b>${esc(u.full_name)}</b>${userLogins[u.id] && !userLogins[u.id].phone_login
+        ? `<div style="font-size:.76rem;color:#B3341F;margin-top:2px" title="${esc(userLogins[u.id].login)}">✉ И-мэйлээр нэвтэрдэг — утас болгоно уу</div>` : ''}</td>
       <td class="muted">${esc(u.phone||'—')}</td>
       <td><span class="badge ${u.role==='super_admin'||u.role==='admin'?'warn':u.role==='farm_admin'?'ok':'none'}">${roleLabel(u.role)}</span></td>
       <td class="muted">${esc(u.farm_code||'—')}</td>
@@ -2076,8 +2099,29 @@ function openUser(id){
   document.getElementById('uRole').value = u.role;
   document.getElementById('uFarm').value = u.farm_id||'';
   document.getElementById('uActive').value = String(u.active);
+  const L = userLogins[id];
+  document.getElementById('uLoginBox').style.display = L ? '' : 'none';
+  document.getElementById('uLogin').textContent = L ? (L.phone_login ? L.login : '✉ ' + L.login + ' (и-мэйл)') : '';
   document.getElementById('userModal').classList.add('on');
 }
+// Login → the phone number in the field above (same password).
+document.getElementById('uLoginSet').addEventListener('click', async e=>{
+  const u = users.find(x=>x.id===userTarget);
+  const phone = normPhone(document.getElementById('uPhone').value);
+  if(!u) return;
+  if(phone.length<6){toast('Дээр утасны дугаараа бүтэн оруулна уу.',true);return;}
+  const self = userTarget===myId;
+  if(!confirm(`"${u.full_name}" одоо ${phone} дугаараар нэвтэрнэ. Нууц үг өөрчлөгдөхгүй.`
+      + (self ? '\n\nЭнэ таны өөрийн бүртгэл: дараа нэвтрэхдээ энэ утсыг ашиглана уу.' : '')
+      + '\n\nҮргэлжлүүлэх үү?')) return;
+  e.target.disabled = true;
+  const {data,error} = await adminUsers({action:'set_login_phone', user_id:userTarget, phone});
+  e.target.disabled = false;
+  if(error){toast(error,true);return;}
+  closeModal('userModal');
+  toast(`Нэвтрэх нэр: ${data.login}`);
+  loadUsers();
+});
 document.getElementById('userSave').addEventListener('click', async ()=>{
   const {error} = await sb.rpc('admin_update_profile',{
     p_profile_id: userTarget,
@@ -2200,14 +2244,16 @@ const AUDIT_ACT = {
   admin_edit_profile:'Хэрэглэгчийн мэдээлэл засав', profile_delete:'Хэрэглэгч устгав',
   farm_create:'Ферм үүсгэв', farm_archive:'Фермийг архивлав', farm_restore:'Фермийг сэргээв', farm_delete:'Ферм устгав',
   cattle_transfer:'Эзэмшигч солив', telegram_link:'Telegram холбов', site_contacts:'Вэб сайтын холбоо барих мэдээлэл засав',
-  tags_pause:'Таг түр зогсоов', tags_resume:'Таг дахин идэвхжүүлэв', farm_owner:'Фермийг Админд хариуцуулав'
+  tags_pause:'Таг түр зогсоов', tags_resume:'Таг дахин идэвхжүүлэв', farm_owner:'Фермийг Админд хариуцуулав',
+  create_user:'Хэрэглэгч үүсгэв', set_password:'Нууц үг солив', set_login_phone:'Нэвтрэх утас солив'
 };
 const AUDIT_KIND = {
   cattle: ['register_cattle','admin_edit_cattle','cattle_delete','report_lost','report_found','tag_replace',
            'set_contact_phone','unlock_contact_phone','set_public_photo','photo_delete','photo_unlock','cattle_transfer'],
   records:['feeding_delete','vaccination_edit','repro_edit','repro_delete'],
   tags:   ['tags_create','tags_assign_farm','tag_write','tag_uid','tag_recycle','tag_retire','tag_delete','tags_pause','tags_resume'],
-  people: ['admin_edit_profile','profile_delete','farm_create','farm_archive','farm_restore','farm_delete','farm_owner','telegram_link','site_contacts'],
+  people: ['admin_edit_profile','profile_delete','farm_create','farm_archive','farm_restore','farm_delete','farm_owner','telegram_link','site_contacts',
+           'create_user','set_password','set_login_phone'],
   deletes:['cattle_delete','photo_delete','feeding_delete','repro_delete','tag_delete','profile_delete','farm_delete']
 };
 const REPRO_KIND_MN = {insemination:'хээлтүүлэг', pregnancy_check:'хээл шалгалт', calving:'төллөлт', abortion:'хээл хаялт'};
@@ -2843,7 +2889,7 @@ async function adminUsers(body){
 }
 
 document.getElementById('newUserBtn').addEventListener('click',()=>{
-  ['nuName','nuPhone','nuEmail','nuPw'].forEach(id=>document.getElementById(id).value='');
+  ['nuName','nuPhone','nuPw'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('nuRole').innerHTML = roleOptions();
   document.getElementById('nuRole').value='herder';
   nuRoleChanged();
@@ -2862,13 +2908,13 @@ document.getElementById('nuSave').addEventListener('click', async ()=>{
     action:'create',
     full_name: document.getElementById('nuName').value.trim(),
     phone:     document.getElementById('nuPhone').value.trim(),
-    email:     document.getElementById('nuEmail').value.trim(),
     role:      document.getElementById('nuRole').value,
     farm_id:   document.getElementById('nuFarm').disabled ? null : (document.getElementById('nuFarm').value || null),
     password:  document.getElementById('nuPw').value
   };
   if(!body.full_name){toast('Нэр оруулна уу.',true);return;}
-  if(!body.phone && !body.email){toast('Утас эсвэл и-мэйл оруулна уу.',true);return;}
+  // Every login is a phone number (typed on a phone's number keypad).
+  if(normPhone(body.phone).length<6){toast('Утасны дугаар оруулна уу.',true);return;}
   if(body.password.length<8){toast('Нууц үг хамгийн багадаа 8 тэмдэгт байх ёстой.',true);return;}
   const btn = document.getElementById('nuSave'); btn.disabled = true;
   const {data,error} = await adminUsers(body);
