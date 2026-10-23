@@ -461,6 +461,15 @@ def row_sums(conn, table, pk):
     return dict(conn.sql(f"set timezone to 'UTC'; select row({pk})::text, md5(t::text) from public.{table} t"))
 
 
+def show_diff(old, new, query):
+    """Print the fields of one row that differ: old value → new value."""
+    ra, rb = old.json(query) if old.sql(query) else {}, new.json(query) if new.sql(query) else {}
+    for f in sorted(set(ra) | set(rb)):
+        if ra.get(f) != rb.get(f):
+            va, vb = (json.dumps(x, ensure_ascii=False)[:70] for x in (ra.get(f), rb.get(f)))
+            print(f"      {f}: old {va}  →  new {vb}")
+
+
 def cmd_catchup(old, new):
     if old.ref and old.ref == new.ref:
         sys.exit("OLD and NEW are the same project. Nothing done.")
@@ -532,8 +541,16 @@ def cmd_catchup(old, new):
         print(f"  {t}: {n_new} row(s) only in the old project" + (f", {n_clash} with a number already used in the new one (gets a new number)" if n_clash else ""))
     for t, k in edited:
         print(f"  {t} {k}: changed on one side — NOT touched (check by hand)")
+        show_diff(old, new, f"set timezone to 'UTC'; select to_jsonb(t) from public.{t} t "
+                            f"where row({info[t][0]})::text = {lit(k)}")
     for k in logins:
-        print(f"  login {k}: differs (new / changed password?) — NOT touched (check by hand)")
+        print(f"  login {k}: differs — NOT touched (check by hand)")
+        # the password hash itself is never shown, only whether it is the same
+        show_diff(old, new, "set timezone to 'UTC'; select jsonb_build_object('email', u.email, "
+                            "'password', 'hash ' || left(md5(coalesce(u.encrypted_password, '')), 4), "
+                            "'banned_until', to_jsonb(u)->>'banned_until', 'phone', to_jsonb(u)->>'phone', "
+                            "'updated_at', to_jsonb(u)->>'updated_at', 'last_sign_in_at', to_jsonb(u)->>'last_sign_in_at') "
+                            f"from auth.users u where u.id::text = {lit(k)}")
     if not plan:
         print("  Nothing to copy — the new project has every row of the old one.")
         return True
