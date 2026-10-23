@@ -66,9 +66,15 @@ class Conn:
         self.label = label
         raw = os.environ.get(env_db)
         if not raw:
-            print(f"\n{label.upper()} project — Connect → Session pooler → copy the connection string")
-            print("(paste it exactly as shown, with [YOUR-PASSWORD] still in it)")
-            raw = input("  connection string: ").strip()
+            # YT_OLD_DB_POOLER / YT_NEW_DB_POOLER: the string as Supabase shows it,
+            # [YOUR-PASSWORD] included (no secret) — then only the password is asked
+            raw = os.environ.get(env_db + "_POOLER", "").strip()
+            if raw:
+                print(f"\n{label.upper()} project: {raw}")
+            else:
+                print(f"\n{label.upper()} project — Connect → Session pooler → copy the connection string")
+                print("(paste it exactly as shown, with [YOUR-PASSWORD] still in it)")
+                raw = input("  connection string: ").strip()
             if "[YOUR-PASSWORD]" not in raw:
                 sys.exit("  It must still contain [YOUR-PASSWORD] — the password is typed separately, hidden. Run again.")
             pw = getpass.getpass(f"  {label} database password (hidden): ")
@@ -478,6 +484,18 @@ def main():
         if cmd == "move":
             # everything in one go, secrets asked once: check → database → photos → compare
             keys = get_keys()
+            # from here on, everything printed is also written to a log file (no secret is
+            # ever printed), so the result can be read without looking at this window
+            log = os.path.join(tempfile.gettempdir(), "yaktag-move-log.txt")
+
+            class Tee:
+                def __init__(self, *s): self.s = s
+                def write(self, x):
+                    for s in self.s: s.write(x); s.flush()
+                def flush(self):
+                    for s in self.s: s.flush()
+            sys.stdout = Tee(sys.__stdout__, open(log, "w", encoding="utf-8"))
+            print(f"(progress also written to {log})")
             print("\n=== 1. check ===")
             if not cmd_check(old, new):
                 sys.exit("Fix the add-ons first, then run move again.")
