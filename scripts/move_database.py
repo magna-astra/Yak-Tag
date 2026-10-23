@@ -11,6 +11,7 @@ YAK-TAG — move the database to another Supabase project (e.g. Sydney → Tokyo
     python scripts/move_database.py photos    # every photo file, old → new (only missing /
                                               #   changed ones; safe to run again)
     python scripts/move_database.py verify    # row counts old vs new, table by table
+    python scripts/move_database.py move      # all four in one go (secrets asked once)
 
 The OLD project is only ever READ. Nothing is written to it.
 Refuses to write into the project the website uses now (the address in
@@ -428,11 +429,16 @@ def quoted(path):
     return "/".join(urllib.parse.quote(p, safe="") for p in path.split("/"))
 
 
-def cmd_photos(old, new):
-    guard_new(old, new)
-    ou, nu = project_url(old, "YT_OLD_URL"), project_url(new, "YT_NEW_URL")
+def get_keys():
     ok_ = os.environ.get("YT_OLD_KEY") or getpass.getpass("\n  OLD project secret key (sb_secret_… / service_role, hidden): ")
     nk = os.environ.get("YT_NEW_KEY") or getpass.getpass("  NEW project secret key (sb_secret_… / service_role, hidden): ")
+    return ok_.strip(), nk.strip()
+
+
+def cmd_photos(old, new, keys=None):
+    guard_new(old, new)
+    ou, nu = project_url(old, "YT_OLD_URL"), project_url(new, "YT_NEW_URL")
+    ok_, nk = keys or get_keys()
     problems = 0
     for b in BUCKETS:
         src = list_files(ou, ok_, b)
@@ -462,13 +468,27 @@ def cmd_photos(old, new):
 
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] not in ("check", "copy", "photos", "verify"):
+    if len(sys.argv) < 2 or sys.argv[1] not in ("check", "copy", "photos", "verify", "move"):
         print(__doc__)
         return
     cmd = sys.argv[1]
     old = Conn("old", "YT_OLD_DB")
     new = Conn("new", "YT_NEW_DB")
     try:
+        if cmd == "move":
+            # everything in one go, secrets asked once: check → database → photos → compare
+            keys = get_keys()
+            print("\n=== 1. check ===")
+            if not cmd_check(old, new):
+                sys.exit("Fix the add-ons first, then run move again.")
+            print("\n=== 2. database ===")
+            cmd_copy(old, new, fresh="--fresh" in sys.argv)
+            print("\n=== 3. photos ===")
+            photos_ok = cmd_photos(old, new, keys)
+            print("\n=== 4. compare old and new ===")
+            same = cmd_verify(old, new)
+            print("\nMOVE COPY " + ("COMPLETE — everything matches." if same and photos_ok else "NOT complete — see above."))
+            sys.exit(0 if same and photos_ok else 1)
         if cmd == "check":
             sys.exit(0 if cmd_check(old, new) else 1)
         if cmd == "copy":
