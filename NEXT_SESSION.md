@@ -38,7 +38,7 @@ To continue, open this folder in Claude Code and say:
 | Public tap page | `t.html` |
 | Herder app (installable) | `app/index.html` + `app/manifest.json` → **https://yaktag.org/app/** (section 3u) |
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
-| Database changes | `db/schema_v*.sql`. v21 to v51 are **run on live** (v45's e-mail part stays dormant); **v52 (speed) to run** (3x). |
+| Database changes | `db/schema_v*.sql`. v21 to v52 are **run on live** (v45's e-mail part stays dormant; v52 run 2026-10-23: "Success. No rows returned"). |
 | Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password, move login to a phone, list logins) — deployed by pasting it in Supabase → Edge Functions |
 | Password reset Edge Function | `supabase/functions/password-reset/index.ts` (Telegram code) — public: **"Verify JWT" must be OFF** |
 | Backups | **Weekly** (Mondays 11:07 UB): `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups/backups/<date>` (+ `database.dump` once `SUPABASE_DB_URL` is set). **Monthly** photos (1st, 11:37 UB): `photos-backup.yml` → `scripts/backup_photos.py` → `Yak-Tag-backups/photos/<bucket>/<path>` (mirror; deleted photos stay in its git history). Both share concurrency group `backup-repo`; keepalive re-enables all three schedules. |
@@ -350,7 +350,7 @@ The owner found old test logins (ganzo@yaktag.test, admin07@yaktag.test …) sti
 
 ## 4. To do next
 
-0d. **Run `db/schema_v52_rls_speed.sql`** in Supabase → SQL Editor (speed only; any time). Its messages say how many rules were sped up / skipped; the CHECK below should list none (or only skipped ones).
+0d. ~~Run v52~~ — done 2026-10-23 on live; its CHECK returned no rows (no access rule left calling helpers per row).
 
 0c. **Deploy `admin-users` again** (it changed: `delete_login`) — any time before or after the push; until then "Устгах" says the login step failed.
 0b. **Before pushing `feature/telegram-reset-phone-only` (strict phone-only):** run `select email from auth.users where email not like '%@yaktag.invalid';` — every row must first be moved to a phone (dashboard → Хэрэглэгчид → Засах → "📱 Дээрх утсаар нэвтэрдэг болгох"; needs the new `admin-users` deployed), or that person can't log in after the push. Then deploy `password-reset` (Edge Functions → new → paste → Deploy → **Verify JWT OFF**), then push. Herders / farm admins link Telegram once (app home card or the animal page's Telegram button) to be able to reset.
