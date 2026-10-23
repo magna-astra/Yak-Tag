@@ -235,6 +235,7 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
       <input type="password" id="password" autocomplete="current-password">
     </div>
     <button class="btn-primary" id="loginBtn">Нэвтрэх</button>
+    <a class="backsite forgot" href="app/?reset=1">Нууц үгээ мартсан уу? (Telegram-аар код)</a>
     <a class="backsite" href="app/">📲 Малчны апп суулгах</a>
     <a class="backsite" href="index.html">← Вэб сайт руу буцах</a>
   </div>
@@ -287,7 +288,7 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
 <div class="toast" id="toast"></div>
 <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
 
-<script src="config.js?v=20261011"></script>
+<script src="config.js?v=20261023"></script>
 <script src="offline.js?v=20261023"></script>
 <script>
 let cow = null;
@@ -334,7 +335,7 @@ if (inHerderApp) {
   }
   const foot = document.querySelector('a.sitefoot');
   if (foot) { foot.href = 'app/'; foot.textContent = '← Миний мал'; }
-  document.querySelectorAll('a.backsite').forEach(a => {
+  document.querySelectorAll('a.backsite:not(.forgot)').forEach(a => {
     if (a.getAttribute('href') === 'app/') a.remove();       // already in the app
     else { a.href = 'app/'; a.textContent = '← Миний мал'; }
   });
@@ -346,9 +347,10 @@ async function doLogin() {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const e = document.getElementById('loginErr');
-  // Logins are phone numbers (an old e-mail login still works if typed).
-  if (!email || !password || (!email.includes('@') && normPhone(email).length < 6)) {
-    e.textContent = 'Утасны дугаар болон нууц үгээ оруулна уу.';
+  // Logins are phone numbers only.
+  const bad = loginPhoneError(email) || (password ? null : 'Нууц үгээ оруулна уу.');
+  if (bad) {
+    e.textContent = bad;
     e.style.display = 'block';
     return;
   }

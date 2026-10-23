@@ -62,6 +62,8 @@ input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px var(--gr
 .btn:disabled{opacity:.6}
 .btn.ghost{background:var(--green-l);color:var(--green-d)}
 .err{display:none;margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--red-l);color:var(--red);font-size:.9rem}
+.okmsg{display:none;margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--green-l);color:var(--green-d);font-size:.9rem}
+#rsCode{font-family:var(--mono);font-size:1.3rem;letter-spacing:.3em;text-align:center}
 .note{font-size:.84rem;color:var(--muted);margin-top:12px;text-align:center}
 .link{color:var(--green-d);font-weight:700}
 
@@ -145,7 +147,32 @@ footer a{color:var(--muted)}
     <label for="password">Нууц үг</label>
     <input type="password" id="password" autocomplete="current-password">
     <button class="btn" id="loginBtn">Нэвтрэх</button>
-    <p class="note">Нууц үгээ мартсан бол фермийн админдаа хандана уу.</p>
+    <button class="btn ghost" id="forgotBtn">Нууц үгээ мартсан уу?</button>
+  </section>
+
+  <!-- ===== Forgotten password: code through Telegram ===== -->
+  <section class="card" id="resetView" hidden>
+    <h1>Нууц үг сэргээх</h1>
+    <p class="sub">YAK-TAG-ийн Telegram бот таны Telegram руу 6 оронтой код илгээнэ.</p>
+    <div class="err" id="rsErr"></div>
+    <div class="okmsg" id="rsMsg"></div>
+    <div id="rsStep1">
+      <label for="rsPhone">Утасны дугаар</label>
+      <input type="tel" id="rsPhone" inputmode="tel" autocomplete="username" placeholder="9911 2233">
+      <button class="btn" id="rsSend">📨 Telegram-аар код авах</button>
+    </div>
+    <div id="rsStep2" hidden>
+      <label for="rsCode">Telegram-д ирсэн код</label>
+      <input type="text" id="rsCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+      <label for="rsPw">Шинэ нууц үг (8+ тэмдэгт)</label>
+      <input type="password" id="rsPw" autocomplete="new-password">
+      <label for="rsPw2">Шинэ нууц үг дахин</label>
+      <input type="password" id="rsPw2" autocomplete="new-password">
+      <button class="btn" id="rsSave">Нууц үг солих</button>
+      <button class="btn ghost" id="rsResend">Код дахин авах</button>
+    </div>
+    <p class="note">Telegram холбоогүй бол Ерөнхий админ эсвэл Админд хандаж шинэ нууц үг авна уу<span id="rsPhoneLine"></span>.</p>
+    <button class="btn ghost" id="rsBack">← Нэвтрэх рүү буцах</button>
   </section>
 
   <!-- ===== Super admin / Админ: they use the dashboard ===== -->
@@ -174,6 +201,16 @@ footer a{color:var(--muted)}
       <p class="note" style="text-align:left">Шинэ таг бол энд нээгээд мал бүртгэнэ.</p>
     </div>
 
+    <!-- Telegram: lost-animal alerts and the password-reset code -->
+    <div class="card" id="tgCard" hidden>
+      <h2>🔔 Telegram холбох</h2>
+      <p class="sub">Мал тань алга болоод хэн нэгэн уншуулбал мэдэгдэл ирнэ. Нууц үгээ мартвал сэргээх код ирнэ. Үнэгүй.</p>
+      <button class="btn" id="tgBtn">Telegram холбох</button>
+      <a class="btn" id="tgOpen" target="_blank" rel="noopener" hidden>Telegram нээх</a>
+      <p class="note" id="tgHint" hidden>Telegram нээгдэхэд <b>Start</b> (Эхлэх) дарна. Холбоос 30 минут хүчинтэй.</p>
+    </div>
+    <p class="note" id="tgOk" hidden>✓ Telegram холбогдсон — мэдэгдэл, нууц үг сэргээх код ирнэ.</p>
+
     <div class="listhead">
       <h2>Миний мал</h2>
       <span class="sub" id="count"></span>
@@ -186,7 +223,7 @@ footer a{color:var(--muted)}
   <footer><a href="../">yaktag.org</a></footer>
 </main>
 
-<script src="../config.js?v=20261011"></script>
+<script src="../config.js?v=20261023"></script>
 <script src="../offline.js?v=20261023"></script>
 <script>
 // ============================================================
@@ -205,8 +242,8 @@ function isOffline(error) {
 function cacheGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
 function cacheSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 function show(id) {
-  ['loginView', 'roleView', 'homeView'].forEach(v => { $(v).hidden = v !== id; });
-  $('outBtn').hidden = id === 'loginView';
+  ['loginView', 'resetView', 'roleView', 'homeView'].forEach(v => { $(v).hidden = v !== id; });
+  $('outBtn').hidden = id === 'loginView' || id === 'resetView';
 }
 
 // ---------- install ----------
@@ -243,9 +280,9 @@ async function doLogin() {
   const err = $('loginErr');
   const fail = m => { err.textContent = m; err.style.display = 'block'; };
   err.style.display = 'none';
-  if (!phone || !password || (!phone.includes('@') && normPhone(phone).length < 6)) {
-    return fail('Утасны дугаар болон нууц үгээ оруулна уу.');
-  }
+  const bad = loginPhoneError(phone);
+  if (bad) return fail(bad);
+  if (!password) return fail('Нууц үгээ оруулна уу.');
   $('loginBtn').disabled = true; $('loginBtn').textContent = 'Нэвтэрч байна…';
   let error = null;
   try { ({ error } = await sb.auth.signInWithPassword({ email: loginEmail(phone), password })); }
@@ -261,6 +298,91 @@ async function doLogin() {
 }
 $('loginBtn').addEventListener('click', doLogin);
 $('password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ---------- forgotten password: a code through Telegram ----------
+// supabase/functions/password-reset. Someone without Telegram asks the
+// super admin / Админ (dashboard → Хэрэглэгчид → "Нууц үг").
+async function resetCall(body) {
+  if (!navigator.onLine) return { error: 'Сүлжээ байхгүй байна. Сүлжээтэй үед дахин оролдоно уу.' };
+  try {
+    const { data, error } = await sb.functions.invoke('password-reset', { body });
+    if (!error) return { data };
+    let msg = error.message, status = 0;
+    try { status = error.context.status; const j = await error.context.json(); if (j && j.error) msg = j.error; } catch (e) {}
+    if (error.name === 'FunctionsFetchError') msg = 'Сүлжээ муу байна. Дахин оролдоно уу.';
+    else if (status === 404) msg = 'Нууц үг сэргээх үйлчилгээ одоогоор ажиллахгүй байна. Админд хандана уу.';
+    else if (status === 401) msg = 'Нууц үг сэргээх тохиргоо дутуу байна. Админд хандана уу.';
+    return { error: msg };
+  } catch (e) {
+    return { error: isOffline(e) ? 'Сүлжээ муу байна. Дахин оролдоно уу.' : String((e && e.message) || e) };
+  }
+}
+function rsSay(kind, text) {
+  $('rsErr').style.display = kind === 'err' ? 'block' : 'none';
+  $('rsMsg').style.display = kind === 'ok' ? 'block' : 'none';
+  if (kind === 'err') $('rsErr').textContent = text;
+  if (kind === 'ok') $('rsMsg').textContent = text;
+}
+let rsWait = null;
+function rsCooldown(sec) {                  // the server sends at most one code a minute
+  clearInterval(rsWait);
+  const b1 = $('rsSend'), b2 = $('rsResend');
+  const tick = () => {
+    const off = sec > 0;
+    b1.disabled = b2.disabled = off;
+    b1.textContent = off ? `📨 ${sec} сек хүлээнэ үү` : '📨 Telegram-аар код авах';
+    b2.textContent = off ? `Код дахин авах (${sec})` : 'Код дахин авах';
+    if (sec-- <= 0) clearInterval(rsWait);
+  };
+  tick(); rsWait = setInterval(tick, 1000);
+}
+async function openReset() {
+  show('resetView');
+  rsSay('', '');
+  if (!$('rsPhone').value) $('rsPhone').value = $('phone').value;
+  // the super admin's phone from the website settings (public), as the last resort
+  try {
+    const { data } = await sb.from('site_settings').select('phone').maybeSingle();
+    const p = data && String(data.phone || '').trim();
+    $('rsPhoneLine').textContent = p ? ` (📞 ${p})` : '';
+  } catch (e) {}
+}
+async function rsSend() {
+  const phone = $('rsPhone').value.trim();
+  const bad = loginPhoneError(phone);
+  if (bad) return rsSay('err', bad);
+  $('rsSend').disabled = $('rsResend').disabled = true;
+  const r = await resetCall({ action: 'request', phone });
+  if (r.error) { $('rsSend').disabled = $('rsResend').disabled = false; return rsSay('err', r.error); }
+  rsSay('ok', r.data.message || 'Код илгээлээ. Telegram-аа шалгана уу.');
+  $('rsStep1').hidden = true; $('rsStep2').hidden = false;
+  rsCooldown(60);
+  try { $('rsCode').focus(); } catch (e) {}
+}
+$('forgotBtn').addEventListener('click', openReset);
+$('rsBack').addEventListener('click', () => { clearInterval(rsWait); show('loginView'); });
+$('rsSend').addEventListener('click', rsSend);
+$('rsResend').addEventListener('click', rsSend);
+$('rsSave').addEventListener('click', async () => {
+  const phone = $('rsPhone').value.trim(), code = $('rsCode').value.replace(/\D/g, '');
+  const pw = $('rsPw').value, pw2 = $('rsPw2').value;
+  if (code.length !== 6) return rsSay('err', 'Telegram-д ирсэн 6 оронтой кодыг оруулна уу.');
+  if (pw.length < 8) return rsSay('err', 'Нууц үг хамгийн багадаа 8 тэмдэгт байна.');
+  if (pw !== pw2) return rsSay('err', 'Хоёр нууц үг таарахгүй байна.');
+  $('rsSave').disabled = true;
+  const r = await resetCall({ action: 'confirm', phone, code, password: pw });
+  $('rsSave').disabled = false;
+  if (r.error) return rsSay('err', r.error);
+  // logged straight in with the new password
+  rsSay('ok', 'Нууц үг солигдлоо. Нэвтэрч байна…');
+  clearInterval(rsWait);
+  ['rsCode', 'rsPw', 'rsPw2'].forEach(id => { $(id).value = ''; });
+  $('phone').value = phone;
+  let error = null;
+  try { ({ error } = await sb.auth.signInWithPassword({ email: loginEmail(phone), password: pw })); } catch (e) { error = e; }
+  if (error) { show('loginView'); return; }
+  boot();
+});
 
 // ---------- log out ----------
 $('outBtn').addEventListener('click', async () => {
@@ -286,7 +408,11 @@ async function boot() {
   // No signal and the login needs refreshing: open from what this phone saved.
   const noNet = !navigator.onLine || (sErr && (isOffline(sErr) || sErr.name === 'AuthRetryableFetchError'));
   offlineMode = !session && noNet && !!cacheGet('yt-uid');
-  if (!session && !offlineMode) { show('loginView'); return; }
+  if (!session && !offlineMode) {
+    // the login pages' "Нууц үгээ мартсан уу?" links come here as app/?reset=1
+    if (/[?&]reset=1/.test(location.search || '')) openReset(); else show('loginView');
+    return;
+  }
   if (session) cacheSet('yt-uid', session.user.id);
 
   let prof = null;
@@ -300,8 +426,39 @@ async function boot() {
   $('whoami').textContent = me ? (me.role === 'farm_admin' ? 'Ферм админ — фермийн бүх мал' : 'Малчин — таны мал') : '';
   watchQueue();
   setupNfc();
+  if (!offlineMode) telegramCard();
   await loadAnimals();
 }
+
+// ---------- Telegram link (lost-animal alerts + password-reset code) ----------
+// Same database calls as the animal page's Telegram button (schema v38).
+let tgPoll = null;
+async function telegramCard() {
+  let st = null;
+  try { ({ data: st } = await sb.rpc('telegram_status')); } catch (e) {}
+  if (!st || !st.configured) { $('tgCard').hidden = true; $('tgOk').hidden = true; return; }
+  $('tgOk').hidden = !st.linked;
+  $('tgCard').hidden = !!st.linked;
+}
+$('tgBtn').addEventListener('click', async () => {
+  $('tgBtn').disabled = true;
+  let lk = null, error = null;
+  try { ({ data: lk, error } = await sb.rpc('telegram_link_code')); } catch (e) { error = e; }
+  $('tgBtn').disabled = false;
+  if (error || !lk || !lk.url) { alert(mnError((error && error.message) || 'Холбоос үүсгэж чадсангүй.')); return; }
+  // a real link the person taps: opening Telegram from a script is often blocked
+  $('tgOpen').href = lk.url;
+  $('tgOpen').hidden = false; $('tgHint').hidden = false; $('tgBtn').hidden = true;
+  clearInterval(tgPoll);
+  let n = 0;
+  tgPoll = setInterval(async () => {
+    if (++n > 90) { clearInterval(tgPoll); return; }
+    try {
+      const { data } = await sb.rpc('telegram_status');
+      if (data && data.linked) { clearInterval(tgPoll); $('tgCard').hidden = true; $('tgOk').hidden = false; }
+    } catch (e) {}
+  }, 4000);
+});
 
 // ---------- my animals ----------
 // The database returns only what this login may see: a herder's own

@@ -18,6 +18,9 @@
 //   · an active SUPER ADMIN — anyone, any role (also "Админ");
 //   · an active АДМИН (role 'admin', schema v49) — only малчин / ферм
 //     админ, only in farms he created himself.
+// Farm admins and herders: never (a forgotten password is reset by the
+// person himself through Telegram — password-reset — or, as the last
+// resort, by the super admin / Админ here).
 // The caller is identified from their own login token.
 //
 // Deploy: Supabase dashboard → Edge Functions → Deploy a new function

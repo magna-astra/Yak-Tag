@@ -116,11 +116,10 @@ async function myProfile() {
 }
 
 // ---------- login by phone ----------
-// Herders may have no email. The super admin creates them with a phone
-// number (supabase/functions/admin-users), stored as the internal login
-// <digits>@yaktag.invalid — a reserved domain that never receives mail.
-// Anything typed with an @ is used as a normal email, so existing
-// email logins keep working. MUST match the Edge Function exactly.
+// Every login is a phone number (supabase/functions/admin-users creates
+// them), stored as the internal login <digits>@yaktag.invalid — a
+// reserved domain that never receives mail. MUST match the Edge
+// Functions (admin-users, password-reset) exactly.
 const HERDER_EMAIL_DOMAIN = 'yaktag.invalid';
 
 function normPhone(s) {
@@ -129,9 +128,20 @@ function normPhone(s) {
   return d;
 }
 
+// Phone number only (owner, 2026-10-23): every login is a phone number,
+// typed on the number keypad. No e-mail logins any more.
 function loginEmail(input) {
-  const v = String(input || '').trim();
-  return v.includes('@') ? v.toLowerCase() : `${normPhone(v)}@${HERDER_EMAIL_DOMAIN}`;
+  return `${normPhone(input)}@${HERDER_EMAIL_DOMAIN}`;
+}
+
+// The check every login / reset box uses before sending anything.
+// Returns the message to show, or null when the number looks right.
+function loginPhoneError(input) {
+  const s = String(input || '').trim();
+  if (!s) return 'Утасны дугаараа оруулна уу.';
+  if (/[^\d\s+()-]/.test(s)) return 'Зөвхөн утасны дугаараа оруулна уу (жишээ: 9911 2233).';
+  if (normPhone(s).length < 6) return 'Утасны дугаараа бүтэн оруулна уу.';
+  return null;
 }
 
 // Calendar date in Mongolia as YYYY-MM-DD. toISOString() gives the UTC
