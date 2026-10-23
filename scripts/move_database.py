@@ -77,8 +77,24 @@ class Conn:
                 raw = input("  connection string: ").strip()
             if "[YOUR-PASSWORD]" not in raw:
                 sys.exit("  It must still contain [YOUR-PASSWORD] — the password is typed separately, hidden. Run again.")
-            pw = getpass.getpass(f"  {label} database password (hidden): ")
-            raw = raw.replace("[YOUR-PASSWORD]", urllib.parse.quote(pw, safe=""))
+            # the password is tried at once, and asked again when it is wrong
+            for _ in range(3):
+                pw = getpass.getpass(f"  {label} database password (hidden): ").strip()
+                self._parse(raw.replace("[YOUR-PASSWORD]", urllib.parse.quote(pw, safe="")))
+                why = self.login_error()
+                if not why:
+                    print("    ok, password accepted")
+                    return
+                if why != "password":
+                    # after several wrong passwords Supabase blocks this computer for a while
+                    sys.exit(f"  {label}: can't connect — {why}\n  If wrong passwords were tried before: "
+                             "Database > Settings > Network Bans > unban this computer, then run again.")
+                print("    WRONG password. Paste it again (if you do not have it: Database > Settings > Reset database password).")
+            sys.exit(f"  {label}: 3 wrong passwords — nothing done.")
+        self._parse(raw)
+
+    def _parse(self, raw):
+        label = self.label
         u = urllib.parse.urlparse(raw)
         if u.scheme not in ("postgres", "postgresql") or not u.hostname:
             sys.exit(f"  {label}: that is not a postgresql:// connection string.")
@@ -95,6 +111,17 @@ class Conn:
 
     def args(self):
         return ["-h", self.host, "-p", self.port, "-U", self.user, "-d", self.db]
+
+    def login_error(self):
+        """None when the database lets us in; "password" when the password is wrong; else the error."""
+        r = subprocess.run([tool("psql"), "-X", "-w", "-q", "-A", "-t", *self.args(), "-c", "select 1"],
+                           capture_output=True, text=True, encoding="utf-8", env=self.env())
+        if not r.returncode:
+            return None
+        err = r.stderr.strip()
+        if "password authentication failed" in err or "no password supplied" in err:
+            return "password"
+        return err[:400] or "unknown error"
 
     def sql(self, query):
         """One query → list of rows (tab-separated text)."""
@@ -435,16 +462,46 @@ def quoted(path):
     return "/".join(urllib.parse.quote(p, safe="") for p in path.split("/"))
 
 
-def get_keys():
-    ok_ = os.environ.get("YT_OLD_KEY") or getpass.getpass("\n  OLD project secret key (sb_secret_… / service_role, hidden): ")
-    nk = os.environ.get("YT_NEW_KEY") or getpass.getpass("  NEW project secret key (sb_secret_… / service_role, hidden): ")
-    return ok_.strip(), nk.strip()
+def key_problem(url, key):
+    """None when this is the project's secret key (it may list the logins); else why not."""
+    if key.startswith("sb_publishable_"):
+        return "that is the PUBLISHABLE key — the SECRET one is needed (Secret keys, sb_secret_…)"
+    if not (key.startswith("sb_secret_") or key.startswith("eyJ")):
+        return "that is not a key (it should start with sb_secret_)"
+    try:
+        api(url, key, "GET", "/auth/v1/admin/users?page=1&per_page=1")
+        return None
+    except urllib.error.HTTPError as e:
+        return f"the project refused it ({e.code}) — wrong key, or a key of the other project"
+    except urllib.error.URLError as e:
+        sys.exit(f"  can't reach {url} — {e.reason}")
+
+
+def get_keys(old=None, new=None):
+    keys = []
+    for label, env_key, conn in (("OLD", "YT_OLD_KEY", old), ("NEW", "YT_NEW_KEY", new)):
+        if os.environ.get(env_key):
+            keys.append(os.environ[env_key].strip())
+            continue
+        url = project_url(conn, f"YT_{label}_URL") if conn else None
+        for _ in range(3):
+            k = getpass.getpass(f"\n  {label} project secret key (sb_secret_… / service_role, hidden): ").strip()
+            why = key_problem(url, k) if url else None
+            if not why:
+                if url:
+                    print("    ok, key accepted")
+                break
+            print(f"    WRONG: {why}. Paste it again.")
+        else:
+            sys.exit(f"  {label}: 3 wrong keys — nothing done.")
+        keys.append(k)
+    return tuple(keys)
 
 
 def cmd_photos(old, new, keys=None):
     guard_new(old, new)
     ou, nu = project_url(old, "YT_OLD_URL"), project_url(new, "YT_NEW_URL")
-    ok_, nk = keys or get_keys()
+    ok_, nk = keys or get_keys(old, new)
     problems = 0
     for b in BUCKETS:
         src = list_files(ou, ok_, b)
@@ -483,7 +540,7 @@ def main():
     try:
         if cmd == "move":
             # everything in one go, secrets asked once: check → database → photos → compare
-            keys = get_keys()
+            keys = get_keys(old, new)
             # from here on, everything printed is also written to a log file (no secret is
             # ever printed), so the result can be read without looking at this window
             log = os.path.join(tempfile.gettempdir(), "yaktag-move-log.txt")
