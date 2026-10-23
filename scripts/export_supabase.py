@@ -104,6 +104,10 @@ def main():
         print("::error::SUPABASE_URL or SUPABASE_SERVICE_KEY not set")
         sys.exit(1)
 
+    # shown on the run page and kept in README.txt: which project was read (after a move)
+    ref = URL.split("//", 1)[-1].split(".", 1)[0]
+    print(f"::notice title=Backup source::Tables read from project {ref}")
+
     outdir = sys.argv[1] if len(sys.argv) > 1 else "backups/manual"
     os.makedirs(outdir, exist_ok=True)
 
@@ -119,6 +123,7 @@ def main():
     with open(os.path.join(outdir, "README.txt"), "w", encoding="utf-8") as f:
         f.write(
             f"YAK-TAG backup\n"
+            f"Project: {ref}\n"
             f"Tables exported: {ok} of {len(TABLES)}\n"
             f"Total rows: {total}\n\n"
             f"Restore:\n"

@@ -85,6 +85,9 @@ def main():
     num = int(r.stdout.strip().splitlines()[-1])
     major = num // 10000
     print(f"Connected. Server version {major} ({num}).")
+    # shown on the run page: which project the full copy comes from (after a move)
+    ref = user.split(".", 1)[1] if "." in user else host
+    print(f"::notice title=Backup source::Full copy from project {ref}")
     out = os.environ.get("GITHUB_OUTPUT")
     if out:
         with open(out, "a", encoding="utf-8") as f:
