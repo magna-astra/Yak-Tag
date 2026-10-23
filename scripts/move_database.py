@@ -363,12 +363,34 @@ def cmd_copy(old, new, fresh=False, keep_files=False):
             print("  " + "\n  ".join(err.splitlines()[-12:]))
             sys.exit(1)
         new.sql("notify pgrst, 'reload schema'")
+        copy_db_settings(old, new)
         print(f"\nDone in {time.time() - t0:.0f} s. Next: python scripts/move_database.py verify")
     finally:
         if keep_files:
             print(f"(files kept in {work} — they contain personal data: delete the folder afterwards)")
         else:
             shutil.rmtree(work, ignore_errors=True)     # the copy holds personal data: never leave it lying around
+
+
+def db_settings(conn):
+    """Settings on the database itself ("alter database … set"), e.g. v21's Mongolia time zone.
+    pg_dump of the tables doesn't carry them."""
+    rows = conn.sql("select unnest(setconfig) from pg_db_role_setting where setrole = 0 "
+                    "and setdatabase = (select oid from pg_database where datname = current_database())")
+    return dict(r[0].split("=", 1) for r in rows)
+
+
+def copy_db_settings(old, new):
+    a, b = db_settings(old), db_settings(new)
+    name = new.sql("select quote_ident(current_database())")[0][0]
+    for k, v in sorted(a.items()):
+        if b.get(k) == v:
+            continue
+        try:
+            new.sql(f"alter database {name} set {k} to {lit(v)}")
+            print(f"  database setting {k} = {v}: copied")
+        except RuntimeError as e:          # one Supabase keeps for itself — reported, not fatal
+            print(f"  database setting {k} = {v}: NOT copied ({e}) — set it by hand")
 
 
 # ---------------------------------------------------------------- verify
@@ -419,6 +441,11 @@ def cmd_verify(old, new):
         a[f"({label}) differing"], b[f"({label}) differing"] = 0, len(diff)
         for k in diff[:8]:
             print(f"  DIFFERENT {label}: {k}\n      old {pa[part].get(k)}\n      new {pb[part].get(k)}")
+    da, dn = db_settings(old), db_settings(new)
+    diff = sorted(k for k in set(da) | set(dn) if da.get(k) != dn.get(k))
+    a["(database settings) differing"], b["(database settings) differing"] = 0, len(diff)
+    for k in diff:
+        print(f"  DIFFERENT database setting {k}: old {da.get(k)}  new {dn.get(k)}")
     print(f"\n  {'':44} {'old':>8} {'new':>8}")
     for k in sorted(set(a) | set(b)):
         same = a.get(k) == b.get(k)
@@ -531,7 +558,7 @@ def cmd_catchup(old, new):
                           "array[" + ",".join(lit(k) for k in clash) + "]::text[]) order by " + born + ";")
 
     # logins are compared but never changed here (a password changed in the old project shows up)
-    lq = ("select u.id::text, md5(concat_ws('|', u.email, u.encrypted_password, to_jsonb(u)->>'banned_until', "
+    lq = ("set timezone to 'UTC'; select u.id::text, md5(concat_ws('|', u.email, u.encrypted_password, to_jsonb(u)->>'banned_until', "
           "to_jsonb(u)->>'phone')) from auth.users u")
     la, lb = dict(old.sql(lq)), dict(new.sql(lq))
     logins = sorted(k for k in la if la[k] != lb.get(k))
