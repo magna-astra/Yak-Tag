@@ -12,10 +12,13 @@ YAK-TAG — move the database to another Supabase project (e.g. Sydney → Tokyo
                                               #   changed ones; safe to run again)
     python scripts/move_database.py verify    # row counts old vs new, table by table
     python scripts/move_database.py move      # all four in one go (secrets asked once)
+    python scripts/move_database.py catchup   # after the switch: rows entered in OLD after the
+                                              #   copy → NEW (only missing rows; nothing deleted)
 
 The OLD project is only ever READ. Nothing is written to it.
 Refuses to write into the project the website uses now (the address in
-config.js), so the live database can never be wiped by mistake.
+config.js), so the live database can never be wiped by mistake — except
+`catchup`, which only ADDS missing rows to it, after you type yes.
 
 Asks, each run, in this window (nothing is saved, passwords never shown):
   · each project's "Session pooler" connection string, exactly as Supabase
@@ -425,6 +428,132 @@ def cmd_verify(old, new):
     return bad == 0
 
 
+# ---------------------------------------------------------------- catch-up
+# Rows entered in the OLD project after the copy, while the website still
+# used it. Copies into NEW only what NEW doesn't have; never deletes or
+# changes a NEW row. Counters and settings that NEW keeps for itself are left out.
+CATCHUP_SKIP = {"lookup_attempts", "lookup_rate", "heartbeat", "app_secrets"}
+
+
+def table_info(conn):
+    """{table: (primary-key columns, pk is a counter, copyable columns, "made at" column)}."""
+    rows = conn.sql("""
+      select c.relname,
+        coalesce((select string_agg(quote_ident(a.attname), ',' order by k.ord)
+                  from unnest(i.indkey) with ordinality k(attnum, ord)
+                  join pg_attribute a on a.attrelid = c.oid and a.attnum = k.attnum), ''),
+        coalesce(i.indnatts = 1 and exists (select 1 from pg_attrdef d where d.adrelid = c.oid
+                  and d.adnum = i.indkey[0] and pg_get_expr(d.adbin, d.adrelid) like 'nextval(%'), false),
+        (select string_agg(quote_ident(attname), ',' order by attnum) from pg_attribute
+          where attrelid = c.oid and attnum > 0 and not attisdropped and attgenerated = ''),
+        coalesce((select quote_ident(a.attname) from pg_attribute a join pg_attrdef d
+                  on d.adrelid = a.attrelid and d.adnum = a.attnum
+                  where a.attrelid = c.oid and a.atttypid = 'timestamptz'::regtype and not a.attisdropped
+                    and pg_get_expr(d.adbin, d.adrelid) = 'now()' order by a.attnum limit 1), '')
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace and n.nspname = 'public'
+      left join pg_index i on i.indrelid = c.oid and i.indisprimary
+      where c.relkind = 'r' order by 1""")
+    return {t: (pk, serial == "t", cols, born) for t, pk, serial, cols, born in rows}
+
+
+def row_sums(conn, table, pk):
+    # one row per line: primary key as text, md5 of the whole row (UTC so times print alike)
+    return dict(conn.sql(f"set timezone to 'UTC'; select row({pk})::text, md5(t::text) from public.{table} t"))
+
+
+def cmd_catchup(old, new):
+    if old.ref and old.ref == new.ref:
+        sys.exit("OLD and NEW are the same project. Nothing done.")
+    if old.ref and old.ref == live_ref():
+        sys.exit(f"OLD ({old.ref}) is the project the website uses now — catch-up copies FROM the old one "
+                 "INTO the live one. Swap them. Nothing done.")
+    info = table_info(old)
+    plan, edited, script = [], [], ["set timezone to 'UTC';"]
+    for t, (pk, serial, cols, born) in sorted(info.items()):
+        if t in CATCHUP_SKIP:
+            continue
+        if not pk:
+            print(f"  {t}: no primary key — not compared")
+            continue
+        a, b = row_sums(old, t, pk), row_sums(new, t, pk)
+        only_old = sorted(k for k in a if k not in b)
+        differ = sorted(k for k in a if k in b and a[k] != b[k])
+        # a counter number on both sides with another "made at" time = two different new rows
+        # (both projects handed out the same number); same time = one row edited → left alone
+        clash = []
+        if serial and born and differ:
+            q = f"set timezone to 'UTC'; select row({pk})::text, {born}::text from public.{t}"
+            ta, tb = dict(old.sql(q)), dict(new.sql(q))
+            clash = [k for k in differ if ta.get(k) != tb.get(k)]
+        edited += [(t, k) for k in differ if k not in clash]
+        if clash:
+            # already copied by an earlier run (under a new number): same content apart from the number
+            q = (f"set timezone to 'UTC'; select row({pk})::text, md5((to_jsonb(t) - {lit(pk.strip(chr(34)))})::text) "
+                 f"from public.{t} t")
+            ca, cb = dict(old.sql(q)), set(dict(new.sql(q)).values())
+            clash = [k for k in clash if ca[k] not in cb]
+        if not (only_old or clash):
+            continue
+        keys = only_old + clash
+        plan.append((t, len(only_old), len(clash)))
+        arr = "array[" + ",".join(lit(k) for k in keys) + "]::text[]"
+        r = subprocess.run([tool("psql"), "-X", "-q", *old.args(), "-c",
+                            f"set timezone to 'UTC'; copy (select {cols} from public.{t} where row({pk})::text = any({arr})) "
+                            f"to stdout with (format csv)"],
+                           capture_output=True, text=True, encoding="utf-8", env=old.env())
+        if r.returncode:
+            sys.exit(f"reading {t} failed: {r.stderr.strip()[:400]}")
+        tmp = f"_cu_{t}"
+        script += [f"create temp table {tmp} (like public.{t});",
+                   f"copy {tmp} ({cols}) from stdin with (format csv);", r.stdout.rstrip("\n"), "\\."]
+        # the counter must stay above every number in the table — moved up after the rows
+        # that keep their number, so the clashing ones get numbers nobody has
+        seq = f"pg_get_serial_sequence('public.{t}', '{pk}')"
+        bump = (f"select setval({seq}, greatest((select max({pk}) from public.{t}), "
+                f"coalesce(pg_sequence_last_value({seq}::regclass), 1)));")
+        if only_old:
+            script.append(f"insert into public.{t} ({cols}) select {cols} from {tmp} where row({pk})::text = any("
+                          "array[" + ",".join(lit(k) for k in only_old) + "]::text[]);")
+            if serial:
+                script.append(bump)
+        if clash:
+            rest = ",".join(c for c in cols.split(",") if c != pk)
+            script.append(f"insert into public.{t} ({rest}) select {rest} from {tmp} where row({pk})::text = any("
+                          "array[" + ",".join(lit(k) for k in clash) + "]::text[]) order by " + born + ";")
+
+    # logins are compared but never changed here (a password changed in the old project shows up)
+    lq = ("select u.id::text, md5(concat_ws('|', u.email, u.encrypted_password, to_jsonb(u)->>'banned_until', "
+          "to_jsonb(u)->>'phone')) from auth.users u")
+    la, lb = dict(old.sql(lq)), dict(new.sql(lq))
+    logins = sorted(k for k in la if la[k] != lb.get(k))
+
+    print()
+    for t, n_new, n_clash in plan:
+        print(f"  {t}: {n_new} row(s) only in the old project" + (f", {n_clash} with a number already used in the new one (gets a new number)" if n_clash else ""))
+    for t, k in edited:
+        print(f"  {t} {k}: changed on one side — NOT touched (check by hand)")
+    for k in logins:
+        print(f"  login {k}: differs (new / changed password?) — NOT touched (check by hand)")
+    if not plan:
+        print("  Nothing to copy — the new project has every row of the old one.")
+        return True
+    if input(f"\n  Copy these rows into the NEW project {new.ref}? Type yes: ").strip().lower() != "yes":
+        sys.exit("  Not confirmed — nothing done.")
+    work = tempfile.mkdtemp(prefix="yaktag-catchup-")
+    try:
+        f = os.path.join(work, "catchup.sql")
+        with open(f, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write("\n".join(script) + "\n")
+        rc, err = run_psql_files(new, [f])
+        if rc:
+            sys.exit("  Copy failed, nothing changed (one transaction): " + err[:600])
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    print("  Copied. The new project now has every row of the old one.")
+    return True
+
+
+
 # ---------------------------------------------------------------- photos
 def api(url, key, method, path, body=None, data=None, headers=None):
     h = {"apikey": key, "Authorization": f"Bearer {key}", **(headers or {})}
@@ -531,7 +660,7 @@ def cmd_photos(old, new, keys=None):
 
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] not in ("check", "copy", "photos", "verify", "move"):
+    if len(sys.argv) < 2 or sys.argv[1] not in ("check", "copy", "photos", "verify", "move", "catchup"):
         print(__doc__)
         return
     cmd = sys.argv[1]
@@ -570,6 +699,8 @@ def main():
             cmd_copy(old, new, fresh="--fresh" in sys.argv, keep_files="--keep-files" in sys.argv)
         if cmd == "verify":
             sys.exit(0 if cmd_verify(old, new) else 1)
+        if cmd == "catchup":
+            sys.exit(0 if cmd_catchup(old, new) else 1)
         if cmd == "photos":
             sys.exit(0 if cmd_photos(old, new) else 1)
     except RuntimeError as e:
