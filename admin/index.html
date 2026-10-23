@@ -596,6 +596,14 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
           </tbody>
         </table>
       </div>
+      <!-- Logins whose user was deleted before "Устгах" removed logins too
+           (2026-10-23), or with a farm. Super admin only. -->
+      <div id="orphanBox" class="super-only" style="display:none;margin-top:18px">
+        <h3 style="font-size:.95rem;margin-bottom:4px">Профайлгүй нэвтрэх эрх <span id="orphanCount" class="count-note"></span></h3>
+        <p class="count-note" style="margin-bottom:8px">Хэрэглэгч нь өмнө устгагдсан ч нэвтрэх эрх нь үлдсэн. Устгавал ямар ч мэдээлэл алга болохгүй.</p>
+        <div id="orphanList"></div>
+        <button class="pwbtn" id="orphanAll" style="margin-top:8px;color:#B3341F">Бүгдийг устгах</button>
+      </div>
     </div>
   </main>
 </div>
@@ -1098,6 +1106,44 @@ async function loadLogins(){
   if(error || !data || !Array.isArray(data.logins)) return {};
   return Object.fromEntries(data.logins.map(l=>[l.id,l]));
 }
+// Logins with no profile (their user was deleted earlier): listed for the
+// super admin with a delete button. Nothing else is attached to them.
+function orphanLogins(){
+  if(myRole!=='super_admin') return [];
+  const ids = new Set(users.map(u=>u.id));
+  return Object.values(userLogins).filter(l=>!ids.has(l.id) && l.id!==myId);
+}
+function renderOrphans(){
+  const list = orphanLogins();
+  document.getElementById('orphanBox').style.display = list.length ? '' : 'none';
+  document.getElementById('orphanCount').textContent = list.length ? `(${list.length})` : '';
+  document.getElementById('orphanList').innerHTML = list.map(l=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)">
+      <span style="font-family:var(--mono,monospace)">${esc(l.phone_login ? l.login : '✉ ' + l.login)}</span>
+      <button class="pwbtn" style="margin-left:auto;color:#B3341F" data-orphan="${esc(l.id)}">Устгах</button>
+    </div>`).join('');
+}
+async function deleteOrphans(ids){
+  let ok = 0, bad = [];
+  for(const id of ids){
+    const {error} = await adminUsers({action:'delete_login', user_id:id});
+    if(error) bad.push(error); else ok++;
+  }
+  toast(bad.length ? `${ok} устгагдлаа, ${bad.length} нь болсонгүй: ${bad[0]}` : `${ok} нэвтрэх эрх устгагдлаа`, !!bad.length);
+  loadUsers();
+}
+document.getElementById('orphanList').addEventListener('click', e=>{
+  const b = e.target.closest('[data-orphan]');
+  if(!b) return;
+  const l = userLogins[b.dataset.orphan];
+  if(!confirm(`"${l ? l.login : ''}" нэвтрэх эрхийг устгах уу?`)) return;
+  deleteOrphans([b.dataset.orphan]);
+});
+document.getElementById('orphanAll').addEventListener('click', ()=>{
+  const list = orphanLogins();
+  if(!list.length || !confirm(`Профайлгүй ${list.length} нэвтрэх эрхийг бүгдийг устгах уу?`)) return;
+  deleteOrphans(list.map(l=>l.id));
+});
 async function loadUsers(){
   const [{data,error}, logins] = await Promise.all([
     sb.from('admin_users').select('*').order('full_name'), loadLogins()]);
@@ -1108,6 +1154,7 @@ async function loadUsers(){
   }
   users = data||[];
   userLogins = logins;
+  renderOrphans();
   document.getElementById('usersBody').innerHTML = users.map(u=>`
     <tr class="userrow">
       <td><b>${esc(u.full_name)}</b>${userLogins[u.id] && !userLogins[u.id].phone_login
@@ -1281,7 +1328,14 @@ async function delUser(id){
     ({data, error} = await sb.rpc('delete_profile',{p_profile_id:id,p_force:true}));
     if(error){toast(mnError(error.message),true);return;}
   }
-  toast(data==='disabled' ? 'Энэ хэрэглэгч түүхтэй тул устгасангүй — нэвтрэх эрхийг хаалаа' : 'Хэрэглэгч устгагдлаа');
+  // The login goes too (admin-users → delete_login): deleted, or — when the
+  // database keeps the user for his history — blocked for good, its phone
+  // number free for a new account.
+  const {error:le} = await adminUsers({action:'delete_login', user_id:id});
+  if(le) toast(`Хэрэглэгч ${data==='disabled'?'хаагдлаа':'устгагдлаа'}, гэхдээ нэвтрэх эрхийг устгаж чадсангүй: ${le}`,true);
+  else toast(data==='disabled'
+    ? 'Энэ хэрэглэгч түүхтэй тул бүртгэл нь үлдэв — нэвтрэх эрхийг бүрмөсөн хаалаа'
+    : 'Хэрэглэгч, нэвтрэх эрхийн хамт устгагдлаа');
   loadUsers();
 }
 
@@ -2100,7 +2154,9 @@ function openUser(id){
   document.getElementById('uActive').value = String(u.active);
   const L = userLogins[id];
   document.getElementById('uLoginBox').style.display = L ? '' : 'none';
-  document.getElementById('uLogin').textContent = L ? (L.phone_login ? L.login : '✉ ' + L.login + ' (и-мэйл)') : '';
+  document.getElementById('uLogin').textContent = !L ? ''
+    : /^removed-/.test(L.login) ? 'хаагдсан (устгагдсан хэрэглэгч)'
+    : L.phone_login ? L.login : '✉ ' + L.login + ' (и-мэйл)';
   document.getElementById('userModal').classList.add('on');
 }
 // Login → the phone number in the field above (same password).
@@ -2245,7 +2301,7 @@ const AUDIT_ACT = {
   cattle_transfer:'Эзэмшигч солив', telegram_link:'Telegram холбов', site_contacts:'Вэб сайтын холбоо барих мэдээлэл засав',
   tags_pause:'Таг түр зогсоов', tags_resume:'Таг дахин идэвхжүүлэв', farm_owner:'Фермийг Админд хариуцуулав',
   create_user:'Хэрэглэгч үүсгэв', set_password:'Нууц үг солив', set_login_phone:'Нэвтрэх утас солив',
-  password_reset_telegram:'Telegram-аар нууц үгээ сэргээв'
+  password_reset_telegram:'Telegram-аар нууц үгээ сэргээв', login_delete:'Нэвтрэх эрх устгав'
 };
 const AUDIT_KIND = {
   cattle: ['register_cattle','admin_edit_cattle','cattle_delete','report_lost','report_found','tag_replace',
@@ -2253,7 +2309,7 @@ const AUDIT_KIND = {
   records:['feeding_delete','vaccination_edit','repro_edit','repro_delete'],
   tags:   ['tags_create','tags_assign_farm','tag_write','tag_uid','tag_recycle','tag_retire','tag_delete','tags_pause','tags_resume'],
   people: ['admin_edit_profile','profile_delete','farm_create','farm_archive','farm_restore','farm_delete','farm_owner','telegram_link','site_contacts',
-           'create_user','set_password','set_login_phone','password_reset_telegram'],
+           'create_user','set_password','set_login_phone','password_reset_telegram','login_delete'],
   deletes:['cattle_delete','photo_delete','feeding_delete','repro_delete','tag_delete','profile_delete','farm_delete']
 };
 const REPRO_KIND_MN = {insemination:'хээлтүүлэг', pregnancy_check:'хээл шалгалт', calving:'төллөлт', abortion:'хээл хаялт'};

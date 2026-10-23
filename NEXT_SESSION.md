@@ -332,8 +332,17 @@ Live check of 3u first: pushed, Pages built, app/ + manifest + icons + changed p
 - `admin-users` unchanged in rights (an attempt to let farm admins reset passwords was undone at the owner's word).
 - Tests (Node, fakes): password-reset 19, admin-users 18, app 41, dashboard 11, cow + sw 13 — 102 pass.
 
+## 3w. "Устгах" removes the login too (2026-10-23, branch `feature/delete-removes-login`)
+
+The owner found old test logins (ganzo@yaktag.test, admin07@yaktag.test …) still in `auth.users`: `delete_profile` only ever removed (or switched off) the PROFILE. Now:
+- `admin-users` → `delete_login` (super admin only, never himself): no profile left → `auth.admin.deleteUser`; profile kept as `disabled` (history) → login renamed `removed-<id>@yaktag.invalid` + banned (`ban_duration 876000h`), so the phone number is free; profile still in use → refused. History `login_delete {login, result}`. `set_login_phone` lifts the ban when the profile is active again.
+- Dashboard: `delUser` calls `delete_login` after `delete_profile` (and says plainly if that step failed); Хэрэглэгчид shows "Профайлгүй нэвтрэх эрх" (logins with no profile — e.g. from deleted farms or old deletions) with Устгах / "Бүгдийг устгах" (super admin). A blocked login shows as "хаагдсан" in the edit window.
+- `db/cleanup_email_logins.sql` (list e-mail logins; delete named ones safely) stays for a one-off cleanup.
+- Tests: admin-users 27, dashboard delete 9, dashboard 11 (+ app 41, cow/sw 13, reset 19) — 120 pass. Row-button wiring unchanged.
+
 ## 4. To do next
 
+0c. **Deploy `admin-users` again** (it changed: `delete_login`) — any time before or after the push; until then "Устгах" says the login step failed.
 0b. **Before pushing `feature/telegram-reset-phone-only` (strict phone-only):** run `select email from auth.users where email not like '%@yaktag.invalid';` — every row must first be moved to a phone (dashboard → Хэрэглэгчид → Засах → "📱 Дээрх утсаар нэвтэрдэг болгох"; needs the new `admin-users` deployed), or that person can't log in after the push. Then deploy `password-reset` (Edge Functions → new → paste → Deploy → **Verify JWT OFF**), then push. Herders / farm admins link Telegram once (app home card or the animal page's Telegram button) to be able to reset.
 0. **After pushing `feature/phone-login-herder-app`:** (a) re-deploy the Edge Function `admin-users` (paste the file); (b) dashboard → Хэрэглэгчид → every "✉ И-мэйлээр нэвтэрдэг" row → Засах → phone in "Утас" → "📱 Дээрх утсаар нэвтэрдэг болгох" (own account too); check in SQL Editor: `select email from auth.users where email not like '%@yaktag.invalid';` → no rows; (c) open https://yaktag.org/app/ on an Android and an iPhone, install, log in as a herder.
 

@@ -7,6 +7,9 @@
 -- Authentication → Users. Run in Supabase → SQL Editor:
 --   PART 1 first (read only) — see every e-mail login and what it has;
 --   PART 2 with the e-mails you want gone typed into the list.
+-- Since the same day the dashboard does this itself: "Устгах" removes the
+-- login too, and Хэрэглэгчид lists leftover logins ("Профайлгүй нэвтрэх
+-- эрх") with a delete button — this script is only for a one-off cleanup.
 -- A REAL person who logs in with an e-mail is NOT deleted: move him to a
 -- phone in the dashboard (Хэрэглэгчид → Засах → "Дээрх утсаар
 -- нэвтэрдэг болгох").

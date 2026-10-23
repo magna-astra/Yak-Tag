@@ -9,6 +9,8 @@
 //   set_login_phone  — turns a user's login into a phone number (also an
 //                      old e-mail login); the password stays the same
 //   list_logins      — which login each user has (to find e-mail logins)
+//   delete_login     — "Устгах" in the dashboard removes the login too
+//                      (super admin only; see below)
 //
 // Phone logins are stored as <digits>@yaktag.invalid, a reserved domain
 // that never receives mail; people only ever see and type the number.
@@ -175,7 +177,7 @@ Deno.serve(async (req) => {
     if (phone.length < 6 || phone.length > 15) {
       return reply(400, { error: "Утасны дугаар буруу." });
     }
-    const { data: p } = await admin.from("profiles").select("farm_id, role").eq("id", id).maybeSingle();
+    const { data: p } = await admin.from("profiles").select("farm_id, role, status").eq("id", id).maybeSingle();
     if (!(await mayManage(p))) {
       return reply(403, { error: "Энэ хэрэглэгчийн нэвтрэх нэрийг солих эрхгүй." });
     }
@@ -183,7 +185,11 @@ Deno.serve(async (req) => {
     const login = `${phone}@${HERDER_EMAIL_DOMAIN}`;
     if (before?.user?.email === login) return reply(200, { ok: true, login: phone, unchanged: true });
 
-    const { error } = await admin.auth.admin.updateUserById(id, { email: login, email_confirm: true });
+    // An active user gets a working login back, also after "Устгах" had
+    // blocked it (delete_login below) and he was switched on again.
+    const { error } = await admin.auth.admin.updateUserById(id, {
+      email: login, email_confirm: true, ...(p?.status === "active" ? { ban_duration: "none" } : {}),
+    });
     if (error) {
       const dup = /already|registered|exists/i.test(error.message);
       return reply(400, { error: dup ? "Энэ утасны дугаараар өөр хэрэглэгч нэвтэрдэг." : error.message });
@@ -199,6 +205,48 @@ Deno.serve(async (req) => {
       detail: { from: old.endsWith(`@${HERDER_EMAIL_DOMAIN}`) ? old.split("@")[0] : old, to: phone },
     });
     return reply(200, { ok: true, login: phone });
+  }
+
+  // ---- delete_login ----
+  // After the dashboard's "Устгах" (delete_profile), the login goes too:
+  //   · no profile left            → the login is deleted;
+  //   · profile kept as 'disabled' (it has history the database keeps)
+  //                                → the login is blocked for good and renamed,
+  //                                  so its phone number is free for a new account;
+  //   · a profile still in use     → refused (delete the user first).
+  // Also for logins whose profile was deleted earlier (the dashboard lists
+  // them under "Профайлгүй нэвтрэх эрх"). Super admin only — deleting is his
+  // alone — and never his own login.
+  if (body.action === "delete_login") {
+    if (!isSuper) return reply(403, { error: "Зөвхөн ерөнхий админ устгана." });
+    const id = String(body.user_id ?? "");
+    if (!id) return reply(400, { error: "user_id required" });
+    if (id === callerId) return reply(400, { error: "Өөрийгөө устгах боломжгүй." });
+    const { data: before } = await admin.auth.admin.getUserById(id);
+    if (!before?.user) return reply(200, { ok: true, result: "gone" });
+    const old = before.user.email ?? "";
+    const oldLogin = old.endsWith(`@${HERDER_EMAIL_DOMAIN}`) ? old.split("@")[0] : old;
+
+    const { data: p } = await admin.from("profiles").select("status, farm_id").eq("id", id).maybeSingle();
+    if (p && p.status !== "disabled") return reply(400, { error: "Эхлээд хэрэглэгчийг устгана уу." });
+
+    let result: string;
+    if (!p) {
+      const { error } = await admin.auth.admin.deleteUser(id);
+      if (error) return reply(400, { error: error.message });
+      result = "deleted";
+    } else {
+      const { error } = await admin.auth.admin.updateUserById(id, {
+        email: `removed-${id}@${HERDER_EMAIL_DOMAIN}`, email_confirm: true, ban_duration: "876000h",
+      });
+      if (error) return reply(400, { error: error.message });
+      result = "blocked";
+    }
+    await admin.from("audit_log").insert({
+      farm_id: p?.farm_id ?? null, actor_id: callerId, action: "login_delete",
+      entity: "profiles", entity_id: id, detail: { login: oldLogin, result },
+    });
+    return reply(200, { ok: true, result });
   }
 
   // ---- list_logins ----
