@@ -25,7 +25,8 @@ admin/index.html          dashboard (farms, animals, tags, users, map, reports)
 config.js offline.js sw.js  shared code: Supabase client, offline queue, offline cache
 db/schema.sql             original database; db/schema_v3 … v46 = every change since,
                           run in number order in Supabase → SQL Editor
-supabase/functions/       admin-users Edge Function (creates logins)
+supabase/functions/       admin-users (creates logins — phone numbers only) and
+                          password-reset (forgotten password → code via Telegram)
 tools/nfc_tag.py          writes and password-protects NFC tags (ACR1552U + NTAG215)
 scripts/export_supabase.py  table export used by the weekly backup
 scripts/backup_photos.py    animal photos, used by the monthly photo backup

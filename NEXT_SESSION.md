@@ -1,6 +1,6 @@
 # YAK-TAG: where we stopped
 
-Last updated **2026-10-23** (phone-only login + herder app at yaktag.org/app — section 3u; v49–v51 live since 10-12).
+Last updated **2026-10-23** (phone-only login + herder app at yaktag.org/app — 3u; strict phone-only + Telegram password reset — 3v; v49–v51 live since 10-12).
 This file has no passwords or tokens. It is safe to commit, but note that the repo is public.
 
 To continue, open this folder in Claude Code and say:
@@ -18,8 +18,9 @@ To continue, open this folder in Claude Code and say:
 - The owner pushes with **GitHub Desktop**. Claude commits locally only.
 - Edit files with **exact-text replacements**, never line-range slicing. A slicing edit once silently deleted all the dashboard row buttons.
 - After any dashboard edit, **click-test every row button**.
-- If `config.js` or `offline.js` change, bump their `?v=` in `t.html`, `cow.html`, `admin/index.html` **and `app/index.html`** (currently `config.js?v=20261011`, `offline.js?v=20261023`).
-- **Logins are phone numbers only** (2026-10-23): every login box is "Утасны дугаар" with the number keypad; the Edge Function creates users with a phone only. `loginEmail()` still accepts a typed e-mail (hidden fallback, e.g. from a PC keyboard) — don't remove it until no e-mail logins are left.
+- If `config.js` or `offline.js` change, bump their `?v=` in `t.html`, `cow.html`, `admin/index.html` **and `app/index.html`** (currently `config.js?v=20261023`, `offline.js?v=20261023`).
+- **Logins are phone numbers only — strict** (2026-10-23, owner's choice): every login box is "Утасны дугаар" with the number keypad; `loginEmail()` always builds `<digits>@yaktag.invalid`, and `loginPhoneError()` (config.js) refuses anything else. The Edge Function creates users with a phone only.
+- **Who resets a forgotten password:** the person himself with a Telegram code (`password-reset`, app/?reset=1); the last resort is the super admin (anyone) or the Админ (only herders / farm admins of farms he created) — dashboard → Хэрэглэгчид → "Нууц үг". **Farm admins never** (owner: "farm admin for password no need").
 - **Test pages must never run the real `sw.js` with a real tag code:** since v51 the service worker sends queued strangers' taps to the LIVE server in the background. `dist/offline_test.py` blocks the service worker and uses `ZZ-…` codes; `dist/sync_test.py` uses `ZZ-SYNC-TEST` (unknown tag = the server answers, saves nothing).
 - **Test SQL on a full local rebuild first:** `python db/test/replay.py --keep` replays `schema.sql` + `seed.sql` + every patch on a throwaway Postgres 18 (port 55440, Supabase stand-ins in `db/test/stub.sql`, hand-made live objects in `db/test/prelude.sql`), then run role tests like `db/test/test_v49.sql` (one transaction, rolled back). Stop it afterwards: `pg_ctl -D "$TEMP/yt-replay" stop`.
 - If `assets/style-a.css` changes, bump its `?v=` in the 4 public pages (currently `?v=2026100701`); same for `assets/contacts.js` (currently `?v=2`). Without it, browsers mix the new pages with the old file. (`assets/site.css` is no longer used.)
@@ -38,7 +39,8 @@ To continue, open this folder in Claude Code and say:
 | Herder app (installable) | `app/index.html` + `app/manifest.json` → **https://yaktag.org/app/** (section 3u) |
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
 | Database changes | `db/schema_v*.sql`. v21 to v51 are **run on live** (v45's e-mail part stays dormant). |
-| Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password) — deployed by pasting it in Supabase → Edge Functions |
+| Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password, move login to a phone, list logins) — deployed by pasting it in Supabase → Edge Functions |
+| Password reset Edge Function | `supabase/functions/password-reset/index.ts` (Telegram code) — public: **"Verify JWT" must be OFF** |
 | Backups | **Weekly** (Mondays 11:07 UB): `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups/backups/<date>` (+ `database.dump` once `SUPABASE_DB_URL` is set). **Monthly** photos (1st, 11:37 UB): `photos-backup.yml` → `scripts/backup_photos.py` → `Yak-Tag-backups/photos/<bucket>/<path>` (mirror; deleted photos stay in its git history). Both share concurrency group `backup-repo`; keepalive re-enables all three schedules. |
 | Not on the website | `_config.yml` keeps `*.md`, `db/`, `tools/`, `scripts/`, `supabase/` off yaktag.org (they stay in the public repo) |
 
@@ -321,8 +323,18 @@ System check first (all green): 59/59 published files = repo; notes/SQL/tools 40
 - `cow.html` opened from the app (standalone, or `sessionStorage yt-from-app`): "‹" before the logo and the bottom link → `app/` ("Миний мал") — an installed iPhone app has no back button. Its login card links "📲 Малчны апп суулгах". Logout also clears `yt-applist`.
 - Tests: app 26/26, cow app-mode + sw 11/11. **Not seen in a real browser yet** (local preview was blocked once by a safety rule on 2026-10-07) — check on an Android and an iPhone after pushing.
 
+## 3v. Strict phone-only + password reset by Telegram (2026-10-23, branch `feature/telegram-reset-phone-only`)
+
+Live check of 3u first: pushed, Pages built, app/ + manifest + icons + changed pages = repo; `tools/python` (empty, the owner's) is in the repo — harmless, `tools/` isn't published.
+- **Strict:** `loginEmail()` no longer passes e-mails through; `loginPhoneError()` gives one message set for all login / reset boxes ("Зөвхөн утасны дугаараа оруулна уу" for letters or @).
+- **`password-reset` Edge Function (new, public, Verify JWT OFF):** `request {phone}` → if the login exists, is active and has `telegram_links`, a 6-digit code goes to that Telegram (token from `app_secrets`); the answer is the same in every case. Limits: 1 code/minute, 3/hour per login; code 15 min, 5 wrong tries; only a SHA-256 of `id:code` is kept, in the login's `app_metadata.pw_reset` (not readable/writable by browsers). `confirm {phone, code, password}` → new password, `pw_reset` removed, history `password_reset_telegram`, Telegram "✅ … солигдлоо".
+- **App:** "Нууц үгээ мартсан уу?" → reset screen (phone → code + new password twice → logged straight in); `app/?reset=1` opens it (linked from the cow page and dashboard login cards, `a.backsite.forgot` is left alone by cow's app mode); shows the site phone as the last resort. Home: "🔔 Telegram холбох" card (telegram_status / telegram_link_code, then polls) or "✓ Telegram холбогдсон".
+- `admin-users` unchanged in rights (an attempt to let farm admins reset passwords was undone at the owner's word).
+- Tests (Node, fakes): password-reset 19, admin-users 18, app 41, dashboard 11, cow + sw 13 — 102 pass.
+
 ## 4. To do next
 
+0b. **Before pushing `feature/telegram-reset-phone-only` (strict phone-only):** run `select email from auth.users where email not like '%@yaktag.invalid';` — every row must first be moved to a phone (dashboard → Хэрэглэгчид → Засах → "📱 Дээрх утсаар нэвтэрдэг болгох"; needs the new `admin-users` deployed), or that person can't log in after the push. Then deploy `password-reset` (Edge Functions → new → paste → Deploy → **Verify JWT OFF**), then push. Herders / farm admins link Telegram once (app home card or the animal page's Telegram button) to be able to reset.
 0. **After pushing `feature/phone-login-herder-app`:** (a) re-deploy the Edge Function `admin-users` (paste the file); (b) dashboard → Хэрэглэгчид → every "✉ И-мэйлээр нэвтэрдэг" row → Засах → phone in "Утас" → "📱 Дээрх утсаар нэвтэрдэг болгох" (own account too); check in SQL Editor: `select email from auth.users where email not like '%@yaktag.invalid';` → no rows; (c) open https://yaktag.org/app/ on an Android and an iPhone, install, log in as a herder.
 
 1. ~~v51~~ — run and pushed 2026-10-12; checked live: `record_public_scan` accepts `p_age_ms` and the older call forms (unknown tag → null), security probe 180/183 (same 3 expected), background sync test sent the tap with no page open.
