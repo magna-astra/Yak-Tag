@@ -288,7 +288,7 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
 <div class="toast" id="toast"></div>
 <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
 
-<script src="config.js?v=2026102302"></script>
+<script src="config.js?v=2026102303"></script>
 <script src="offline.js?v=20261023"></script>
 <script>
 let cow = null;
@@ -1139,29 +1139,13 @@ function renderCow() {
   document.getElementById('cowMeta').textContent =
     `${sex}${age ? ' · ' + age + ' нас' : ''}${cow.breed ? ' · ' + cow.breed : ''} · ${cow.owner_name}`;
 
-  const milkLogged = cow.milk_today != null;
-
   document.getElementById('cowBody').innerHTML = `
     <div id="lostTop"></div>
 
     <!-- MILK -->
     <div class="card">
       <h2><span class="dot"></span>Өнөөдрийн сүү</h2>
-      <div id="milkZone">
-        ${milkLogged
-          ? `<div class="milk-done">Өнөөдөр ${Number(cow.milk_today).toFixed(1)} литр бүртгэгдсэн</div>
-             <p class="hint">Засах шаардлагатай бол доор шинэ утга оруулна уу.</p>
-             <div class="milk-entry" style="margin-top:10px">
-               <input type="number" id="milkInput" inputmode="decimal" step="0.1" min="0"
-                      value="${Number(cow.milk_today).toFixed(1)}">
-               <button id="milkBtn">Засах</button>
-             </div>`
-          : `<div class="milk-entry">
-               <input type="number" id="milkInput" inputmode="decimal" step="0.1" min="0" placeholder="0.0">
-               <button id="milkBtn">Хадгалах</button>
-             </div>
-             <p class="hint">Литрээр оруулна уу. Өдөрт нэг удаа бүртгэнэ.</p>`}
-      </div>
+      <div id="milkZone"></div>
       <div class="kv" style="margin-top:14px;border-top:1px solid #F0F2F5;padding-top:12px">
         <span>Энэ сарын нийт</span>
         <span class="mono">${cow.milk_this_month != null ? Number(cow.milk_this_month).toFixed(1) : '0.0'} л</span>
@@ -1258,8 +1242,9 @@ function renderCow() {
 
   renderPhone();
   renderLost();
+  renderMilk();
+  loadMilkRow();
   loadCowExtras();
-  document.getElementById('milkBtn').addEventListener('click', saveMilk);
   document.getElementById('feedBtn').addEventListener('click', logFeeding);
   document.querySelectorAll('#milkTabs button').forEach(b => {
     b.addEventListener('click', () => {
@@ -1477,6 +1462,56 @@ async function savePhone(lock){
 }
 
 // ---------- milk ----------
+// Today's entry: who saved it and whether its one correction (schema_v54)
+// is used. null = not known yet / no signal — the server decides anyway.
+let milkRow = null;
+
+function milkAdmin() {
+  return !!myProf && (myProf.role === 'super_admin' ||
+         (myProf.role === 'farm_admin' && myProf.farm_id === cow.farm_id));
+}
+
+function renderMilk() {
+  const z = document.getElementById('milkZone');
+  if (!z) return;
+  if (cow.milk_today == null) {
+    z.innerHTML = `
+      <div class="milk-entry">
+        <input type="number" id="milkInput" inputmode="decimal" step="0.1" min="0" placeholder="0.0">
+        <button id="milkBtn">Хадгалах</button>
+      </div>
+      <p class="hint">Литрээр оруулна уу. Өдөрт нэг удаа бүртгэнэ, дараа нь нэг удаа засах боломжтой.</p>`;
+  } else {
+    const done = `<div class="milk-done">Өнөөдөр ${Number(cow.milk_today).toFixed(1)} литр бүртгэгдсэн</div>`;
+    const admin = milkAdmin();
+    const other = milkRow && myProf && milkRow.recorded_by !== myProf.id;
+    if (!admin && milkRow && (milkRow.locked || other)) {
+      z.innerHTML = done + `<p class="hint">🔒 ${milkRow.locked ? MILK_LOCKED
+        : 'Өөр хүн бүртгэсэн. Засах бол ферм админд хандана уу.'}</p>`;
+      return;
+    }
+    z.innerHTML = done + `
+      <p class="hint">${admin ? 'Шаардлагатай бол доор шинэ утга оруулна уу.' : MILK_ONE_EDIT + ' Шинэ утгаа доор оруулна уу.'}</p>
+      <div class="milk-entry" style="margin-top:10px">
+        <input type="number" id="milkInput" inputmode="decimal" step="0.1" min="0"
+               value="${Number(cow.milk_today).toFixed(1)}">
+        <button id="milkBtn">Засах</button>
+      </div>`;
+  }
+  document.getElementById('milkBtn').addEventListener('click', saveMilk);
+}
+
+async function loadMilkRow() {
+  milkRow = null;
+  if (offlineMode || cow.milk_today == null) return;
+  try {
+    const { data, error } = await sb.from('milk_yield')
+      .select('liters, edit_count, locked, recorded_by')
+      .eq('cattle_id', cow.id).eq('yield_date', mnDate()).maybeSingle();
+    if (!error && data) { milkRow = data; renderMilk(); }
+  } catch (e) {}
+}
+
 async function saveMilk() {
   const input = document.getElementById('milkInput');
   const btn = document.getElementById('milkBtn');
@@ -1485,6 +1520,14 @@ async function saveMilk() {
     toast('Зөв тоо оруулна уу.', true);
     return;
   }
+  // a correction: the same number again changes nothing (and isn't counted);
+  // a herder is told first that there is only one
+  const editing = cow.milk_today != null;
+  if (editing && input.value.trim() === Number(cow.milk_today).toFixed(1)) {
+    toast('Утга өөрчлөгдөөгүй байна.');
+    return;
+  }
+  if (editing && !milkAdmin() && !confirm(MILK_CONFIRM)) return;
   btn.disabled = true;
   // The signed-in user from this phone (no network call), so milk can
   // be entered with no signal; the date is today's, fixed now.
@@ -1502,7 +1545,11 @@ async function saveMilk() {
     toast(`Сүлжээгүй — ${liters.toFixed(1)} литр утсанд хадгалагдлаа, сүлжээ орохоор илгээгдэнэ`);
     return;
   }
-  if (!r.sent) { toast('Хадгалж чадсангүй: ' + (r.error ? (r.error.message || r.error) : 'дахин оролдоно уу'), true); return; }
+  if (!r.sent) {
+    if (editing && r.error) { toast(milkError(r.error), true); await loadCow(cow.tag_code); return; }
+    toast('Хадгалж чадсангүй: ' + (r.error ? (r.error.message || r.error) : 'дахин оролдоно уу'), true);
+    return;
+  }
   toast(`${liters.toFixed(1)} литр хадгалагдлаа`);
   await loadCow(cow.tag_code);
 }

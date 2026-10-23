@@ -211,6 +211,18 @@ const MN_ERRORS = [
   [/JWT expired|invalid JWT|Auth session missing!?/i, 'Нэвтрэх хугацаа дууссан. Дахин нэвтэрнэ үү.'],
   [/TypeError: Failed to fetch|Failed to fetch|NetworkError.*|Load failed/i, 'Сүлжээ байхгүй байна. Дахин оролдоно уу.'],
 ];
+// Milk (schema_v54): after the first save a herder may correct the
+// number once; then only a farm admin can. Shown by cow.html (and so
+// the app) and the dashboard.
+const MILK_ONE_EDIT = 'Нэг удаа засах боломжтой.';
+const MILK_CONFIRM  = 'Сүүг зөвхөн нэг удаа засах боломжтой. Үргэлжлүүлэх үү?';
+const MILK_LOCKED   = 'Засагдсан — дахин засах боломжгүй. Засах бол ферм админд хандана уу.';
+// a refused milk save (locked, or another person's entry) in plain words
+function milkError(msg) {
+  return /row-level security|permission denied/i.test(String((msg && msg.message) || msg || ''))
+    ? MILK_LOCKED : mnError(msg);
+}
+
 function mnError(msg) {
   let s = String((msg && msg.message) || msg || '');
   for (const [re, mn] of MN_ERRORS) s = s.replace(re, mn);

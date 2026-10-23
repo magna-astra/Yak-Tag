@@ -38,7 +38,7 @@ To continue, open this folder in Claude Code and say:
 | Public tap page | `t.html` |
 | Herder app (installable) | `app/index.html` + `app/manifest.json` → **https://yaktag.org/app/** (section 3u) |
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
-| Database changes | `db/schema_v*.sql`. v21 to v52 are **run on live** (v45's e-mail part stays dormant; v52 run 2026-10-23: "Success. No rows returned"). They came to Tokyo with the copy (not re-run). v53 = Tokyo Telegram, run in Tokyo right after the switch. The "Wrong database … oxfbxqclqfglpzgzizhq" texts in old files are only messages (the checks look for functions, not the project id). |
+| Database changes | `db/schema_v*.sql`. v21 to v52 are **run on live** (v45's e-mail part stays dormant; v52 run 2026-10-23: "Success. No rows returned"). They came to Tokyo with the copy (not re-run). v53 = Tokyo Telegram, run in Tokyo 2026-10-23 ((200) "Webhook was set"). v54 = milk: one correction (section 3za) — **run in Tokyo** before / with its push. The "Wrong database … oxfbxqclqfglpzgzizhq" texts in old files are only messages (the checks look for functions, not the project id). |
 | Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password, move login to a phone, list logins) — deployed by pasting it in Supabase → Edge Functions |
 | Password reset Edge Function | `supabase/functions/password-reset/index.ts` (Telegram code) — public: **"Verify JWT" must be OFF** |
 | Edge Functions in Tokyo | **both** `admin-users` and `password-reset` need "Verify JWT with legacy secret" **OFF**: Tokyo signs logins with the new ECC key, the legacy check would refuse every logged-in call. Both functions check the caller themselves. |
@@ -370,7 +370,16 @@ The owner found old test logins (ganzo@yaktag.test, admin07@yaktag.test …) sti
 - Lesson for any next move: run `verify` right before pushing the switch, and `catchup` right after it.
 - **Rollback:** revert the switch commit and push (entries made in Tokyo meanwhile would need copying back). Telegram: run `select telegram_setup(app_secret('telegram_token'), app_secret('telegram_bot'), 'https://oxfbxqclqfglpzgzizhq.supabase.co', 'sb_publishable_W3WMWLP28Czb2_5VTDQUlg_--3vfY71');` in Sydney.
 
+## 3za. Milk: a herder corrects a day's milk ONCE (2026-10-23, branch `feature/milk-one-edit`)
+
+- Owner's choices: one correction, then only farm admin / super admin; days stay today + yesterday; entries already corrected are locked now; herders get "Сүүг зөвхөн нэг удаа засах боломжтой. Үргэлжлүүлэх үү?" first.
+- `db/schema_v54_milk_one_edit.sql`: the counter trigger locks on the first real change (same number again = not a change). **Also fixes an old bug:** `milk_update` had no WITH CHECK, so its USING (`locked = false`) was also asked of the new row — the change that locks was always refused (under the 3-rule the 3rd correction failed with "row-level security"). Now WITH CHECK = own recent entry, without `locked`; unlocking from a browser stays impossible (the trigger keeps `locked` from the old row).
+- `cow.html` (and the app): milk box drawn by `renderMilk()` from today's row (`loadMilkRow()`): "Нэг удаа засах боломжтой.", the question, then 🔒 "Засагдсан — дахин засах боломжгүй. Засах бол ферм админд хандана уу."; another person's entry read-only; an unchanged number isn't sent. Dashboard: same texts, `milkEditsLeft()`. Texts in `config.js` (`MILK_*`, `milkError()`), `config.js?v=2026102303`.
+- Tests: `db/test/test_v54.sql` 9/9 (one correction, resend not counted, 2nd refused, plain UPDATE / unlocking no effect, farm admin still corrects, yesterday too, other herder refused, v54 locks old corrected rows) + test_v49/50/51 141/141; page logic 10/10 with a simulated page.
+
 ## 4. To do next
+
+0f. **Milk one-correction:** Tokyo SQL editor → paste `db/schema_v54_milk_one_edit.sql` → Run ("Success. No rows returned"), then push. Check: a herder saves milk, corrects once (question appears), then sees the 🔒 message.
 
 0e. **Tokyo switch** — done 2026-10-23: functions switch OFF, pushed, v53 (Telegram → Tokyo), catch-up + time zone (section 3z). **Still open:** (a) GitHub → Settings → Secrets → Actions: `SUPABASE_URL` = https://mjijgxfmkgtxmpbmshtl.supabase.co, `SUPABASE_SERVICE_KEY` = Tokyo secret key, `SUPABASE_ANON_KEY` = Tokyo publishable key, `SUPABASE_DB_URL` = Tokyo session pooler URI with its password — until then the weekly backup and keepalive still read Sydney; then Actions → Weekly database backup → Run workflow → green; (b) herders / farm admins log in once again (same phone + password); (c) ~2026-11-06, no problems: pause the Sydney project (later delete).
 
