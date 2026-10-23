@@ -2,10 +2,10 @@
 
 Apply each once, in Supabase SQL Editor, with the role set to `postgres`.
 
-> The table below stops at v15. Patches v16 – v46 follow the same rule
+> The table below stops at v15. Patches v16 – v52 follow the same rule
 > (number order, each safe to run twice); what each one does is in its own
-> header comment and in `../NEXT_SESSION.md`. As of 2026-10-07, v21 – v45
-> are on the live project and **v46 (write permissions) still has to be run**.
+> header comment and in `../NEXT_SESSION.md`. As of 2026-10-23, v21 – v51
+> are on the live project and **v52 (access-rule speed-up) still has to be run**.
 
 | # | File | What it does |
 |---|---|---|

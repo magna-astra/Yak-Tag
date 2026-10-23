@@ -38,7 +38,7 @@ To continue, open this folder in Claude Code and say:
 | Public tap page | `t.html` |
 | Herder app (installable) | `app/index.html` + `app/manifest.json` → **https://yaktag.org/app/** (section 3u) |
 | Shared code | `config.js` (client, dates, Mongolian errors), `offline.js` (offline queue), `sw.js` |
-| Database changes | `db/schema_v*.sql`. v21 to v51 are **run on live** (v45's e-mail part stays dormant). |
+| Database changes | `db/schema_v*.sql`. v21 to v51 are **run on live** (v45's e-mail part stays dormant); **v52 (speed) to run** (3x). |
 | Accounts Edge Function | `supabase/functions/admin-users/index.ts` (create user, set password, move login to a phone, list logins) — deployed by pasting it in Supabase → Edge Functions |
 | Password reset Edge Function | `supabase/functions/password-reset/index.ts` (Telegram code) — public: **"Verify JWT" must be OFF** |
 | Backups | **Weekly** (Mondays 11:07 UB): `.github/workflows/backup.yml` → `scripts/export_supabase.py` → private repo `Yak-Tag-backups/backups/<date>` (+ `database.dump` once `SUPABASE_DB_URL` is set). **Monthly** photos (1st, 11:37 UB): `photos-backup.yml` → `scripts/backup_photos.py` → `Yak-Tag-backups/photos/<bucket>/<path>` (mirror; deleted photos stay in its git history). Both share concurrency group `backup-repo`; keepalive re-enables all three schedules. |
@@ -340,7 +340,17 @@ The owner found old test logins (ganzo@yaktag.test, admin07@yaktag.test …) sti
 - `db/cleanup_email_logins.sql` (list e-mail logins; delete named ones safely) stays for a one-off cleanup.
 - Tests: admin-users 27, dashboard delete 9, dashboard 11 (+ app 41, cow/sw 13, reset 19) — 120 pass. Row-button wiring unchanged.
 
+## 3x. Load test + v52 access-rule speed-up (2026-10-23)
+
+**Live, read-only** (no data written; logins only with a number that has no account): database reads 25 → 50 at once = 61 → 125/s, p50 ~350 ms flat, 0 errors; `public_tag_state` 50 at once 120/s; app page (GitHub Pages) 43/s; one login ~0.43 s. Server time per request **1 ms** (`x-envoy-upstream-service-time`) — the ~350 ms is distance: the project is in **AWS ap-southeast-2 (Sydney)** (db host IPv6 2406:da1c… matched against AWS ip-ranges.json). Seoul/Tokyo would be ~3× closer (owner chose not to move for now).
+**Local writes** (full rebuild + 200 herders, 4,000 animals, 120k milk rows; pgbench with real roles/RLS): milk insert 11.6k–21.7k/s, app scan / stranger tap / lookup 16k–58k/s (repeat limits working). **Bottleneck: a herder's herd list (`cattle_dashboard`) — 37 of 53 RLS rules called `is_super()/my_role()/my_farm()/auth.uid()` once PER ROW.**
+- **v52** `db/schema_v52_rls_speed.sql` (no data touched; safe twice; a rule it may not change is skipped and named): wraps those calls as `(select …)` in every public/storage policy (regex with look-behind, so already wrapped calls stay). Measured: herd list 95 → 5.6 ms (10 at once), 353 → 14 ms (40 at once); 105 → 1,782 and 113 → 2,809 lists/s. Fresh rebuild v1→v52: 0 rules left per-row, role tests 141/141. Run 2 changes nothing (policy texts identical).
+- Note: `db/test/replay.py` replays EVERY `db/schema_v*.sql` — set a new patch aside to measure "before".
+- Logins: Supabase limits sign-ins per internet address (default roughly 30 per 5 min) — a training day with many herders on one Wi-Fi / mobile NAT could hit it; Supabase → Authentication → Rate Limits (free) if that happens.
+
 ## 4. To do next
+
+0d. **Run `db/schema_v52_rls_speed.sql`** in Supabase → SQL Editor (speed only; any time). Its messages say how many rules were sped up / skipped; the CHECK below should list none (or only skipped ones).
 
 0c. **Deploy `admin-users` again** (it changed: `delete_login`) — any time before or after the push; until then "Устгах" says the login step failed.
 0b. **Before pushing `feature/telegram-reset-phone-only` (strict phone-only):** run `select email from auth.users where email not like '%@yaktag.invalid';` — every row must first be moved to a phone (dashboard → Хэрэглэгчид → Засах → "📱 Дээрх утсаар нэвтэрдэг болгох"; needs the new `admin-users` deployed), or that person can't log in after the push. Then deploy `password-reset` (Edge Functions → new → paste → Deploy → **Verify JWT OFF**), then push. Herders / farm admins link Telegram once (app home card or the animal page's Telegram button) to be able to reset.
