@@ -42,10 +42,19 @@ def main():
     user_raw, _, pw_raw = userinfo.partition(":")
     if re.search(r"%(?![0-9A-Fa-f]{2})", pw_raw):
         fail("SUPABASE_DB_URL", "The password contains a % sign that is not encoded. Use letters and digits only, or write % as %25.")
+    if pw_raw.startswith("[") or pw_raw.endswith("]"):
+        fail("SUPABASE_DB_URL", "The password is still inside [ ] brackets. Remove the brackets: "
+             "…:YourPassword@aws-… (not …:[YourPassword]@aws-…).")
+    if "[" in pw_raw or "]" in pw_raw:
+        fail("SUPABASE_DB_URL", "The password contains [ or ]. Reset the database password to letters and digits only "
+             "(Supabase → Project Settings → Database) and paste the new URI into the secret.")
     password = up.unquote(pw_raw)
     secrets = {s for s in (pw_raw, password) if s}
 
-    p = up.urlsplit(URL)
+    try:
+        p = up.urlsplit(URL)
+    except ValueError:
+        fail("SUPABASE_DB_URL", f"The address cannot be read. Copy the URI again from {WHERE}.")
     try:
         host, port = p.hostname or "", p.port or 5432
     except ValueError:
