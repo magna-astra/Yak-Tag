@@ -320,6 +320,7 @@ System check first (all green): 59/59 published files = repo; notes/SQL/tools 40
 - Installable web app: `app/manifest.json` (scope `/`, start `/app/`, standalone, icons `assets/app-icon-*.png` made from the tag artwork), Android "Суулгах" button (beforeinstallprompt), iPhone Safari steps (Share → Add to Home Screen).
 - Login (phone + password) → "Миний мал": herder = own animals, farm admin = whole farm (RLS, `cattle_dashboard`); badges lost / sold… / milk today / vaccine overdue or ≤7 days; search; open by number ("8000" → YT-008000, also new tags → registration); Android "📶 Таг уншуулах" (Web NFC reads the tag's link inside the app). Super admin / Админ get "use the dashboard".
 - No signal: the list is kept on the phone (`yt-applist`), the page is in `sw.js` SHELL (`app/`, paths ending `/` count as pages); `offline.js` now registers `/sw.js` by its own address (from `app/` a relative `sw.js` would be `app/sw.js`).
+- Homepage intro: a "📲 Малчны апп" button → `app/` (owner chose only this spot, 2026-10-23).
 - `cow.html` opened from the app (standalone, or `sessionStorage yt-from-app`): "‹" before the logo and the bottom link → `app/` ("Миний мал") — an installed iPhone app has no back button. Its login card links "📲 Малчны апп суулгах". Logout also clears `yt-applist`.
 - Tests: app 26/26, cow app-mode + sw 11/11. **Not seen in a real browser yet** (local preview was blocked once by a safety rule on 2026-10-07) — check on an Android and an iPhone after pushing.
 
