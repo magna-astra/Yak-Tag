@@ -1629,6 +1629,7 @@ function rowMenu(c, up){
   return `<details class="rowmenu${up?' up':''}"><summary aria-label="Үйлдэл">⋯</summary><div class="menu">
       ${myRole==='admin'?'':`<button data-act="openVacc" data-id="${esc(c.id)}">Вакцин бүртгэх</button>`}
       <button onclick="location.href='${esc(cowUrl(c,'../'))}'">Дэлгэрэнгүй хуудас</button>
+      ${c.species==='horse' ? `<button onclick="location.href='../contract.html?id=${esc(c.id)}'">📄 Худалдах гэрээ</button>` : ''}
       ${admin?`<button data-act="openEdit" data-id="${esc(c.id)}">Мэдээлэл засах</button>
       <button data-act="delCattle" data-id="${esc(c.id)}" style="color:var(--alert)">Устгах</button>`:''}
     </div></details>`;

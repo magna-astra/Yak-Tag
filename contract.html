@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<style id="yt-noframe">html{display:none}</style>
+<script>if (window.self === window.top) document.getElementById('yt-noframe').remove(); else window.top.location = window.self.location.href;</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Худалдах гэрээ · YAK-TAG</title>
+<link rel="icon" href="assets/favicon.ico">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
+<!--
+  YAK-TAG — sale contract for horses (schema_v56, horses stage 2)
+  contract.html?id=<animal id>[,<animal id>…] — the seller (owner, farm
+  admin, super admin) prints it, both sign. A sale of horses needs a
+  written contract listing each animal's kind, age, sex and brand (им
+  тамга); the origin certificate still comes from the soum / bag
+  governor. The empty lines are typed here or filled in by hand.
+-->
+<style>
+:root{--ink:#14243B;--soft:#5B6779;--line:#C9C2B3;--green:#2E7D46}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:15px/1.55 'Times New Roman',Georgia,serif;color:var(--ink);background:#EDEAE3}
+.bar{position:sticky;top:0;background:var(--green);color:#fff;padding:10px 16px;display:flex;gap:10px;align-items:center;
+  font:600 14px/1.3 system-ui,sans-serif;z-index:2}
+.bar button{margin-left:auto;border:0;border-radius:10px;background:#fff;color:var(--green);font-weight:800;padding:9px 16px;cursor:pointer}
+.bar a{color:#fff}
+.sheet{background:#fff;max-width:800px;margin:18px auto;padding:46px 54px;box-shadow:0 6px 24px rgba(0,0,0,.08)}
+h1{text-align:center;font-size:19px;letter-spacing:.02em;margin-bottom:4px}
+.sub{text-align:center;color:var(--soft);font-size:13px;margin-bottom:22px}
+.line{display:flex;gap:18px;flex-wrap:wrap;margin:6px 0}
+.f{display:inline-flex;align-items:baseline;gap:6px;flex:1;min-width:220px}
+.f b{white-space:nowrap;font-weight:600}
+input.u{flex:1;min-width:60px;border:0;border-bottom:1px dotted var(--line);font:inherit;color:inherit;padding:1px 2px;background:transparent}
+input.u:focus{outline:none;border-bottom-color:var(--green)}
+h3{font-size:15px;margin:18px 0 6px}
+table{width:100%;border-collapse:collapse;margin-top:6px;font-size:13.5px}
+th,td{border:1px solid var(--line);padding:5px 6px;vertical-align:top;text-align:left}
+th{background:#F5F2EB;font-weight:600}
+td img{width:74px;height:56px;object-fit:cover;display:block}
+.mono{font-family:Consolas,monospace;font-size:12.5px}
+ol{margin:6px 0 0 20px}
+ol li{margin:3px 0}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:30px}
+.sign div{border-top:1px solid var(--ink);padding-top:4px;font-size:13px;color:var(--soft)}
+.foot{margin-top:28px;font-size:11.5px;color:var(--soft);text-align:center}
+.msg{max-width:520px;margin:60px auto;text-align:center;font:16px/1.6 system-ui,sans-serif}
+@media print{
+  body{background:#fff}
+  .bar{display:none}
+  .sheet{box-shadow:none;margin:0;max-width:none;padding:14mm 16mm}
+  input.u{border-bottom:1px dotted #999}
+  @page{size:A4;margin:0}
+}
+@media (max-width:600px){ .sheet{padding:24px 16px} td img{width:54px;height:42px} }
+</style>
+</head>
+<body>
+<div class="bar"><span>Худалдах гэрээ</span><a href="#" id="backLink">← Буцах</a><button id="printBtn" disabled>🖨 Хэвлэх / PDF</button></div>
+<div id="page"><div class="msg">Ачаалж байна…</div></div>
+
+<script src="config.js?v=2026102304"></script>
+<script>
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+const ids = (new URLSearchParams(location.search).get('id') || '').split(',')
+  .filter(v => /^[0-9a-f-]{36}$/i.test(v)).slice(0, 30);
+const cap = s => String(s || '').replace(/^./, x => x.toUpperCase());
+const u = (ph, val = '', w = '') => `<input class="u" placeholder="${esc(ph)}" value="${esc(val)}"${w ? ` style="max-width:${w}"` : ''}>`;
+
+async function boot() {
+  const page = document.getElementById('page');
+  document.getElementById('backLink').href = ids.length === 1 ? 'cow.html?id=' + ids[0] : 'app/#horse';
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    page.innerHTML = '<div class="msg">Гэрээ хэвлэхийн тулд нэвтэрнэ үү.<br><a href="app/">YAK-TAG апп руу</a></div>';
+    return;
+  }
+  if (!ids.length) { page.innerHTML = '<div class="msg">Адуу сонгогдоогүй байна.</div>'; return; }
+
+  // only animals this login may see (the database's own rules)
+  const { data: rows, error } = await sb.from('cattle_dashboard').select('*').in('id', ids);
+  if (error) { page.innerHTML = `<div class="msg">${esc(mnError(error.message))}</div>`; return; }
+  if (!rows || !rows.length) { page.innerHTML = '<div class="msg">Адуу олдсонгүй эсвэл танд харагдахгүй байна.</div>'; return; }
+  rows.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+
+  // the newest brand (тамга) photo of each, as a picture in the table
+  const brand = {};
+  try {
+    const { data: ph } = await sb.from('cattle_photos').select('cattle_id, storage_path, taken_at')
+      .in('cattle_id', ids).eq('kind', 'brand').order('taken_at', { ascending: false });
+    const first = {};
+    (ph || []).forEach(p => { if (!first[p.cattle_id]) first[p.cattle_id] = p.storage_path; });
+    const paths = Object.values(first);
+    if (paths.length) {
+      const { data: signed } = await sb.storage.from('cattle-photos').createSignedUrls(paths, 3600);
+      (signed || []).forEach(s => {
+        const cid = Object.keys(first).find(k => first[k] === s.path);
+        if (cid && s.signedUrl) brand[cid] = s.signedUrl;
+      });
+    }
+  } catch (e) {}
+
+  const seller = rows[0].owner_name || '';
+  const today = mnDate().replace(/-/g, '/');
+  const horseRows = rows.map((c, i) => {
+    const kind = c.species === 'horse' ? 'Адуу' : 'Үхэр';
+    const ids2 = [c.chip_no && `Чип ${c.chip_no}`, c.national_id, c.tag_code && `YAK-TAG ${c.tag_code}`].filter(Boolean);
+    return `<tr><td>${i + 1}</td><td>${kind}</td>
+      <td>${c.species === 'horse' ? esc(cap(horseLabel(c))) : esc(c.sex === 'female' ? 'Эм' : 'Эр')}${c.birth_year ? `<br><span style="color:#5B6779">${c.birth_year} онд төрсөн</span>` : ''}</td>
+      <td>${esc(c.breed || '')}</td>
+      <td>${esc([c.colour, (c.markings || []).join(', ')].filter(Boolean).join('; '))}</td>
+      <td>${brand[c.id] ? `<img src="${esc(brand[c.id])}" alt="тамга">` : '<span style="color:#9AA6B8">зураггүй</span>'}</td>
+      <td class="mono">${ids2.map(esc).join('<br>') || '—'}</td></tr>`;
+  }).join('');
+
+  page.innerHTML = `<div class="sheet">
+    <h1>${rows.every(c => c.species === 'horse') ? 'АДУУ' : 'МАЛ'} ХУДАЛДАХ, ХУДАЛДАН АВАХ ГЭРЭЭ</h1>
+    <div class="sub">№ ${u('', '', '90px')}</div>
+    <div class="line"><span class="f"><b>Огноо:</b>${u('', today)}</span><span class="f"><b>Газар:</b>${u('аймаг, сум, баг')}</span></div>
+
+    <h3>1. Талууд</h3>
+    <div class="line"><span class="f"><b>Худалдагч:</b>${u('овог, нэр', seller)}</span><span class="f"><b>РД:</b>${u('регистрийн дугаар')}</span></div>
+    <div class="line"><span class="f"><b>Утас:</b>${u('')}</span><span class="f"><b>Хаяг:</b>${u('')}</span></div>
+    <div class="line"><span class="f"><b>Худалдан авагч:</b>${u('овог, нэр')}</span><span class="f"><b>РД:</b>${u('регистрийн дугаар')}</span></div>
+    <div class="line"><span class="f"><b>Утас:</b>${u('')}</span><span class="f"><b>Хаяг:</b>${u('')}</span></div>
+
+    <h3>2. Худалдах мал</h3>
+    <table><thead><tr><th>№</th><th>Төрөл</th><th>Нас, хүйс</th><th>Үүлдэр</th><th>Зүс, тэмдэг</th><th>Им тамга</th><th>Чип / улсын дугаар / таг</th></tr></thead>
+      <tbody>${horseRows}</tbody></table>
+    <div class="line" style="margin-top:8px"><span class="f"><b>Нийт:</b>${rows.length} толгой</span>
+      <span class="f"><b>Үнэ:</b>${u('нийт үнэ')}<b>төгрөг</b></span></div>
+    <div class="line"><span class="f"><b>Төлбөр:</b>${u('бэлнээр / дансаар, хэзээ')}</span></div>
+
+    <h3>3. Нөхцөл</h3>
+    <ol>
+      <li>Худалдагч дээрх мал өөрийн өмч бөгөөд хулгайн, барьцааны болон бусад маргаангүй гэдгийг баталж байна.</li>
+      <li>Мал шилжүүлэхэд гарал үүслийн гэрчилгээг сум, багийн Засаг даргаас авна.</li>
+      <li>Худалдан авагч малыг хүлээж авахдаа чип, им тамга, зүсийг энэ гэрээтэй тулгаж шалгана.</li>
+      <li>Эзэмшил шилжсэнийг YAK-TAG-д бүртгэнэ.</li>
+      <li>${u('нэмэлт нөхцөл')}</li>
+    </ol>
+
+    <div class="sign">
+      <div>Худалдагч: гарын үсэг, нэр</div>
+      <div>Худалдан авагч: гарын үсэг, нэр</div>
+      <div>Гэрч: гарын үсэг, нэр</div>
+      <div>Гэрч: гарын үсэг, нэр</div>
+    </div>
+    <div class="foot">YAK-TAG-аас бэлтгэсэн загвар · ${esc(fmtDateTime(new Date().toISOString()))} ·
+      Адууг yaktag.org/check.html дээр чип, улсын дугаараар шалгаж болно.</div>
+  </div>`;
+  document.getElementById('printBtn').disabled = false;
+}
+document.getElementById('printBtn').addEventListener('click', () => window.print());
+boot();
+</script>
+</body>
+</html>

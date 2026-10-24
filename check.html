@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<!-- Never shown inside another site's frame (click-jacking guard). -->
+<style id="yt-noframe">html{display:none}</style>
+<script>if (window.self === window.top) document.getElementById('yt-noframe').remove(); else window.top.location = window.self.location.href;</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Адуу шалгах · YAK-TAG</title>
+<meta name="description" content="Адууг чип, улсын бүртгэлийн дугаар эсвэл YAK-TAG тагаар шалгах. Алга болсон, хулгайд алдсан адууны жагсаалт.">
+<link rel="icon" href="assets/favicon.ico">
+<link rel="apple-touch-icon" href="assets/logo-180.png">
+<meta name="theme-color" content="#23633A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok" crossorigin="anonymous"></script>
+<!--
+  YAK-TAG — public horse check (schema_v56, horses stage 2)
+  Anyone types a chip (15 digits), national number (MGL…) or tag number:
+  registered or not, lost / stolen or not. Every check reaches the owner
+  by Telegram (with the place if the checker allows GPS). A lost horse
+  gets "Би энэ адууг харсан". Below: the public list of lost / stolen
+  horses (only those the owner chose to show). Never the owner's name.
+-->
+<style>
+:root{
+  --ink:#14243B; --ink-soft:#5B6779; --line:#E9E2D3; --bg:#F6F1E6; --card:#fff;
+  --green:#2E7D46; --green-l:#E7F2E6; --alert:#B3341F; --alert-l:#FCEAE7; --gold:#9A6A00;
+  --body:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit}
+.top{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 100%);color:#fff;padding:15px 0}
+.top .in{max-width:560px;margin:0 auto;padding:0 18px;display:flex;align-items:center;gap:9px}
+.top img{width:24px;height:24px;filter:invert(1)}
+.top b{font-size:.85rem;letter-spacing:.06em;font-weight:800}
+.top a{color:#fff;margin-left:auto;font-size:.85rem;font-weight:600;text-decoration:none;opacity:.9}
+main{flex:1;max-width:560px;width:100%;margin:0 auto;padding:22px 18px 34px}
+h1{font-size:1.45rem;line-height:1.25;margin-bottom:6px}
+h2{font-size:1.1rem;margin:30px 0 4px}
+.hint{color:var(--ink-soft);font-size:.88rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px;
+  box-shadow:0 8px 24px rgba(20,36,59,.06)}
+.ask{display:flex;gap:8px;margin-top:14px}
+.ask input{flex:1;min-width:0;padding:15px 14px;border:1.5px solid var(--line);border-radius:13px;background:#fff;
+  font-family:var(--mono);font-size:1.05rem;text-transform:uppercase}
+.ask input:focus,.field input:focus,.field textarea:focus{outline:none;border-color:var(--green)}
+.btn{border:0;border-radius:13px;background:var(--green);color:#fff;font-weight:800;padding:0 20px;cursor:pointer}
+.btn:disabled{opacity:.55}
+.btn.wide{display:block;width:100%;padding:15px;margin-top:12px;text-align:center;text-decoration:none}
+.btn.red{background:var(--alert)}
+.btn.ghost{background:var(--green-l);color:var(--green)}
+.err{color:var(--alert);font-weight:600;font-size:.9rem;margin-top:10px;display:none}
+.banner{border-radius:14px;padding:13px 15px;font-weight:700;margin-bottom:14px}
+.banner.ok{background:var(--green-l);color:var(--green)}
+.banner.bad{background:var(--alert);color:#fff}
+.banner.none{background:#EEF0F4;color:var(--ink-soft)}
+.banner small{display:block;font-weight:500;opacity:.9;margin-top:2px}
+.photos{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:14px}
+.photos.two{grid-template-columns:2fr 1fr}
+.photos figure{border-radius:14px;overflow:hidden;background:#E9ECF0;aspect-ratio:4/3}
+.photos.two figure:last-child{aspect-ratio:auto}
+.photos img{width:100%;height:100%;object-fit:cover;display:block}
+.photos figcaption{font-size:.75rem;color:var(--ink-soft);text-align:center;padding:3px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #F1ECE1;font-size:.93rem}
+.kv span:first-child{color:var(--ink-soft)}
+.kv span:last-child{font-weight:600;text-align:right}
+.field{margin-top:12px}
+.field label{display:block;font-size:.85rem;font-weight:700;color:var(--ink-soft);margin-bottom:5px}
+.field input,.field textarea{width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:12px;background:#fff}
+.filters{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.filters select{flex:1;min-width:130px;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff}
+.lostitem{display:flex;gap:12px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;margin-top:10px}
+.lostitem .pic{flex:0 0 96px;height:96px;border-radius:12px;overflow:hidden;background:#E9ECF0;display:grid;place-items:center;
+  color:#9AA6B8;font-size:.72rem}
+.lostitem .pic img{width:100%;height:100%;object-fit:cover}
+.lostitem .tx{flex:1;min-width:0;font-size:.88rem}
+.lostitem b{display:block;font-size:.96rem}
+.tagx{display:inline-block;font-size:.72rem;font-weight:800;border-radius:999px;padding:2px 8px;margin-bottom:3px;
+  background:var(--alert-l);color:var(--alert)}
+.lostitem .btn{padding:8px 12px;font-size:.84rem;margin-top:6px}
+.empty{text-align:center;color:var(--ink-soft);padding:24px 8px;font-size:.9rem}
+.thanks{background:var(--green-l);color:var(--green);border-radius:12px;padding:12px;font-weight:700;margin-top:10px}
+.foot{text-align:center;font-size:.75rem;color:var(--ink-soft);padding:0 18px 26px}
+.foot a{color:var(--ink-soft)}
+</style>
+</head>
+<body>
+
+<div class="top"><div class="in">
+  <img src="assets/logo-64.png" alt=""><b>YAK-TAG</b>
+  <a href="index.html">yaktag.org</a>
+</div></div>
+
+<main>
+  <h1>🔎 Адуу шалгах</h1>
+  <p class="hint">Чипийн дугаар (15 оронтой), улсын бүртгэлийн дугаар (MGL…) эсвэл YAK-TAG тагийн дугаараа
+    оруулна уу. Адуу худалдаж авахын өмнө шалгаарай.</p>
+  <div class="ask">
+    <input type="text" id="q" placeholder="956000012345678" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24">
+    <button class="btn" id="qBtn">Шалгах</button>
+  </div>
+  <div class="err" id="qErr"></div>
+  <p class="hint" style="margin-top:8px;font-size:.8rem">Шалгасан тухай адууны эзэнд мэдэгдэл очно. Байршлаа
+    зөвшөөрвөл хаана шалгасныг эзэн нь харна. Эзний нэр энд харагдахгүй.</p>
+  <div id="result"></div>
+
+  <h2>⚠ Алга болсон, хулгайд алдсан адуу</h2>
+  <p class="hint">Эзэд нь энд харуулахыг зөвшөөрсөн адуу. Танд таарсан адуу байвал "Харсан" дарж мэдэгдээрэй.</p>
+  <div class="filters">
+    <select id="fCoat"><option value="">Бүх зүс</option></select>
+    <select id="fSex"><option value="">Гүү, эр адуу</option><option value="female">Гүү</option><option value="male">Эр адуу</option></select>
+  </div>
+  <div id="lostList"><div class="empty">Ачаалж байна…</div></div>
+  <button class="btn ghost wide" id="moreBtn" hidden>Цааш үзэх</button>
+</main>
+<div class="foot">YAK-TAG · Мал бүрт цахим үнэмлэх · <a href="index.html">yaktag.org</a></div>
+
+<script src="config.js?v=2026102304"></script>
+<script>
+const $ = id => document.getElementById(id);
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+const pubUrl = p => p ? sb.storage.from('cattle-public').getPublicUrl(p).data.publicUrl : null;
+const cap = s => String(s || '').replace(/^./, x => x.toUpperCase());
+
+// The checker's place, if they allow it (asked on the button press).
+function getGps(ms = 8000) {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    const t = setTimeout(() => res(null), ms);
+    navigator.geolocation.getCurrentPosition(
+      p => { clearTimeout(t); res({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }); },
+      () => { clearTimeout(t); res(null); },
+      { enableHighAccuracy: true, timeout: ms, maximumAge: 60000 });
+  });
+}
+
+// One horse as a stranger may see it (public_horse_card in schema_v56).
+function horseHtml(h) {
+  const lost = h.status === 'lost' || h.status === 'stolen';
+  const photo = pubUrl(h.photo_path), brand = pubUrl(h.brand_path);
+  const pics = (photo || brand) ? `<div class="photos${photo && brand ? ' two' : ''}">
+      ${photo ? `<figure><img src="${esc(photo)}" alt="Адууны зураг" loading="lazy"></figure>` : ''}
+      ${brand ? `<figure><img src="${esc(brand)}" alt="Тамга" loading="lazy"><figcaption>Тамга</figcaption></figure>` : ''}
+    </div>` : '';
+  const row = (k, v) => v ? `<div class="kv"><span>${k}</span><span>${esc(v)}</span></div>` : '';
+  return pics +
+    row('Нас, хүйс', cap(horseLabel(h))) + row('Үүлдэр', h.breed) + row('Зүс', h.colour) +
+    row('Тэмдэг', (h.markings || []).join(', ')) +
+    (lost ? row('Мэдэгдсэн', h.reported_lost_at ? fmtDateTime(h.reported_lost_at) : '') + row('Тэмдэглэл', h.lost_note) : '') +
+    (h.has_phone && h.phone ? `<a class="btn wide${lost ? ' red' : ''}" href="tel:${esc(String(h.phone).replace(/[^0-9+]/g, ''))}">📞 Эзэнтэй холбогдох</a>` : '') +
+    (lost ? `<button class="btn red wide" data-seen="${esc(h.ref)}">👁 Би энэ адууг харсан</button><div></div>` : '');
+}
+
+// ---------- the check ----------
+async function check() {
+  const q = $('q').value.trim();
+  const err = $('qErr');
+  err.style.display = 'none';
+  if (!q) { err.textContent = 'Дугаараа оруулна уу.'; err.style.display = 'block'; return; }
+  $('qBtn').disabled = true; $('qBtn').textContent = '…';
+  const g = await getGps();
+  let data = null, error = null;
+  try {
+    ({ data, error } = await sb.rpc('public_horse_check', {
+      p_query: q, p_lat: g ? g.lat : null, p_lng: g ? g.lng : null, p_accuracy: g ? g.acc : null }));
+  } catch (e) { error = e; }
+  $('qBtn').disabled = false; $('qBtn').textContent = 'Шалгах';
+  if (error) { err.textContent = mnError(error.message || error); err.style.display = 'block'; return; }
+
+  const r = $('result');
+  if (!data || !data.found) {
+    r.innerHTML = `<div class="card"><div class="banner none">YAK-TAG-д бүртгэлгүй
+      <small>Энэ дугаартай адуу YAK-TAG-д алга. Улсын бүртгэлийг сум, аймгийн хөдөө аж ахуйн тасгаас шалгуулж болно.</small></div></div>`;
+    return;
+  }
+  const lost = data.status === 'lost' || data.status === 'stolen';
+  r.innerHTML = `<div class="card">
+    ${lost ? `<div class="banner bad">⚠ ${data.status === 'stolen' ? 'ХУЛГАЙД АЛДСАН' : 'АЛГА БОЛСОН'} гэж бүртгэлтэй
+               <small>Худалдаж авахгүй байна уу. Харсан бол доор мэдэгдээрэй — эзэнд нь шууд очно.</small></div>`
+           : `<div class="banner ok">✓ Бүртгэлтэй адуу — алга болсон гэж бүртгэлгүй
+               <small>Эзэнд нь шалгасан тухай мэдэгдэл очлоо.</small></div>`}
+    ${horseHtml(data)}</div>`;
+}
+$('qBtn').addEventListener('click', check);
+$('q').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+// a link may carry the number (?q=…); the check itself waits for the button
+$('q').value = new URLSearchParams(location.search).get('q') || '';
+
+// ---------- "I saw this horse" ----------
+// the form opens right under the button pressed (the same horse may be
+// both in the result and in the list)
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-seen]');
+  if (!b) return;
+  const ref = b.dataset.seen, box = b.nextElementSibling;
+  if (!box || box.dataset.open) return;
+  box.dataset.open = '1';
+  box.innerHTML = `
+    <div class="field"><label>Хаана, хэзээ харсан бэ? (заавал биш)</label>
+      <textarea class="sn" rows="2" maxlength="300"></textarea></div>
+    <div class="field"><label>Таны утас (заавал биш — эзэн нь залгана)</label>
+      <input type="tel" class="sp" inputmode="tel" maxlength="24"></div>
+    <div class="err"></div>
+    <button class="btn red wide ss">Эзэнд мэдэгдэх</button>
+    <p class="hint" style="font-size:.8rem;margin-top:6px">Таны байршлыг асууна — зөвшөөрвөл эзэнд газрын зураг очно.</p>`;
+  box.querySelector('.ss').addEventListener('click', async () => {
+    const btn = box.querySelector('.ss'), er = box.querySelector('.err');
+    er.style.display = 'none'; btn.disabled = true;
+    const g = await getGps();
+    let data = null, error = null;
+    try {
+      ({ data, error } = await sb.rpc('public_horse_seen', {
+        p_ref: ref, p_lat: g ? g.lat : null, p_lng: g ? g.lng : null, p_accuracy: g ? g.acc : null,
+        p_note: box.querySelector('.sn').value.trim() || null, p_phone: box.querySelector('.sp').value.trim() || null }));
+    } catch (x) { error = x; }
+    btn.disabled = false;
+    if (error) { er.textContent = mnError(error.message || error); er.style.display = 'block'; return; }
+    box.innerHTML = data ? '<div class="thanks">✓ Баярлалаа! Эзэнд нь мэдэгдэл очлоо.</div>'
+                         : '<div class="thanks">Энэ адуу олдсон байна. Баярлалаа!</div>';
+  });
+});
+
+// ---------- the lost / stolen list ----------
+let page = 0;
+const PAGE = 20;
+async function loadLost(more) {
+  page = more ? page + 1 : 0;
+  const list = $('lostList');
+  if (!more) list.innerHTML = '<div class="empty">Ачаалж байна…</div>';
+  let data = null, error = null;
+  try {
+    ({ data, error } = await sb.rpc('public_lost_horses', {
+      p_colour: $('fCoat').value || null, p_sex: $('fSex').value || null, p_limit: PAGE, p_offset: page * PAGE }));
+  } catch (e) { error = e; }
+  if (error) { list.innerHTML = `<div class="empty">${esc(mnError(error.message || error))}</div>`; return; }
+  const rows = data || [];
+  const html = rows.map(h => {
+    const photo = pubUrl(h.photo_path) || pubUrl(h.brand_path);
+    return `<div class="lostitem">
+      <div class="pic">${photo ? `<img src="${esc(photo)}" alt="" loading="lazy">` : 'Зураггүй'}</div>
+      <div class="tx">
+        <span class="tagx">${h.status === 'stolen' ? 'Хулгайд алдсан' : 'Алга болсон'}</span>
+        <b>${esc(cap(horseLabel(h)))}${h.colour ? ' · ' + esc(h.colour) : ''}</b>
+        ${esc([h.breed, (h.markings || []).join(', ')].filter(Boolean).join(' · '))}
+        ${h.reported_lost_at ? `<div class="hint" style="font-size:.8rem">${esc(fmtDateTime(h.reported_lost_at))}</div>` : ''}
+        ${h.lost_note ? `<div class="hint" style="font-size:.8rem">${esc(h.lost_note)}</div>` : ''}
+        <button class="btn red" data-seen="${esc(h.ref)}">👁 Харсан</button><div></div>
+      </div></div>`;
+  }).join('');
+  if (more) list.insertAdjacentHTML('beforeend', html);
+  else list.innerHTML = html || '<div class="empty">Одоогоор алга болсон адуу бүртгэлгүй.</div>';
+  $('moreBtn').hidden = rows.length < PAGE;
+}
+$('fCoat').innerHTML += HORSE_COATS.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+$('fCoat').addEventListener('change', () => loadLost(false));
+$('fSex').addEventListener('change', () => loadLost(false));
+$('moreBtn').addEventListener('click', () => loadLost(true));
+loadLost(false);
+</script>
+</body>
+</html>

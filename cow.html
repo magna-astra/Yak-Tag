@@ -937,10 +937,14 @@ async function loadCowExtras() {
   cowExtra = cacheGet('yt-extra:' + cow.id) || {};
   if (!offlineMode && navigator.onLine) {
     try {
-      const { data, error } = await sb.from('cattle').select('species, breed_code').eq('id', cow.id).maybeSingle();
+      let { data, error } = await sb.from('cattle').select('species, breed_code, ble_name').eq('id', cow.id).maybeSingle();
+      if (error && error.code === '42703') {     // database not yet on v56
+        ({ data, error } = await sb.from('cattle').select('species, breed_code').eq('id', cow.id).maybeSingle());
+      }
       if (!error) { cowExtra = data || {}; cacheSet('yt-extra:' + cow.id, cowExtra); }
     } catch (e) {}
   }
+  if (isHorse() && !document.getElementById('heSave')) renderHorse(false);   // now with the BLE tag
   renderBreedEdit();
   if (cow.sex === 'female') loadRepro();
   loadFeedings();
@@ -1468,16 +1472,22 @@ async function renderLost() {
   const can = canEditCow();
   if (cowIsLost() && !lostInfo && !offlineMode && navigator.onLine) {
     try {
-      const { data, error } = await sb.from('cattle').select('reported_lost_at, lost_note').eq('id', cow.id).maybeSingle();
+      const { data, error } = await sb.from('cattle').select(isHorse() ? 'reported_lost_at, lost_note, lost_public'
+                                                                         : 'reported_lost_at, lost_note').eq('id', cow.id).maybeSingle();
       if (!error) lostInfo = data || {};
     } catch (e) {}
   }
   if (cowIsLost()) {
     const li = lostInfo || {};
+    // a horse (schema_v56): anyone checking its number sees the warning; the public list if chosen
+    const horseNote = isHorse()
+      ? `Чип, улсын дугаар${cow.tag_code ? ', таг' : ''}аар нь шалгасан хүн анхааруулга харж, танд Telegram-аар мэдэгдэл ирнэ.
+         ${li.lost_public === false ? 'Нийтийн жагсаалтад харагдахгүй.' : 'Нийтийн жагсаалтад харагдана: <a href="check.html" style="color:inherit">yaktag.org/check.html</a>'}`
+      : 'Тагийг уншуулсан хүн анхааруулга харж, байршил нь "Сүүлд харагдсан" болон самбарын газрын зурагт бүртгэгдэнэ.';
     top.innerHTML = `<div class="lostbar">
-      <b>⚠ Алга болсон гэж мэдэгдсэн</b>${li.reported_lost_at ? `Мэдэгдсэн: ${fmtDateTime(li.reported_lost_at)}` : ''}
+      <b>⚠ ${cow.status === 'stolen' ? 'Хулгайд алдсан' : 'Алга болсон'} гэж мэдэгдсэн</b>${li.reported_lost_at ? `Мэдэгдсэн: ${fmtDateTime(li.reported_lost_at)}` : ''}
       ${li.lost_note ? `<br>Тэмдэглэл: ${esc(li.lost_note)}` : ''}
-      <p>Тагийг уншуулсан хүн анхааруулга харж, байршил нь "Сүүлд харагдсан" болон самбарын газрын зурагт бүртгэгдэнэ.</p>
+      <p>${horseNote}</p>
       ${can ? '<button class="found-btn" id="foundBtn">Олдсон — буцаж ирсэн</button>' : ''}</div>`;
     card.style.display = 'none';
     const fb = document.getElementById('foundBtn');
@@ -1498,6 +1508,7 @@ function lostSaved(status, info) {
 }
 async function markLost() {
   if (!navigator.onLine || offlineMode) return toast('Сүлжээ шаардлагатай.', true);
+  if (isHorse()) return lostHorseForm();
   if (!confirm(`${animalCode(cow)} малыг алга болсон гэж мэдэгдэх үү?`)) return;
   const note = prompt('Хаана, хэзээ алга болсон бэ? (заавал биш)', '');
   if (note === null) return;
@@ -1509,9 +1520,45 @@ async function markLost() {
   toast('Алга болсон гэж бүртгэгдлээ');
   lostSaved('lost', { reported_lost_at: new Date().toISOString(), lost_note: note.trim() || null });
 }
+// A horse (schema_v56): lost or stolen, and whether it goes on the public
+// list (yaktag.org/check.html) — on unless the owner says no.
+function lostHorseForm() {
+  const card = document.getElementById('lostCard');
+  if (!card || document.getElementById('lhForm')) return;
+  card.insertAdjacentHTML('beforeend', `<div id="lhForm" style="margin-top:12px">
+    <div class="kind-pick" id="lhKind">
+      <button type="button" data-k="lost" class="on">Алга болсон</button>
+      <button type="button" data-k="stolen">Хулгайд алдсан</button></div>
+    <div class="field" style="margin-top:10px"><label for="lhNote">Хаана, хэзээ? (заавал биш)</label>
+      <input type="text" id="lhNote" maxlength="300" placeholder="Хэнтий, Галшар сум, 10/20"></div>
+    <label style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-weight:500">
+      <input type="checkbox" id="lhPublic" checked style="margin-top:4px">
+      <span>Нийтийн жагсаалтад харуулах — зураг, тамга, зүс, энэ тэмдэглэл бүх хүнд харагдана (таны нэр харагдахгүй)</span></label>
+    <button class="lost-btn" id="lhSave" style="margin-top:12px">Мэдэгдэх</button></div>`);
+  let kind = 'lost';
+  document.querySelectorAll('#lhKind button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#lhKind button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); kind = b.dataset.k;
+  }));
+  document.getElementById('lostBtn').style.display = 'none';
+  document.getElementById('lhSave').addEventListener('click', async () => {
+    const btn = document.getElementById('lhSave');
+    const note = document.getElementById('lhNote').value.trim() || null;
+    const pub = document.getElementById('lhPublic').checked;
+    btn.disabled = true;
+    const { error } = await sb.rpc('report_lost', { p_cattle_id: cow.id, p_note: note, p_stolen: kind === 'stolen', p_public: pub });
+    btn.disabled = false;
+    if (error) return toast('Мэдэгдэж чадсангүй: ' + mnError(error.message), true);
+    document.getElementById('lhForm').remove();
+    document.getElementById('lostBtn').style.display = '';
+    toast(kind === 'stolen' ? 'Хулгайд алдсан гэж бүртгэгдлээ' : 'Алга болсон гэж бүртгэгдлээ');
+    lostSaved(kind, { reported_lost_at: new Date().toISOString(), lost_note: note, lost_public: pub });
+  });
+}
+
 async function markFound() {
   if (!navigator.onLine || offlineMode) return toast('Сүлжээ шаардлагатай.', true);
-  if (!confirm(`${cow.tag_code} мал олдсон уу? Анхааруулга арилна.`)) return;
+  if (!confirm(`${animalCode(cow)} мал олдсон уу? Анхааруулга арилна.`)) return;
   const btn = document.getElementById('foundBtn');
   btn.disabled = true;
   const { error } = await sb.rpc('report_found', { p_cattle_id: cow.id });
@@ -1604,6 +1651,7 @@ function renderHorse(editing) {
   }
   const row = (k, v, mono) => `<div class="kv"><span>${k}</span><span${mono ? ' class="mono"' : ''}>${v}</span></div>`;
   const missing = !cow.chip_no && !cow.national_id;
+  const ble = cowExtra.ble_name;
   z.innerHTML =
     row('Нас, хүйс', esc(horseLabel(cow))) +
     row('Зүс', esc(cow.colour || '—')) +
@@ -1611,10 +1659,72 @@ function renderHorse(editing) {
     (cow.sex === 'male' ? row('Агт', cow.castrated ? 'Тийм' : 'Үгүй') : '') +
     row('Чипийн дугаар', esc(cow.chip_no || '—'), true) +
     row('Улсын дугаар', esc(cow.national_id || '—'), true) +
+    row('BLE таг', esc(ble || '—'), true) +
     (missing ? `<p class="hint">Чип эсвэл улсын бүртгэлийн дугаараа оруулбал алга болох, хулгайд алдахад
        адуугаа олоход тусална. Тамгын зургийг "Зураг авах" → "Тамга" товчоор авна.</p>` : '') +
-    (can ? '<button class="lockbtn" id="heEdit" style="margin-top:10px">Засах</button>' : '');
-  if (can) document.getElementById('heEdit').addEventListener('click', () => renderHorse(true));
+    (can ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button class="lockbtn" id="heEdit">Засах</button>
+        <button class="lockbtn" id="heBle">${ble ? '📡 BLE таг салгах' : '📡 BLE таг холбох'}</button>
+        <a class="lockbtn" href="contract.html?id=${encodeURIComponent(cow.id)}" style="text-decoration:none">📄 Худалдах гэрээ</a>
+      </div>
+      <div style="margin-top:14px"><b style="font-size:.9rem">Сүүлийн шалгалтууд</b>
+        <p class="hint" style="margin-top:2px">Хэн нэгэн дугаараар нь шалгах бүрт энд бичигдэж, танд Telegram-аар мэдэгдэл ирнэ.</p>
+        <div id="hcList"></div></div>` : '');
+  if (can) {
+    document.getElementById('heEdit').addEventListener('click', () => renderHorse(true));
+    document.getElementById('heBle').addEventListener('click', () => ble ? unlinkBle() : linkBle());
+    loadChecks();
+  }
+}
+
+// ---------- BLE tag (schema_v56) ----------
+// Our own beacons. Web Bluetooth: Android Chrome only (an iPhone browser
+// has no Bluetooth). The beacon is known by its name (set in its own app,
+// e.g. YT-H001); the browser never gives out the hardware address.
+async function linkBle() {
+  if (!navigator.bluetooth) {
+    return toast('Энэ утсан дээр вэбээс Bluetooth ашиглах боломжгүй. Android утсанд Chrome-оор нээнэ үү.', true);
+  }
+  let dev;
+  try { dev = await navigator.bluetooth.requestDevice({ acceptAllDevices: true }); }
+  catch (e) {                                   // NotFoundError: the list was closed
+    if (e && e.name !== 'NotFoundError') toast('Bluetooth: ' + (e.message || e), true);
+    return;
+  }
+  const name = String(dev.name || '').trim();
+  if (!name) return toast('Энэ таг нэргүй байна. Тагийн өөрийн апп-аар нэр өгөөд (жишээ: YT-H001) дахин оролдоно уу.', true);
+  if (!confirm(`"${name}" BLE тагийг ${animalCode(cow)}-д холбох уу?`)) return;
+  const { error } = await sb.rpc('set_ble_tag', { p_cattle_id: cow.id, p_ble_name: name });
+  if (error) return toast(mnError(error.message), true);
+  cowExtra.ble_name = name; cacheSet('yt-extra:' + cow.id, cowExtra);
+  toast('BLE таг холбогдлоо');
+  renderHorse(false);
+}
+async function unlinkBle() {
+  if (!confirm(`"${cowExtra.ble_name}" BLE тагийг салгах уу?`)) return;
+  const { error } = await sb.rpc('set_ble_tag', { p_cattle_id: cow.id, p_ble_name: null });
+  if (error) return toast(mnError(error.message), true);
+  cowExtra.ble_name = null; cacheSet('yt-extra:' + cow.id, cowExtra);
+  toast('BLE таг салгагдлаа');
+  renderHorse(false);
+}
+
+// ---------- who checked this horse (schema_v56) ----------
+async function loadChecks() {
+  const z = document.getElementById('hcList');
+  if (!z || offlineMode || !navigator.onLine) return;
+  let data = null, error = null;
+  try {
+    ({ data, error } = await sb.from('horse_checks')
+      .select('at, seen, was_lost, lat, lng, note, finder_phone')
+      .eq('cattle_id', cow.id).order('at', { ascending: false }).limit(5));
+  } catch (e) { error = e; }
+  if (error) { z.innerHTML = ''; return; }                 // database not yet on v56
+  z.innerHTML = (data || []).length ? data.map(c => `<div class="kv"><span>${c.seen ? '👁 Харсан' : '🔎 Шалгасан'}
+      ${c.note ? '· ' + esc(c.note) : ''}${c.finder_phone ? ' · 📞 ' + esc(c.finder_phone) : ''}</span>
+      <span>${fmtDateTime(c.at)}${c.lat != null ? ` · <a href="https://www.google.com/maps?q=${c.lat},${c.lng}"
+        target="_blank" rel="noopener" style="color:#1B4FA8">газрын зураг ↗</a>` : ''}</span></div>`).join('')
+    : '<p class="hint">Одоогоор хэн ч шалгаагүй.</p>';
 }
 
 async function saveHorse() {
@@ -1778,6 +1888,18 @@ document.getElementById('fileInput').addEventListener('change', async e => {
         // Record it locally too, or loadPhotos() → autoPublish() sees
         // no public photo and uploads the same picture a second time.
         else cow.public_photo_path = pubPath;
+      }
+    } else if (photoKind === 'brand') {
+      // The тамга's public copy (schema_v56): strangers see it only while
+      // the horse is reported lost / stolen and listed publicly.
+      const pubPath = `farm-${cow.farm_id}/cow-${cow.id}/brand-${Date.now()}.jpg`;
+      const { error: pubErr } = await sb.storage
+        .from('cattle-public')
+        .upload(pubPath, blob, { contentType: 'image/jpeg', upsert: true });
+      if (pubErr) toast('Тамгын нийтийн хуулбар хадгалагдсангүй: ' + pubErr.message, true);
+      else {
+        const { error: ptrErr } = await sb.rpc('set_public_brand', { p_cattle_id: cow.id, p_path: pubPath });
+        if (ptrErr) toast('Тамга холбогдсонгүй: ' + mnError(ptrErr.message), true);
       }
     }
 

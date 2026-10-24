@@ -210,6 +210,11 @@ footer a{color:var(--muted)}
       <p class="note" style="text-align:left" id="codeNote">Шинэ таг бол энд нээгээд мал бүртгэнэ.</p>
       <!-- horse section: most horses wear no YAK-TAG tag (chip + тамга identify them) -->
       <button class="btn ghost" id="horseNewBtn" hidden>＋ Таггүй адуу бүртгэх</button>
+      <div id="horseTools" hidden>
+        <button class="btn ghost" id="bleBtn">📡 Ойролцоох адуу (BLE)</button>
+        <div class="note" id="bleMsg" style="text-align:left" hidden></div>
+        <p class="note"><a href="../check.html" style="color:var(--green-d);font-weight:700">🔎 Адуу шалгах · алга болсон адуу</a></p>
+      </div>
     </div>
 
     <!-- Telegram: lost-animal alerts and the password-reset code -->
@@ -586,8 +591,70 @@ function applySection() {
   $('codeNote').textContent = horse ? 'Шинэ таг бол энд нээгээд адуу бүртгэнэ.' : 'Шинэ таг бол энд нээгээд мал бүртгэнэ.';
   $('search').placeholder = horse ? 'Хайх: дугаар, чип, зүс, үүлдэр…' : 'Хайх: дугаар, үүлдэр…';
   $('horseNewBtn').hidden = !horse || !me || !['herder', 'farm_admin'].includes(me.role) || offlineMode;
+  $('horseTools').hidden = !horse;
   render();
 }
+
+// ---------- 📡 nearby horses: our BLE beacons (schema_v56) ----------
+// Web Bluetooth (Android Chrome; an iPhone browser has none). The phone's
+// list shows only my horses' beacons that are in range (~100 m in the open);
+// picking one logs an encounter with GPS, so "last seen" moves here.
+function gpsOnce(ms = 10000) {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    const t = setTimeout(() => res(null), ms);
+    navigator.geolocation.getCurrentPosition(
+      p => { clearTimeout(t); res(p.coords); }, () => { clearTimeout(t); res(null); },
+      { enableHighAccuracy: true, timeout: ms, maximumAge: 30000 });
+  });
+}
+$('bleBtn').addEventListener('click', async () => {
+  const msg = $('bleMsg');
+  const say = h => { msg.innerHTML = h; msg.hidden = false; };
+  if (!navigator.bluetooth) {
+    return say('Энэ утсан дээр вэбээс Bluetooth ашиглах боломжгүй (iPhone). Android утсанд Chrome-оор нээнэ үү.');
+  }
+  let tagged = [];
+  try {
+    const { data, error } = await sb.from('cattle').select('id, tag_code, chip_no, national_id, ble_name, farm_id')
+      .not('ble_name', 'is', null);
+    if (error) throw error;
+    tagged = data || [];
+  } catch (e) { return say(esc(mnError(e.message || e))); }
+  if (!tagged.length) return say('BLE таг холбосон адуу алга. Адууны хуудас → "📡 BLE таг холбох".');
+
+  let dev;
+  try { dev = await navigator.bluetooth.requestDevice({ filters: tagged.map(h => ({ name: h.ble_name })) }); }
+  catch (e) {                                    // NotFoundError: nothing picked
+    return say(e && e.name === 'NotFoundError' ? 'Ойролцоо таг сонгогдсонгүй. Адуунд ойртоод дахин оролдоно уу.'
+                                               : 'Bluetooth: ' + esc(e.message || e));
+  }
+  const h = tagged.find(x => x.ble_name.toLowerCase() === String(dev.name || '').toLowerCase());
+  if (!h) return say('Энэ таг таны адуунд холбогдоогүй байна.');
+  say(`📡 <b>${esc(dev.name)}</b> ойролцоо байна — ${esc(animalCode(h))}.
+       <a href="${esc(cowUrl(h, '../'))}" style="color:var(--green-d);font-weight:700">Нээх ›</a><span id="bleRssi"></span>`);
+
+  // where: an encounter like an NFC read (offline: kept on the phone)
+  const g = await gpsOnce();
+  const r = await ytQueue.add('app_scan', {
+    client_uuid: ytUuid(), farm_id: h.farm_id, cattle_id: h.id, scanned_by: cacheGet('yt-uid') || (me && me.id),
+    method: 'ble', lat: g ? g.latitude : null, lng: g ? g.longitude : null, accuracy_m: g ? g.accuracy : null,
+    scanned_at: new Date().toISOString() });
+  if (r.queued) $('bleRssi').textContent = ' · утсанд хадгалагдлаа, сүлжээ ороход илгээгдэнэ';
+
+  // signal strength while searching, where Chrome allows it (may still be experimental)
+  if (dev.watchAdvertisements) {
+    try {
+      await dev.watchAdvertisements();
+      dev.addEventListener('advertisementreceived', ev => {
+        const near = ev.rssi > -65 ? 'маш ойрхон' : ev.rssi > -80 ? 'ойрхон' : 'хол';
+        const el = $('bleRssi');
+        if (el) el.textContent = ` · дохио ${ev.rssi} dBm (${near})`;
+      });
+      setTimeout(() => { try { dev.unwatchAdvertisements && dev.unwatchAdvertisements(); } catch (e) {} }, 120000);
+    } catch (e) {}
+  }
+});
 $('kindBtn').addEventListener('click', () => { location.hash = section === 'horse' ? '' : 'horse'; });
 window.addEventListener('hashchange', () => {
   section = location.hash === '#horse' ? 'horse' : 'cattle';
