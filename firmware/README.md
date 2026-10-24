@@ -25,6 +25,14 @@ If the beacon has no 32.768 kHz crystal, uncomment `CONFIG_CLOCK_CONTROL_NRF_K32
 
 Before production: pin the server's TLS root certificate in the box (it uses `setInsecure()` now).
 
+## `test-tag-esp32/` — a pretend tag for the first day
+
+Two ESP32-C3 SuperMinis test the whole chain before any beacon arrives: one runs `test-tag-esp32.ino` (broadcasts `YT-H00001`, USB / power bank — an ESP32 is no coin-cell tag), the other runs `listener-esp32.ino`. Link YT-H00001 to a test horse ("📡 BLE таг холбох") → within a minute its "Сүүлд харагдсан" moves to the box's place.
+
+## Which beacons to buy for real tags
+
+Prefer models the open-source Everytag project has already flashed over SWD (github.com/vasimv/Everytag): **KKM C2 (nRF52805), KKM P1 / P11 (nRF52810), KKM K4P / K5 (nRF52833), Minew HCB22E (nRF52832)** — all chips our firmware targets. Ask the factory: which nRF chip, SWDIO/SWCLK pads exposed, readout protection on (then only a J-Link-class probe — the nRF52840-DK — can unlock it; an ST-Link clone can't), 32 kHz crystal, price for 5 samples to Taiwan.
+
 ## Field test (what to write down)
 
 - Range: walk away from a tag on a horse, note where the phone / box stops hearing it (open steppe, behind the horse's body, in a herd).
