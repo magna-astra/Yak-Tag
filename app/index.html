@@ -239,7 +239,7 @@ footer a{color:var(--muted)}
   <footer><a href="../">yaktag.org</a></footer>
 </main>
 
-<script src="../config.js?v=2026102304"></script>
+<script src="../config.js?v=2026102305"></script>
 <script src="../offline.js?v=20261023"></script>
 <script>
 // ============================================================
@@ -419,7 +419,8 @@ $('outBtn').addEventListener('click', async () => {
 let me = null, offlineMode = false, animals = [];
 // Cows and horses are separate sections (#horse = the horse section);
 // the small button at the top switches, the phone's back button returns.
-let section = location.hash === '#horse' ? 'horse' : 'cattle';
+// (horses hidden until launch: config.js HORSES_PUBLIC / ?horses=1)
+let section = horsesOn && location.hash === '#horse' ? 'horse' : 'cattle';
 
 async function boot() {
   let session = null, sErr = null;
@@ -582,6 +583,7 @@ $('reloadBtn').addEventListener('click', () => { offlineMode = false; boot(); })
 // ---------- cows | horses ----------
 function applySection() {
   const horse = section === 'horse';
+  $('kindBtn').hidden = !horsesOn;
   $('kindBtn').textContent = horse ? '🐄 Үхэр' : '🐎 Адуу';
   $('kindBtn').title = horse ? 'Үхрийн хэсэг рүү' : 'Адууны хэсэг рүү';
   $('listTitle').textContent = horse ? 'Миний адуу' : 'Миний мал';
@@ -657,7 +659,7 @@ $('bleBtn').addEventListener('click', async () => {
 });
 $('kindBtn').addEventListener('click', () => { location.hash = section === 'horse' ? '' : 'horse'; });
 window.addEventListener('hashchange', () => {
-  section = location.hash === '#horse' ? 'horse' : 'cattle';
+  section = horsesOn && location.hash === '#horse' ? 'horse' : 'cattle';
   $('search').value = '';
   applySection();
   window.scrollTo({ top: 0 });

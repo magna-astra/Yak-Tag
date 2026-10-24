@@ -217,6 +217,20 @@ const MN_ERRORS = [
 const MILK_ONE_EDIT = 'Нэг удаа засах боломжтой.';
 const MILK_CONFIRM  = 'Сүүг зөвхөн нэг удаа засах боломжтой. Үргэлжлүүлэх үү?';
 const MILK_LOCKED   = 'Засагдсан — дахин засах боломжгүй. Засах бол ферм админд хандана уу.';
+// ---------- horses: hidden until launch (owner, 2026-10-24) ----------
+// true = everyone sees the horse section, the 🐎 buttons and check.html.
+// Before that a tester turns horses on for ONE phone / browser by opening
+// any page once with ?horses=1 (?horses=0 turns it off again).
+const HORSES_PUBLIC = false;
+const horsesOn = (() => {
+  try {
+    const p = new URLSearchParams(location.search).get('horses');
+    if (p === '1') localStorage.setItem('yt-horses', '1');
+    if (p === '0') localStorage.removeItem('yt-horses');
+    return HORSES_PUBLIC || localStorage.getItem('yt-horses') === '1';
+  } catch (e) { return HORSES_PUBLIC; }
+})();
+
 // ---------- horses (schema_v55; words and lists: HORSE_RESEARCH.md) ----------
 // Coat colours (зүс): the 17 basic ones + two common shades.
 const HORSE_COATS = ['хээр', 'зээрд', 'хүрэн', 'хар', 'халтар', 'хул', 'халиун', 'шарга', 'хонгор',

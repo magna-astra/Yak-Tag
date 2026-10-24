@@ -8,6 +8,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Адуу шалгах · YAK-TAG</title>
 <meta name="description" content="Адууг чип, улсын бүртгэлийн дугаар эсвэл YAK-TAG тагаар шалгах. Алга болсон, хулгайд алдсан адууны жагсаалт.">
+<!-- horses are hidden until launch: remove this line then (config.js HORSES_PUBLIC) -->
+<meta name="robots" content="noindex">
 <link rel="icon" href="assets/favicon.ico">
 <link rel="apple-touch-icon" href="assets/logo-180.png">
 <meta name="theme-color" content="#23633A">
@@ -120,7 +122,7 @@ h2{font-size:1.1rem;margin:30px 0 4px}
 </main>
 <div class="foot">YAK-TAG · Мал бүрт цахим үнэмлэх · <a href="index.html">yaktag.org</a></div>
 
-<script src="config.js?v=2026102304"></script>
+<script src="config.js?v=2026102305"></script>
 <script>
 const $ = id => document.getElementById(id);
 function esc(s) {
@@ -188,10 +190,16 @@ async function check() {
                <small>Эзэнд нь шалгасан тухай мэдэгдэл очлоо.</small></div>`}
     ${horseHtml(data)}</div>`;
 }
-$('qBtn').addEventListener('click', check);
-$('q').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
-// a link may carry the number (?q=…); the check itself waits for the button
-$('q').value = new URLSearchParams(location.search).get('q') || '';
+// horses are hidden until launch (config.js HORSES_PUBLIC; a tester: ?horses=1)
+if (!horsesOn) {
+  document.querySelector('main').innerHTML =
+    '<h1>🔎 Адуу шалгах</h1><p class="hint" style="margin-top:10px">Тун удахгүй.</p>';
+} else {
+  $('qBtn').addEventListener('click', check);
+  $('q').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+  // a link may carry the number (?q=…); the check itself waits for the button
+  $('q').value = new URLSearchParams(location.search).get('q') || '';
+}
 
 // ---------- "I saw this horse" ----------
 // the form opens right under the button pressed (the same horse may be
@@ -258,11 +266,13 @@ async function loadLost(more) {
   else list.innerHTML = html || '<div class="empty">Одоогоор алга болсон адуу бүртгэлгүй.</div>';
   $('moreBtn').hidden = rows.length < PAGE;
 }
-$('fCoat').innerHTML += HORSE_COATS.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
-$('fCoat').addEventListener('change', () => loadLost(false));
-$('fSex').addEventListener('change', () => loadLost(false));
-$('moreBtn').addEventListener('click', () => loadLost(true));
-loadLost(false);
+if (horsesOn) {
+  $('fCoat').innerHTML += HORSE_COATS.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  $('fCoat').addEventListener('change', () => loadLost(false));
+  $('fSex').addEventListener('change', () => loadLost(false));
+  $('moreBtn').addEventListener('click', () => loadLost(true));
+  loadLost(false);
+}
 </script>
 </body>
 </html>

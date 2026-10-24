@@ -288,7 +288,7 @@ header.cowhead{background:linear-gradient(135deg,#23633A 0%,#2E7D46 60%,#3E9A58 
 <div class="toast" id="toast"></div>
 <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
 
-<script src="config.js?v=2026102304"></script>
+<script src="config.js?v=2026102305"></script>
 <script src="offline.js?v=20261023"></script>
 <script>
 let cow = null;
@@ -579,6 +579,10 @@ async function boot() {
   const tag = getTagFromUrl();
   const id = tag ? null : getIdFromUrl();
   if (!tag && new URLSearchParams(location.search).get('new') === 'horse') {
+    if (!horsesOn) {                         // horses hidden until launch (config.js)
+      document.getElementById('cowBody').innerHTML = '<div class="notfound"><h2>Тун удахгүй</h2></div>';
+      return;
+    }
     requestGps();
     renderRegistration(null, null);          // a horse with no YAK-TAG tag
     return;
@@ -916,7 +920,10 @@ async function fillBreedSelect(selId, otherId, selected, only, onPick) {
     other.placeholder = 'Үүлдэр (Монгол, Хайнаг…)';
     return;
   }
-  const grp = (sp, label) => (only && only !== sp) ? '' : `<optgroup label="${label}">` + breeds.filter(b => b.species === sp)
+  // horses hidden until launch (config.js) — except on a horse already saved
+  const hideHorse = !horsesOn && only !== 'horse' && breedByCode[selected]?.species !== 'horse';
+  const grp = (sp, label) => ((only && only !== sp) || (sp === 'horse' && hideHorse)) ? ''
+    : `<optgroup label="${label}">` + breeds.filter(b => b.species === sp)
     .map(b => `<option value="${esc(b.code)}" ${b.code === selected ? 'selected' : ''}>${esc(b.name_mn)}</option>`)
     .join('') + '</optgroup>';
   sel.innerHTML = '<option value="">— сонгох —</option>' + grp('cattle', 'Үхэр') + grp('horse', 'Адуу');
