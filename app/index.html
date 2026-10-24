@@ -86,6 +86,12 @@ input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px var(--gr
 .listhead .sub{margin-left:auto}
 .listhead button{border:0;background:none;color:var(--green-d);font-weight:700;cursor:pointer;font-size:.9rem}
 #search{margin-bottom:10px}
+/* cows and horses are separate sections: a small button switches */
+.hellorow{display:flex;align-items:flex-start;gap:10px}
+.hellorow h1{flex:1}
+.kindbtn{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;
+  font-weight:800;font-size:.88rem;color:var(--ink);cursor:pointer;white-space:nowrap}
+.kindbtn:active{background:var(--green-l)}
 .animal{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;
   color:inherit;text-decoration:none}
 .animal:active{background:var(--green-l)}
@@ -185,7 +191,10 @@ footer a{color:var(--muted)}
   <!-- ===== Home: my animals ===== -->
   <section id="homeView" hidden>
     <div class="card">
-      <h1 id="hello">Сайн байна уу</h1>
+      <div class="hellorow">
+        <h1 id="hello">Сайн байна уу</h1>
+        <button class="kindbtn" id="kindBtn">🐎 Адуу</button>
+      </div>
       <p class="sub" id="whoami"></p>
       <div class="bar off" id="offBar"></div>
       <div class="bar q" id="queueBar"></div>
@@ -198,7 +207,9 @@ footer a{color:var(--muted)}
         <input type="text" id="code" placeholder="YT-008000" autocomplete="off" autocapitalize="characters" spellcheck="false">
         <button id="codeBtn">Нээх</button>
       </div>
-      <p class="note" style="text-align:left">Шинэ таг бол энд нээгээд мал бүртгэнэ.</p>
+      <p class="note" style="text-align:left" id="codeNote">Шинэ таг бол энд нээгээд мал бүртгэнэ.</p>
+      <!-- horse section: most horses wear no YAK-TAG tag (chip + тамга identify them) -->
+      <button class="btn ghost" id="horseNewBtn" hidden>＋ Таггүй адуу бүртгэх</button>
     </div>
 
     <!-- Telegram: lost-animal alerts and the password-reset code -->
@@ -212,7 +223,7 @@ footer a{color:var(--muted)}
     <p class="note" id="tgOk" hidden>✓ Telegram холбогдсон — мэдэгдэл, нууц үг сэргээх код ирнэ.</p>
 
     <div class="listhead">
-      <h2>Миний мал</h2>
+      <h2 id="listTitle">Миний мал</h2>
       <span class="sub" id="count"></span>
       <button id="reloadBtn" title="Шинэчлэх">↻</button>
     </div>
@@ -223,7 +234,7 @@ footer a{color:var(--muted)}
   <footer><a href="../">yaktag.org</a></footer>
 </main>
 
-<script src="../config.js?v=2026102303"></script>
+<script src="../config.js?v=2026102304"></script>
 <script src="../offline.js?v=20261023"></script>
 <script>
 // ============================================================
@@ -401,6 +412,9 @@ $('outBtn').addEventListener('click', async () => {
 
 // ---------- start ----------
 let me = null, offlineMode = false, animals = [];
+// Cows and horses are separate sections (#horse = the horse section);
+// the small button at the top switches, the phone's back button returns.
+let section = location.hash === '#horse' ? 'horse' : 'cattle';
 
 async function boot() {
   let session = null, sErr = null;
@@ -423,7 +437,7 @@ async function boot() {
   if (me && (me.role === 'super_admin' || me.role === 'admin')) { show('roleView'); return; }
   show('homeView');
   $('hello').textContent = me && me.full_name ? `Сайн байна уу, ${me.full_name}` : 'Сайн байна уу';
-  $('whoami').textContent = me ? (me.role === 'farm_admin' ? 'Ферм админ — фермийн бүх мал' : 'Малчин — таны мал') : '';
+  applySection();
   watchQueue();
   setupNfc();
   if (!offlineMode) telegramCard();
@@ -464,11 +478,18 @@ $('tgBtn').addEventListener('click', async () => {
 // The database returns only what this login may see: a herder's own
 // animals, a farm admin's whole farm.
 const COLS = 'id,tag_code,breed,sex,birth_year,status,reported_lost_at,milk_today,next_vaccination_due,owner_name,owner_id';
+const HORSE_COLS = ',species,colour,chip_no,national_id,castrated';     // schema_v55
 async function fetchAnimals() {
   const out = [];
+  let cols = COLS + HORSE_COLS;
   for (let from = 0; from < 20000; from += 1000) {
-    const { data, error } = await sb.from('cattle_dashboard').select(COLS)
+    let { data, error } = await sb.from('cattle_dashboard').select(cols)
       .order('tag_code').range(from, from + 999);
+    // database not yet on v55: the list without the horse columns
+    if (error && error.code === '42703' && cols !== COLS) {
+      cols = COLS;
+      ({ data, error } = await sb.from('cattle_dashboard').select(cols).order('tag_code').range(from, from + 999));
+    }
     if (error) throw error;
     out.push(...(data || []));
     if (!data || data.length < 1000) break;
@@ -504,14 +525,19 @@ async function loadAnimals() {
 
 const STATUS_MN = { sold:'Зарагдсан', slaughtered:'Нядалсан', dead:'Үхсэн', lost:'Алга болсон', stolen:'Хулгайлагдсан' };
 function card(c) {
+  const horse = c.species === 'horse';
   const age = c.birth_year ? `${new Date().getFullYear() - c.birth_year} нас` : '';
-  const meta = [c.sex === 'female' ? 'Эм' : c.sex === 'male' ? 'Эр' : '', age, c.breed,
-                me && me.role === 'farm_admin' ? c.owner_name : ''].filter(Boolean).join(' · ');
+  const meta = (horse ? [horseLabel(c), c.breed, c.colour]
+                      : [c.sex === 'female' ? 'Эм' : c.sex === 'male' ? 'Эр' : '', age, c.breed])
+    .concat(me && me.role === 'farm_admin' ? c.owner_name : '').filter(Boolean).join(' · ');
   const b = [];
   const lost = c.reported_lost_at || c.status === 'lost' || c.status === 'stolen';
   if (lost) b.push('<span class="b bad">⚠ Алга болсон</span>');
   else if (STATUS_MN[c.status]) b.push(`<span class="b">${STATUS_MN[c.status]}</span>`);
-  if (c.status === 'active' && c.sex !== 'male') {
+  if (horse && c.status === 'active' && !c.tag_code && !c.chip_no && !c.national_id) {
+    b.push('<span class="b warn">Чип / улсын дугаар алга</span>');
+  }
+  if (!horse && c.status === 'active' && c.sex !== 'male') {
     b.push(c.milk_today != null ? `<span class="b ok">🥛 Өнөөдөр ${Number(c.milk_today).toFixed(1)} л</span>`
                                 : '<span class="b">🥛 Өнөөдөр —</span>');
   }
@@ -520,38 +546,72 @@ function card(c) {
     if (d < 0) b.push('<span class="b bad">💉 Вакцин хэтэрсэн</span>');
     else if (d <= 7) b.push(`<span class="b warn">💉 Вакцин ${d === 0 ? 'өнөөдөр' : d + ' хоногт'}</span>`);
   }
-  return `<a class="animal" href="../cow.html?tag=${encodeURIComponent(c.tag_code)}" data-tag="${esc(c.tag_code)}">
-    <div class="row"><span class="code">${esc(c.tag_code)}</span><span class="go">›</span></div>
+  return `<a class="animal" href="${esc(cowUrl(c, '../'))}">
+    <div class="row"><span class="code">${esc(animalCode(c))}</span><span class="go">›</span></div>
     ${meta ? `<div class="meta">${esc(meta)}</div>` : ''}
     ${b.length ? `<div class="badges">${b.join('')}</div>` : ''}
   </a>`;
 }
 function render() {
   const q = $('search').value.trim().toLowerCase();
+  // this section only: horses in the horse section, everything else (cows) in the cow one
+  const mine = animals.filter(c => (c.species === 'horse') === (section === 'horse'));
   // active animals first, then the rest (sold, dead…) in tag order
   const rank = c => (c.status === 'active' || c.reported_lost_at) ? 0 : 1;
-  const list = animals
-    .filter(c => !q || [c.tag_code, c.breed, c.owner_name].some(v => String(v || '').toLowerCase().includes(q)))
-    .sort((a, b) => rank(a) - rank(b) || String(a.tag_code).localeCompare(String(b.tag_code)));
-  const active = animals.filter(c => c.status === 'active').length;
-  $('count').textContent = animals.length ? `${active} идэвхтэй${animals.length > active ? ` / ${animals.length}` : ''}` : '';
+  const list = mine
+    .filter(c => !q || [c.tag_code, c.breed, c.owner_name, c.colour, c.chip_no, c.national_id]
+      .some(v => String(v || '').toLowerCase().includes(q)))
+    .sort((a, b) => rank(a) - rank(b) || String(animalCode(a)).localeCompare(String(animalCode(b))));
+  const active = mine.filter(c => c.status === 'active').length;
+  $('search').hidden = mine.length < 8;
+  $('count').textContent = mine.length ? `${active} идэвхтэй${mine.length > active ? ` / ${mine.length}` : ''}` : '';
+  const none = section === 'horse'
+    ? 'Танд бүртгэлтэй адуу алга.<br>"Таггүй адуу бүртгэх" дарж эсвэл шинэ тагаа уншуулж бүртгэнэ.'
+    : 'Танд бүртгэлтэй мал алга.<br>Шинэ тагаа дээр уншуулж эсвэл дугаараар нээгээд мал бүртгэнэ.';
   $('list').innerHTML = list.length ? list.map(card).join('')
-    : `<div class="empty">${animals.length ? 'Олдсонгүй.' : 'Танд бүртгэлтэй мал алга.<br>Шинэ тагаа дээр уншуулж эсвэл дугаараар нээгээд мал бүртгэнэ.'}</div>`;
+    : `<div class="empty">${mine.length ? 'Олдсонгүй.' : none}</div>`;
 }
 $('search').addEventListener('input', render);
 $('reloadBtn').addEventListener('click', () => { offlineMode = false; boot(); });
 
+// ---------- cows | horses ----------
+function applySection() {
+  const horse = section === 'horse';
+  $('kindBtn').textContent = horse ? '🐄 Үхэр' : '🐎 Адуу';
+  $('kindBtn').title = horse ? 'Үхрийн хэсэг рүү' : 'Адууны хэсэг рүү';
+  $('listTitle').textContent = horse ? 'Миний адуу' : 'Миний мал';
+  $('whoami').textContent = !me ? '' : (horse ? 'Адууны хэсэг · ' : '') +
+    (me.role === 'farm_admin' ? (horse ? 'фермийн бүх адуу' : 'Ферм админ — фермийн бүх мал')
+                              : (horse ? 'таны адуу' : 'Малчин — таны мал'));
+  $('codeNote').textContent = horse ? 'Шинэ таг бол энд нээгээд адуу бүртгэнэ.' : 'Шинэ таг бол энд нээгээд мал бүртгэнэ.';
+  $('search').placeholder = horse ? 'Хайх: дугаар, чип, зүс, үүлдэр…' : 'Хайх: дугаар, үүлдэр…';
+  $('horseNewBtn').hidden = !horse || !me || !['herder', 'farm_admin'].includes(me.role) || offlineMode;
+  render();
+}
+$('kindBtn').addEventListener('click', () => { location.hash = section === 'horse' ? '' : 'horse'; });
+window.addEventListener('hashchange', () => {
+  section = location.hash === '#horse' ? 'horse' : 'cattle';
+  $('search').value = '';
+  applySection();
+  window.scrollTo({ top: 0 });
+});
+$('horseNewBtn').addEventListener('click', () => openUrl('../cow.html?new=horse'));
+
 // Opening an animal: the animal page then leads back here (its logo and
-// bottom link say "Миний мал").
+// bottom link say "Миний мал" / "Миний адуу"). A new tag opened from
+// one section offers only that section's breeds (kind=…).
+function openUrl(url) {
+  try { sessionStorage.setItem('yt-from-app', section === 'horse' ? 'horse' : '1'); } catch (e) {}
+  location.href = url;
+}
 function openAnimal(code) {
-  try { sessionStorage.setItem('yt-from-app', '1'); } catch (e) {}
-  location.href = '../cow.html?tag=' + encodeURIComponent(code);
+  openUrl('../cow.html?tag=' + encodeURIComponent(code) + '&kind=' + section);
 }
 $('list').addEventListener('click', e => {
   const a = e.target.closest('a.animal');
   if (!a) return;
   e.preventDefault();
-  openAnimal(a.dataset.tag);
+  openUrl(a.getAttribute('href'));
 });
 
 // ---------- open by tag number ----------

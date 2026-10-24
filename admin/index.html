@@ -67,6 +67,9 @@ main{padding:22px 22px 60px;max-width:1560px;margin:0 auto}
 .tabs button{background:none;border:0;padding:10px 16px;font-weight:600;font-size:.9rem;
   color:var(--ink-soft);border-bottom:2px solid transparent;margin-bottom:-1px}
 .tabs button.on{color:var(--khukh);border-bottom-color:var(--khukh)}
+.tabs .kindsw{margin:0 0 6px auto;align-self:center;border:1.5px solid var(--line);border-radius:999px;
+  padding:5px 12px;font-weight:700;font-size:.84rem;color:var(--ink);background:#fff}
+.tabs .kindsw:hover{border-color:var(--khukh);color:var(--khukh)}
 .tabpane{display:none}
 .tabpane.on{display:block}
 
@@ -350,13 +353,15 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
 
   <main>
     <div class="tabs">
-      <button data-tab="herd" class="on">Мал сүрэг</button>
+      <button data-tab="herd" class="on" id="herdTabBtn">Мал сүрэг</button>
       <button data-tab="map">Газрын зураг</button>
       <button data-tab="calving" id="calvTabBtn">Төллөлт</button>
       <button data-tab="users" class="super-only mgr">Хэрэглэгчид</button>
       <button data-tab="farms" class="super-only mgr">Фермүүд</button>
       <button data-tab="tags" class="admin-only">Тагууд</button>
       <button data-tab="audit" class="super-only">Түүх</button>
+      <!-- cows and horses are separate sections (#horse) -->
+      <button class="kindsw" id="kindSw" title="Адууны хэсэг рүү">🐎 Адуу</button>
     </div>
 
     <!-- ===== HERD ===== -->
@@ -630,6 +635,7 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
     <div class="mnote" id="vaccNote" style="display:none;margin:0 0 6px"></div>
     <label>Вакцины нэр</label>
     <input type="text" id="vaccName" placeholder="Шүлхий, дал уяа…">
+    <datalist id="horseVacc"></datalist>
     <label>Хийсэн огноо</label>
     <input type="date" id="vaccGiven">
     <label>Дараагийн огноо</label>
@@ -934,9 +940,13 @@ a.signout{text-decoration:none;display:inline-flex;align-items:center}
 
 <div class="toast" id="toast"></div>
 
-<script src="../config.js?v=2026102303"></script>
+<script src="../config.js?v=2026102304"></script>
 <script>
 let allCattle = [], farms = [], users = [], myRole = null, myId = null;
+// Cows and horses are separate sections: #horse shows only horses in the
+// herd list, its counts, the map and the foaling list.
+let section = location.hash === '#horse' ? 'horse' : 'cattle';
+const inSection = c => (c.species === 'horse') === (section === 'horse');
 let map = null, markers = [];
 let filterDate = mnDate();
 let fReg = '', fVacc = '', fFarm = '', mFarm = '', mAge = '';
@@ -1022,9 +1032,9 @@ function roleOptions(){
 }
 
 // ---------- tabs ----------
-document.querySelectorAll('.tabs button').forEach(b=>{
+document.querySelectorAll('.tabs button[data-tab]').forEach(b=>{
   b.addEventListener('click',()=>{
-    document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.tabs button[data-tab]').forEach(x=>x.classList.remove('on'));
     document.querySelectorAll('.tabpane').forEach(x=>x.classList.remove('on'));
     b.classList.add('on');
     document.getElementById('tab-'+b.dataset.tab).classList.add('on');
@@ -1035,6 +1045,25 @@ document.querySelectorAll('.tabs button').forEach(b=>{
     if(b.dataset.tab==='audit'){ loadAudit(true); }
   });
 });
+
+// ---------- cows | horses ----------
+function applySection(){
+  const horse = section === 'horse';
+  document.getElementById('kindSw').textContent = horse ? '🐄 Үхэр' : '🐎 Адуу';
+  document.getElementById('kindSw').title = horse ? 'Үхрийн хэсэг рүү' : 'Адууны хэсэг рүү';
+  document.getElementById('herdTabBtn').textContent = horse ? 'Адуу' : 'Мал сүрэг';
+  document.getElementById('search').placeholder = horse ? 'Дугаар, чип, зүс, эзэмшигчээр хайх…' : 'Дугаар, эзэмшигчээр хайх…';
+  if(!allCattle.length) return;
+  render();
+  if(document.getElementById('tab-map').classList.contains('on')) drawMap();
+  if(document.getElementById('tab-calving').classList.contains('on')) renderCalving();
+}
+document.getElementById('kindSw').addEventListener('click', ()=>{ location.hash = section === 'horse' ? '' : 'horse'; });
+window.addEventListener('hashchange', ()=>{
+  section = location.hash === '#horse' ? 'horse' : 'cattle';
+  applySection();
+});
+applySection();
 
 // ---------- data ----------
 async function loadFarms(){
@@ -1402,7 +1431,7 @@ function breedingAge(c){ return c.breed_code==='yak' ? BREED_AGE.yak : (c.specie
 function calvingLists(){
   const farm = isManager() ? document.getElementById('cvFarm').value : '';
   const yr = +mnDate().slice(0,4);
-  const females = allCattle.filter(c=>c.sex==='female' && c.status==='active' && (!farm || c.farm_id===farm));
+  const females = allCattle.filter(c=>inSection(c) && c.sex==='female' && c.status==='active' && (!farm || c.farm_id===farm));
   const due = [], open = [];
   females.forEach(c=>{
     const r = reproById[c.id];
@@ -1440,7 +1469,7 @@ function renderCalving(){
     <div class="stat"><div class="lbl">Хээлтэй / хээлтүүлсэн</div><div class="val">${pregnant}</div></div>
     <div class="stat"><div class="lbl">Хээлтүүлээгүй</div><div class="val">${open.length}</div></div>`;
 
-  const link = c => `<a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${esc(c.tag_code)}</a>`;
+  const link = c => `<a href="${esc(cowUrl(c,'../'))}">${esc(animalCode(c))}</a>`;
   const grp = d => d===null ? 'nodate' : d<0 ? 'over' : d<=7 ? 'week' : d<=30 ? 'month' : 'later';
   const GRP = { over:['red','Хугацаа хэтэрсэн'], week:['red','Ойрын 7 хоногт'], month:['amber','8–30 хоногт'],
                 later:['green','30-аас дээш хоногт'], nodate:['grey','Төллөх огноо тодорхойгүй'] };
@@ -1474,7 +1503,8 @@ document.getElementById('cvFarm').addEventListener('change', renderCalving);
 function visible(){
   const q = document.getElementById('search').value.toLowerCase().trim();
   return allCattle.filter(c=>{
-    if(q && !(`${c.tag_code} ${c.owner_name}`.toLowerCase().includes(q))) return false;
+    if(!inSection(c)) return false;
+    if(q && !(`${c.tag_code||''} ${c.owner_name} ${c.chip_no||''} ${c.national_id||''} ${c.colour||''}`.toLowerCase().includes(q))) return false;
     if(fFarm && c.farm_id !== fFarm) return false;
     const m = milkByDate[c.id];
     if(fReg==='logged' && !m) return false;
@@ -1507,11 +1537,13 @@ function renderStats(){
 
   const card = (cls, icon, lbl, val) => `<div class="stat ${cls}"><div class="sic"><svg class="ic"><use href="#i-${icon}"/></svg></div>
     <div><div class="lbl">${lbl}</div><div class="val">${val}</div></div></div>`;
+  const horse = section === 'horse';
   document.getElementById('stats').innerHTML =
-    card('blue',  'tag',            'Нийт мал', rows.length) +
+    card('blue',  'tag',            horse ? 'Нийт адуу' : 'Нийт мал', rows.length) +
     card('green', 'shield-check',   'Идэвхтэй', active.length) +
+    (horse ? card('blue', 'tag', 'Чип / улсын дугаартай', rows.filter(c=>c.chip_no||c.national_id).length + `<small>/${rows.length}</small>`) :
     card('blue',  'milk',           `Сүү (${isToday(filterDate)?'өнөөдөр':fmtDate(filterDate)})`, `${milkTotal.toFixed(1)}<small>л</small>`) +
-    card('blue',  'chart-bar',      'Сүү бүртгэсэн', `${logged}<small>/${rows.length}</small>`) +
+    card('blue',  'chart-bar',      'Сүү бүртгэсэн', `${logged}<small>/${rows.length}</small>`)) +
     card('green', 'vaccine',        'Вакцин хийх', due) +
     card('red',   'alert-triangle', 'Алга болсон', lost);
 }
@@ -1581,6 +1613,7 @@ function seenCell(c){
 }
 
 function milkCellNew(c){
+  if(c.species==='horse') return '<span class="dash">—</span>';
   const m = milkByDate[c.id];
   const editsLeft = milkEditsLeft(m);
   const canEdit = myRole!=='admin' && (myRole!=='herder' || (isToday(filterDate) && editsLeft>0));
@@ -1595,7 +1628,7 @@ function rowMenu(c, up){
   const admin = myRole==='super_admin';
   return `<details class="rowmenu${up?' up':''}"><summary aria-label="Үйлдэл">⋯</summary><div class="menu">
       ${myRole==='admin'?'':`<button data-act="openVacc" data-id="${esc(c.id)}">Вакцин бүртгэх</button>`}
-      <button onclick="location.href='../cow.html?tag=${encodeURIComponent(c.tag_code)}'">Дэлгэрэнгүй хуудас</button>
+      <button onclick="location.href='${esc(cowUrl(c,'../'))}'">Дэлгэрэнгүй хуудас</button>
       ${admin?`<button data-act="openEdit" data-id="${esc(c.id)}">Мэдээлэл засах</button>
       <button data-act="delCattle" data-id="${esc(c.id)}" style="color:var(--alert)">Устгах</button>`:''}
     </div></details>`;
@@ -1652,7 +1685,7 @@ function render(){
   const base = visible();
   renderAttn(base);
   let rows = fAttn ? base.filter(ATTN[fAttn].test) : base;
-  document.getElementById('countNote').textContent = `${rows.length} / ${allCattle.length}`;
+  document.getElementById('countNote').textContent = `${rows.length} / ${allCattle.filter(inSection).length}`;
   document.getElementById('milkHead').textContent = isToday(filterDate) ? 'Сүү' : `Сүү ${fmtDate(filterDate)}`;
   renderStats();
 
@@ -1673,11 +1706,12 @@ function render(){
     const age = c.birth_year ? (yr-c.birth_year)+' нас' : '';
     const sex = c.sex==='female' ? 'Эм' : 'Эр';
     const alert = STATUS_ALERT[c.status];
-    const sub = [sex, age, c.breed && esc(c.breed)].filter(Boolean).join(' · ');
+    const sub = (c.species==='horse' ? [esc(horseLabel(c)), c.breed && esc(c.breed), c.colour && esc(c.colour)]
+                                     : [sex, age, c.breed && esc(c.breed)]).filter(Boolean).join(' · ');
     const month = c.milk_this_month ? Number(c.milk_this_month).toFixed(1) : '';
     return `<tr class="${isUrgent(c)?'urgent':''}">
-      <td class="animal" title="${esc(c.tag_code)} · ${sub}">
-        <span class="tag-code"><a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}">${esc(c.tag_code)}</a></span>
+      <td class="animal" title="${esc(animalCode(c))} · ${sub}">
+        <span class="tag-code"><a href="${esc(cowUrl(c,'../'))}">${esc(animalCode(c))}</a></span>
         <button class="editpen super-only" data-act="openEdit" data-id="${esc(c.id)}" title="Мэдээлэл засах" aria-label="Засах">✎</button>
         <div class="sub">${sub}</div>
       </td>
@@ -1845,7 +1879,7 @@ function initMap(){
 }
 
 function mapRows(){
-  let rows = allCattle.filter(c=>c.last_lat && c.last_lng);
+  let rows = allCattle.filter(c=>inSection(c) && c.last_lat && c.last_lng);
   if(mFarm) rows = rows.filter(c=>c.farm_id===mFarm);
   if(mAge){
     const cutoff = Number(mAge);
@@ -1857,13 +1891,13 @@ function mapRows(){
 function popupHtml(c){
   const days = daysSince(c.last_seen_at);
   return `<div style="font-family:Inter,sans-serif;font-size:13px;line-height:1.5;min-width:170px">
-    <b style="font-family:monospace;font-size:14px">${esc(c.tag_code)}</b><br>
+    <b style="font-family:monospace;font-size:14px">${esc(animalCode(c))}</b><br>
     ${esc(c.owner_name)}<br>
     <span style="color:#5A6880">
-      ${c.sex==='female'?'Эм':'Эр'} · ${esc(c.breed||'—')}<br>
+      ${c.species==='horse' ? esc(horseLabel(c)) : c.sex==='female'?'Эм':'Эр'} · ${esc(c.breed||'—')}<br>
       Сүүлд: ${fmtDT(c.last_seen_at)}${days!==null?` (${days} хоног)`:''}
     </span><br>
-    <a href="../cow.html?tag=${encodeURIComponent(c.tag_code)}"
+    <a href="${esc(cowUrl(c,'../'))}"
        style="color:#1B4FA8;font-weight:600">Дэлгэрэнгүй →</a><br>
     <a href="${gmapsDir(c.last_lat,c.last_lng)}" target="_blank" rel="noopener"
        style="color:#2C7A45;font-weight:600">Google Maps-аар очих →</a>
@@ -1971,6 +2005,11 @@ function vaccNewMode(c){
 function openVacc(cattleId, tagCode){
   vaccTarget = cattleId;
   const c = allCattle.find(x=>x.id===cattleId) || {};
+  // a horse: the usual horse vaccines to pick from (still free text)
+  const vn = document.getElementById('vaccName'), hl = document.getElementById('horseVacc');
+  if(!hl.children.length) hl.innerHTML = HORSE_VACCINES.map(v=>`<option value="${esc(v)}">`).join('');
+  if(c.species==='horse'){ vn.setAttribute('list','horseVacc'); vn.placeholder = 'Боом, адууны томуу…'; }
+  else { vn.removeAttribute('list'); vn.placeholder = 'Шүлхий, дал уяа…'; }
   const note = document.getElementById('vaccNote');
   document.getElementById('vaccModalSub').textContent = tagCode;
   note.style.display = 'none';
@@ -2721,14 +2760,17 @@ async function buildExport(){
         c.next_vaccination_due ? fmtD(c.next_vaccination_due) : '',
         c.milk_this_month != null ? Number(c.milk_this_month) : null,
         c.last_fed_at ? fmtD(c.last_fed_at) : '', c.last_seen_at ? fmtDT(c.last_seen_at) : '',
-        c.last_lat != null ? Number(c.last_lat) : null, c.last_lng != null ? Number(c.last_lng) : null];
+        c.last_lat != null ? Number(c.last_lat) : null, c.last_lng != null ? Number(c.last_lng) : null,
+        c.chip_no || '', c.national_id || '', c.species==='horse' && c.sex==='male' ? (c.castrated ? 'Тийм' : 'Үгүй') : '',
+        (c.markings || []).join(', ')];
     });
     sheets.push({name:'Мал сүрэг', rows, cols:[
       {h:'Таг',w:12},{h:'Ферм',w:8},{h:'Эзэмшигч',w:18},{h:'Төрөл',w:8},{h:'Үүлдэр',w:18},{h:'Хүйс',w:6},
       {h:'Төрсөн он',w:10,t:'n'},{h:'Нас',w:6,t:'n'},{h:'Зүс',w:10},{h:'Эхийн таг',w:12},{h:'Жин (кг)',w:9,t:'n'},
       {h:'Төлөв',w:13},{h:'Хээл',w:13},{h:'Төллөх огноо',w:13},{h:'Сүүлд вакцин',w:13},{h:'Вакцин',w:16},
       {h:'Дараагийн вакцин',w:15},{h:'Энэ сарын сүү (л)',w:15,t:'n1'},{h:'Сүүлд тэжээсэн',w:14},
-      {h:'Сүүлд харагдсан',w:17},{h:'Өргөрөг',w:11,t:'n'},{h:'Уртраг',w:11,t:'n'}]});
+      {h:'Сүүлд харагдсан',w:17},{h:'Өргөрөг',w:11,t:'n'},{h:'Уртраг',w:11,t:'n'},
+      {h:'Чипийн дугаар',w:17},{h:'Улсын дугаар',w:15},{h:'Агт',w:6},{h:'Тэмдэг',w:16}]});
   }
 
   if(document.getElementById('xMilk').checked){
@@ -3033,7 +3075,7 @@ document.getElementById('mpSave').addEventListener('click', async ()=>{
 // farm name used to break out of the handler.
 // (This block was removed by mistake in fccedbb, which silently broke
 // every row button; restored here.)
-const tagOf  = id => (allCattle.find(c=>c.id===id)||{}).tag_code || '';
+const tagOf  = id => { const c = allCattle.find(x=>x.id===id); return c ? animalCode(c) : ''; };
 const farmOf = id => adminFarms.find(f=>f.id===id);
 const rowActions = {
   openUser, resetPw, delUser, restFarm, openEdit, editFarm, setTagUid, openTransfer,

@@ -217,6 +217,37 @@ const MN_ERRORS = [
 const MILK_ONE_EDIT = 'Нэг удаа засах боломжтой.';
 const MILK_CONFIRM  = 'Сүүг зөвхөн нэг удаа засах боломжтой. Үргэлжлүүлэх үү?';
 const MILK_LOCKED   = 'Засагдсан — дахин засах боломжгүй. Засах бол ферм админд хандана уу.';
+// ---------- horses (schema_v55; words and lists: HORSE_RESEARCH.md) ----------
+// Coat colours (зүс): the 17 basic ones + two common shades.
+const HORSE_COATS = ['хээр', 'зээрд', 'хүрэн', 'хар', 'халтар', 'хул', 'халиун', 'шарга', 'хонгор',
+  'цавьдар', 'саарал', 'хөх саарал', 'буурал', 'бор', 'хөх бор', 'улаан', 'цагаан', 'алаг', 'цоохор'];
+const HORSE_MARKS = ['халзан', 'сартай', 'булаг'];          // face / leg markings
+const HORSE_VACCINES = ['Боом', 'Адууны томуу', 'Адууны сахуу', 'Галзуу'];
+// Year of life, counted as herders do: born this year = 1st (унага).
+function horseYear(birthYear) {
+  return birthYear ? Number(mnDate().slice(0, 4)) - birthYear + 1 : null;
+}
+function horseAgeName(birthYear) {
+  const n = horseYear(birthYear);
+  return n == null ? '' : (['', 'унага', 'даага', 'шүдлэн', 'хязаалан', 'соёолон'][n] || (n > 5 ? 'их нас' : ''));
+}
+// "эм унага", "эр даага", "шүдлэн гүү", "соёолон азарга", "их насны агт"
+function horseLabel(c) {
+  const n = horseYear(c.birth_year), age = horseAgeName(c.birth_year);
+  if (n != null && n <= 2) return `${c.sex === 'female' ? 'эм' : 'эр'} ${age}`;
+  const who = c.sex === 'female' ? 'гүү' : c.castrated ? 'агт' : (n == null || n >= 4) ? 'азарга' : 'үрээ';
+  return age ? `${age === 'их нас' ? 'их насны' : age} ${who}` : who;
+}
+// The animal's page: by tag when it has one, else by id (a horse with
+// no YAK-TAG tag). prefix = '../' from admin/ and app/.
+function cowUrl(c, prefix = '') {
+  return prefix + 'cow.html?' + (c.tag_code ? 'tag=' + encodeURIComponent(c.tag_code) : 'id=' + encodeURIComponent(c.id));
+}
+// What to show where a tag number goes, for a horse without a tag
+function animalCode(c) {
+  return c.tag_code || (c.national_id ? c.national_id : c.chip_no ? 'Чип …' + c.chip_no.slice(-6) : 'Таггүй адуу');
+}
+
 // a refused milk save (locked, or another person's entry) in plain words
 function milkError(msg) {
   return /row-level security|permission denied/i.test(String((msg && msg.message) || msg || ''))
