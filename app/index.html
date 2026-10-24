@@ -213,6 +213,9 @@ footer a{color:var(--muted)}
       <div id="horseTools" hidden>
         <button class="btn ghost" id="bleBtn">📡 Ойролцоох адуу (BLE)</button>
         <div class="note" id="bleMsg" style="text-align:left" hidden></div>
+        <!-- listener boxes at wells / winter camps (schema_v57, BLE_TAG_SPEC.md) -->
+        <button class="btn ghost" id="gwBtn">📶 Сонсогч төхөөрөмж (худаг, өвөлжөө)</button>
+        <div id="gwBox" hidden></div>
         <p class="note"><a href="../check.html" style="color:var(--green-d);font-weight:700">🔎 Адуу шалгах · алга болсон адуу</a></p>
       </div>
     </div>
@@ -596,6 +599,60 @@ function applySection() {
   $('horseTools').hidden = !horse;
   render();
 }
+
+// ---------- 📶 listener boxes (schema_v57) ----------
+// An ESP32 at a well / winter camp hears every YAK-TAG tag nearby and
+// reports it with the box's place. Added here at the box's place (this
+// phone's GPS); its secret key is shown once, for the box's settings.
+async function loadGateways() {
+  const box = $('gwBox');
+  let rows = [], error = null;
+  try { ({ data: rows, error } = await sb.from('ble_gateways').select('id, name, lat, lng, last_report_at').order('name')); }
+  catch (e) { error = e; }
+  if (error) { box.innerHTML = `<p class="note">${esc(mnError(error.message || error))}</p>`; return; }
+  const ago = t => t ? fmtDateTime(t) : 'хараахан илгээгээгүй';
+  box.innerHTML = (rows || []).map(g => `<div class="animal" style="cursor:default">
+      <div class="row"><span class="code" style="font-family:inherit">${esc(g.name)}</span>
+        <button class="gwDel" data-id="${esc(g.id)}" style="margin-left:auto;border:0;background:none;color:var(--red);font-weight:700;cursor:pointer">Устгах</button></div>
+      <div class="meta">Сүүлд илгээсэн: ${esc(ago(g.last_report_at))}${g.lat != null
+        ? ` · <a href="https://www.google.com/maps?q=${g.lat},${g.lng}" target="_blank" rel="noopener">газрын зураг ↗</a>` : ''}</div>
+    </div>`).join('') + `
+    <label for="gwName">Шинэ сонсогч — энд, яг байгаа газраа нэмнэ</label>
+    <div class="open"><input type="text" id="gwName" placeholder="Хойд худаг" maxlength="60" style="text-transform:none;font-family:inherit">
+      <button id="gwAdd">Нэмэх</button></div>
+    <div class="note" id="gwKey" style="text-align:left" hidden></div>`;
+  $('gwAdd').addEventListener('click', addGateway);
+  box.querySelectorAll('.gwDel').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Энэ сонсогчийг устгах уу? Хуучин бүртгэлүүд нь хадгалагдана.')) return;
+    const { error: e } = await sb.rpc('ble_gateway_delete', { p_id: b.dataset.id });
+    if (e) return alert(mnError(e.message));
+    loadGateways();
+  }));
+}
+async function addGateway() {
+  const name = $('gwName').value.trim();
+  if (!name) return alert('Нэр өгнө үү (жишээ: Хойд худаг).');
+  $('gwAdd').disabled = true;
+  const g = await gpsOnce();
+  if (!g && !confirm('Байршил олдсонгүй. Байршилгүй нэмэх үү? (Сонсогчийн мэдээ газрын зурагт гарахгүй.)')) {
+    $('gwAdd').disabled = false; return;
+  }
+  const { data: key, error } = await sb.rpc('ble_gateway_create', {
+    p_name: name, p_lat: g ? g.latitude : null, p_lng: g ? g.longitude : null });
+  $('gwAdd').disabled = false;
+  if (error) return alert(mnError(error.message));
+  await loadGateways();
+  const k = $('gwKey');
+  k.innerHTML = `<b>✓ "${esc(name)}" нэмэгдлээ.</b> Энэ түлхүүрийг ESP32 төхөөрөмжийн тохиргоонд
+    (<code>YT_KEY</code>) хуулна уу — <b>дахин харагдахгүй</b>:<br>
+    <code style="word-break:break-all;user-select:all;display:block;background:#F3F1EA;padding:8px;border-radius:8px;margin-top:6px">${esc(key)}</code>`;
+  k.hidden = false;
+}
+$('gwBtn').addEventListener('click', () => {
+  const box = $('gwBox');
+  box.hidden = !box.hidden;
+  if (!box.hidden) { box.innerHTML = '<p class="note">Ачаалж байна…</p>'; loadGateways(); }
+});
 
 // ---------- 📡 nearby horses: our BLE beacons (schema_v56) ----------
 // Web Bluetooth (Android Chrome; an iPhone browser has none). The phone's

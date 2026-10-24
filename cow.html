@@ -944,9 +944,12 @@ async function loadCowExtras() {
   cowExtra = cacheGet('yt-extra:' + cow.id) || {};
   if (!offlineMode && navigator.onLine) {
     try {
-      let { data, error } = await sb.from('cattle').select('species, breed_code, ble_name').eq('id', cow.id).maybeSingle();
-      if (error && error.code === '42703') {     // database not yet on v56
-        ({ data, error } = await sb.from('cattle').select('species, breed_code').eq('id', cow.id).maybeSingle());
+      // newest columns first; an older database (before v57 / v56) answers with fewer
+      let data = null, error = null;
+      for (const cols of ['species, breed_code, ble_name, ble_battery, ble_heard_at', 'species, breed_code, ble_name',
+                          'species, breed_code']) {
+        ({ data, error } = await sb.from('cattle').select(cols).eq('id', cow.id).maybeSingle());
+        if (!error || error.code !== '42703') break;
       }
       if (!error) { cowExtra = data || {}; cacheSet('yt-extra:' + cow.id, cowExtra); }
     } catch (e) {}
@@ -1667,6 +1670,10 @@ function renderHorse(editing) {
     row('Чипийн дугаар', esc(cow.chip_no || '—'), true) +
     row('Улсын дугаар', esc(cow.national_id || '—'), true) +
     row('BLE таг', esc(ble || '—'), true) +
+    (ble && (cowExtra.ble_heard_at || cowExtra.ble_battery != null)
+      ? row('BLE сүүлд сонсогдсон', esc([cowExtra.ble_heard_at ? fmtDateTime(cowExtra.ble_heard_at) : '',
+                                         cowExtra.ble_battery != null ? 'батарей ' + cowExtra.ble_battery + '%' : '']
+                                        .filter(Boolean).join(' · '))) : '') +
     (missing ? `<p class="hint">Чип эсвэл улсын бүртгэлийн дугаараа оруулбал алга болох, хулгайд алдахад
        адуугаа олоход тусална. Тамгын зургийг "Зураг авах" → "Тамга" товчоор авна.</p>` : '') +
     (can ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">

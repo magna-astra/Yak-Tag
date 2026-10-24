@@ -9,6 +9,8 @@ exclude:
   - DEMO_SCRIPT.md
   - SWITCH_MAPS_BEFORE_LAUNCH.md
   - HORSE_RESEARCH.md
+  - BLE_TAG_SPEC.md
+  - firmware/
   - heartbeat.sql
   - db/
   - tools/
