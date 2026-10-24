@@ -411,6 +411,15 @@ The owner found old test logins (ganzo@yaktag.test, admin07@yaktag.test …) sti
 - **Not yet:** the Android app (background listening for the crowd) — after the boards work; v2 changing IDs; the Bluetooth SIG listing question for our own tag (ask Raytac / SIG).
 - **Tests:** `db/test/test_v57.sql` 20/20 (crowd report, dedup, privacy, "last seen" moves, box key, wrong key, future time, lost alert, limits, who may remove a box); all suites 229/229; listener-box screen 7/7.
 
+## 3zf. Tracking direction: free Apple + Google networks first, own network later (owner, 2026-10-24)
+
+- **Start (pilot):** tags run **Everytag** (github.com/vasimv/Everytag, GPL-3.0) — an AirTag (up to 40 changing keys) and a Google Find My tag at once; settings / keys over BLE. Apple reports read by **Macless-Haystack** (OpenHaystack family, AGPL-3.0; Docker: anisette-v3-server + endpoint; an Apple ID with **SMS** 2-step), Google by **GoogleFindMyTools**. **Layer 3 = ours:** add our `YT-H#####` broadcast to Everytag (fork, GPL) so wells / herders' phones (v57) hear it on the steppe. A **bridge** on a server sends Apple / Google locations into YAK-TAG (same map, "Сүүлд харагдсан", lost alerts) — to build: v58 (sightings with their own place + source apple / google) + Docker setup + connector.
+- **Server:** a free cloud VM for testing (e.g. Oracle Cloud Always Free — the owner signs up), an office PC later.
+- **Accounts (owner):** a separate YAK-TAG Apple ID (SMS 2FA) and Google account — never personal ones.
+- **Beacons:** order samples of BOTH — KKM K4P/K5 (nRF52833) or Minew HCB22E (nRF52832): over-the-air update possible → in 2–3 years switch to our own system without opening tags; and KKM C2 / P1 / P11 (nRF52805 / 52810): cheaper, re-flash only by wire. Decide after the test. Plus the nRF52840-DK (programmer; unlocks protected chips), CR2032(L), SWD cable; the ESP32-C3 SuperMinis (ordered) = test tag + well boxes.
+- **Risks (told to the owner):** unofficial ("research purposes only"), Apple / Google can break it or block the account; steppe coverage weak (Apple: where iPhones pass; Google: busy places by default); an iPhone may warn a thief about an "unknown AirTag"; GPL / AGPL: publish our changes if we ship modified firmware / run a modified service.
+- **In 2–3 years:** OTA to our own protocol, our own tag made in Taiwan, our Android crowd app.
+
 ## 4. To do next
 
 0i. **BLE network:** Tokyo SQL editor → paste `db/schema_v57_ble_network.sql` → Run, then push. When the boards arrive: build + flash a beacon (`firmware/README.md`), add a box in the app (`?horses=1`), put the key in the ESP32 sketch, watch "Сүүлд харагдсан" move. Then the Android app.
