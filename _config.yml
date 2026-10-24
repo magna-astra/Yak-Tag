@@ -8,6 +8,7 @@ exclude:
   - NEXT_SESSION.md
   - DEMO_SCRIPT.md
   - SWITCH_MAPS_BEFORE_LAUNCH.md
+  - HORSE_RESEARCH.md
   - heartbeat.sql
   - db/
   - tools/
